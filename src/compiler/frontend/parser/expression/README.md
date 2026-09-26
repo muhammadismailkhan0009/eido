@@ -8,8 +8,10 @@ behavior lives here.
 
 - `literal_expressions.nim` — Int, Float, Bool, and Char literals
 - `call_expressions.nim` — function-call expressions and argument parsing
+- `construction_expressions.nim` — named class construction expressions
+- `field_access_expressions.nim` — postfix `.field` access chains
 - `grouping_expressions.nim` — `()`, `[]`, and `{}` grouping/matching
-- `primary_expressions.nim` — primary-expression dispatch and identifiers
+- `primary_expressions.nim` — primary-atom dispatch plus postfix access application
 - `unary_negation.nim` — recursive numeric unary `-`
 - `arithmetic_operators.nim` — `* / + -`
 - `comparison_operators.nim` — `< <= > >= == !=`
@@ -20,7 +22,8 @@ behavior lives here.
 Highest to lowest:
 
 ```text
-primary / grouping
+primary / grouping / construction
+postfix field access
 unary -
 * /
 + -

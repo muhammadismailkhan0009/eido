@@ -82,7 +82,6 @@ See `class-construction.md` for exact-field, nesting, scope, and representation 
 
 Not yet included:
 
-- field access;
 - field mutation;
 - methods;
 - class types in function signatures;

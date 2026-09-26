@@ -34,6 +34,7 @@ include expression/expected_types
 include expression/identifier_expressions
 include expression/call_expressions
 include expression/construction_expressions
+include expression/field_access_expressions
 include expression/unary_negation
 include expression/arithmetic_operators
 include expression/comparison_operators
@@ -62,6 +63,9 @@ proc analyzeExpr*(
 
   of astExpressions.ekConstruct:
     analyzeConstruction(expr, locals, functions, classes)
+
+  of astExpressions.ekFieldAccess:
+    analyzeFieldAccess(expr, locals, functions, classes)
 
   of astExpressions.ekUnary:
     case expr.unaryOp

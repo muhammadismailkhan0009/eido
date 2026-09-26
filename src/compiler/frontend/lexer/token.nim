@@ -35,6 +35,7 @@ type
     tkSemicolon,
     tkComma,
     tkColon,
+    tkDot,
     tkEqual,
     tkEqualEqual,
     tkBangEqual,

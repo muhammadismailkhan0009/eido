@@ -1,9 +1,8 @@
-## Dispatches primary expressions after literal, call, and grouping helpers are available.
-## Example: `salary`, `add(1, 2)`, and `[a + b]` are selected here.
+## Dispatches primary atoms and then applies postfix field access.
+## Example: `employee.address.zip` starts from identifier `employee` and grows through postfix access.
 
-## Parses identifiers, calls, literals, and all three mathematical grouping forms.
-## Example: `5`, `salary`, `add(1, 2)`, and `{a + b}` start here.
-proc parsePrimary(parser: var Parser): Expr =
+## Parses one primary atom before postfix operators are applied.
+proc parsePrimaryAtom(parser: var Parser): Expr =
   let literal = parser.parseLiteral()
   if not literal.isNil:
     return literal
@@ -34,5 +33,9 @@ proc parsePrimary(parser: var Parser): Expr =
 
   failAt(
     parser.peek.span,
-    "expected primitive literal, identifier, call, or grouped expression"
+    "expected primitive literal, identifier, call, construction, or grouped expression"
   )
+
+## Parses a complete primary expression including chained field access.
+proc parsePrimary(parser: var Parser): Expr =
+  parser.parseFieldAccessChain(parser.parsePrimaryAtom())

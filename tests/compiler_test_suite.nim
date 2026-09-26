@@ -14,6 +14,7 @@ import compiler/frontend/lexer/keywords/class_keyword_test
 import compiler/frontend/parser/expression/literal_expression_parser_test
 import compiler/frontend/parser/expression/call_expression_parser_test
 import compiler/frontend/parser/expression/construction_expression_parser_test
+import compiler/frontend/parser/expression/field_access_expression_parser_test
 import compiler/frontend/parser/expression/grouping_expression_parser_test
 import compiler/frontend/parser/expression/unary_negation_parser_test
 import compiler/frontend/parser/expression/arithmetic_operator_parser_test
@@ -37,6 +38,7 @@ import compiler/semantic/analysis/expression/expected_type_analysis_test
 import compiler/semantic/analysis/expression/identifier_expression_analysis_test
 import compiler/semantic/analysis/expression/call_expression_analysis_test
 import compiler/semantic/analysis/expression/construction_expression_analysis_test
+import compiler/semantic/analysis/expression/field_access_expression_analysis_test
 import compiler/semantic/analysis/expression/unary_negation_analysis_test
 import compiler/semantic/analysis/expression/arithmetic_operator_analysis_test
 import compiler/semantic/analysis/expression/comparison_operator_analysis_test
@@ -44,6 +46,7 @@ import compiler/semantic/analysis/expression/boolean_operator_analysis_test
 import compiler/backend/nim/emitter/nim_emitter_test
 import compiler/backend/nim/emitter/expression/boolean_operator_emitter_test
 import compiler/backend/nim/emitter/expression/construction_expression_emitter_test
+import compiler/backend/nim/emitter/expression/field_access_expression_emitter_test
 import compiler/backend/nim/emitter/statement/conditional_statement_emitter_test
 import compiler/backend/nim/emitter/statement/while_statement_emitter_test
 import compiler/backend/nim/emitter/statement/for_statement_emitter_test
@@ -58,6 +61,7 @@ import features/expression/boolean_operator_variants_test
 import features/function_variants_test
 import features/classes/class_declaration_variants_test
 import features/classes/class_construction_variants_test
+import features/classes/class_field_access_variants_test
 import features/control_flow/conditional_variants_test
 import features/control_flow/else_if_variants_test
 import features/control_flow/while_variants_test

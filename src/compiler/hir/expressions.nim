@@ -33,6 +33,7 @@ type
     hekLocal,
     hekCall,
     hekConstruct,
+    hekFieldAccess,
     hekUnary,
     hekBinary
 
@@ -68,6 +69,9 @@ type
     of hekConstruct:
       constructedTypeName*: string
       fields*: seq[HirConstructionField]
+    of hekFieldAccess:
+      target*: HirExpr
+      sourceFieldName*: string
     of hekUnary:
       unaryOp*: HirUnaryOp
       operand*: HirExpr

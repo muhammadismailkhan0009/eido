@@ -11,6 +11,7 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string
 
 include expression/boolean_operators
 include expression/construction_expressions
+include expression/field_access_expressions
 
 ## Renders a resolved function call without deciding whether its result is used.
 ## Example: resolved `add(1, 2)` becomes `eido_fn_1_add(int64(1), int64(2))`.
@@ -66,6 +67,8 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     result = renderCall(expr.call)
   of hirExpressions.hekConstruct:
     result = renderConstruction(expr)
+  of hirExpressions.hekFieldAccess:
+    result = renderFieldAccess(expr)
   of hirExpressions.hekUnary:
     case expr.unaryOp
     of hirExpressions.huoNegate:

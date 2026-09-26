@@ -96,7 +96,6 @@ semantics are designed.
 
 Not yet included:
 
-- field access;
 - field mutation;
 - class-valued function parameters/results;
 - methods;

@@ -193,6 +193,7 @@ proc nextToken*(lexer: var Lexer): Token =
     of ';': tkSemicolon
     of ',': tkComma
     of ':': tkColon
+    of '.': tkDot
     of '=':
       if lexer.matchNext('='): tkEqualEqual else: tkEqual
     of '!':

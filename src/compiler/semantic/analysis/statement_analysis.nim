@@ -46,6 +46,13 @@ proc analyzeStmt*(
 
     let initializer = analyzeExpr(stmt.initializer, locals, functions, classes)
 
+    if initializer.typ.kind == etkClass and
+        stmt.initializer.kind != astExpressions.ekConstruct:
+      failAt(
+        stmt.initializer.span,
+        "class-valued binding requires explicit copy or ref"
+      )
+
     if stmt.initializer.kind == astExpressions.ekIdentifier:
       failAt(
         stmt.initializer.span,
@@ -79,13 +86,6 @@ proc analyzeStmt*(
     if target.kind != bkVariable:
       failAt(stmt.span, "parameter reassignment is not supported")
 
-    if target.typ.kind == etkClass and
-        stmt.assignedValue.kind == astExpressions.ekIdentifier:
-      failAt(
-        stmt.assignedValue.span,
-        "class identifier assignment requires explicit copy or ref"
-      )
-
     let value = analyzeExprExpected(
       stmt.assignedValue,
       target.typ,
@@ -93,6 +93,13 @@ proc analyzeStmt*(
       functions,
       classes
     )
+
+    if target.typ.kind == etkClass and
+        stmt.assignedValue.kind != astExpressions.ekConstruct:
+      failAt(
+        stmt.assignedValue.span,
+        "class-valued assignment requires explicit copy or ref"
+      )
 
     HirStmt(
       kind: hskAssign,

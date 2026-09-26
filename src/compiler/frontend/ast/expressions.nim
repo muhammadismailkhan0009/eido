@@ -30,6 +30,7 @@ type
     ekIdentifier,
     ekCall,
     ekConstruct,
+    ekFieldAccess,
     ekUnary,
     ekBinary
 
@@ -57,6 +58,9 @@ type
     of ekConstruct:
       typeName*: string
       fields*: seq[ConstructionField]
+    of ekFieldAccess:
+      target*: Expr
+      fieldName*: string
     of ekUnary:
       unaryOp*: UnaryOp
       operand*: Expr
