@@ -7,6 +7,7 @@ proc analyzeWhile(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
+  classes: ClassSymbols,
   functionResult: FunctionResult,
   loopDepth: int
 ): hirStatements.HirStmt =
@@ -14,13 +15,15 @@ proc analyzeWhile(
     stmt.whileCondition,
     etBool,
     locals,
-    functions
+    functions,
+    classes
   )
 
   let body = analyzeScopedStatementBlock(
     stmt.body,
     locals,
     functions,
+    classes,
     functionResult,
     loopDepth + 1
   )

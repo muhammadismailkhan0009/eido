@@ -7,12 +7,13 @@ proc analyzeExprExpected*(
   expr: astExpressions.Expr,
   expected: EidoType,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
   if expr.kind == astExpressions.ekInteger and expected.isIntegral:
     return analyzeIntegerAs(expr, expected)
 
-  let analyzed = analyzeExpr(expr, locals, functions)
+  let analyzed = analyzeExpr(expr, locals, functions, classes)
   if analyzed.typ != expected:
     failAt(
       expr.span,

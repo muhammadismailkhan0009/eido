@@ -7,6 +7,7 @@ import ../../hir/expressions as hirExpressions
 import ../../types/model
 import ../../types/function_result
 import ../symbols/functions
+import ../symbols/classes
 import ../symbols/scope
 
 ## Resolves names and types in an AST expression and produces HIR.
@@ -14,7 +15,8 @@ import ../symbols/scope
 proc analyzeExpr*(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr
 
 ## Analyzes an expression against an expected primitive type.
@@ -23,13 +25,15 @@ proc analyzeExprExpected*(
   expr: astExpressions.Expr,
   expected: EidoType,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr
 
 include expression/literal_expressions
 include expression/expected_types
 include expression/identifier_expressions
 include expression/call_expressions
+include expression/construction_expressions
 include expression/unary_negation
 include expression/arithmetic_operators
 include expression/comparison_operators
@@ -40,7 +44,8 @@ include expression/boolean_operators
 proc analyzeExpr*(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
   case expr.kind
   of astExpressions.ekInteger,
@@ -53,28 +58,31 @@ proc analyzeExpr*(
     analyzeIdentifier(expr, locals)
 
   of astExpressions.ekCall:
-    analyzeValueCall(expr, locals, functions)
+    analyzeValueCall(expr, locals, functions, classes)
+
+  of astExpressions.ekConstruct:
+    analyzeConstruction(expr, locals, functions, classes)
 
   of astExpressions.ekUnary:
     case expr.unaryOp
     of astExpressions.uoNegate:
-      analyzeUnaryNegation(expr, locals, functions)
+      analyzeUnaryNegation(expr, locals, functions, classes)
     of astExpressions.uoNot:
-      analyzeBooleanNot(expr, locals, functions)
+      analyzeBooleanNot(expr, locals, functions, classes)
 
   of astExpressions.ekBinary:
     case expr.op
     of astExpressions.boAnd, astExpressions.boOr:
-      analyzeBooleanBinary(expr, locals, functions)
+      analyzeBooleanBinary(expr, locals, functions, classes)
     of astExpressions.boEqual,
         astExpressions.boNotEqual,
         astExpressions.boLess,
         astExpressions.boLessEqual,
         astExpressions.boGreater,
         astExpressions.boGreaterEqual:
-      analyzeComparison(expr, locals, functions)
+      analyzeComparison(expr, locals, functions, classes)
     of astExpressions.boAdd,
         astExpressions.boSubtract,
         astExpressions.boMultiply,
         astExpressions.boDivide:
-      analyzeArithmetic(expr, locals, functions)
+      analyzeArithmetic(expr, locals, functions, classes)

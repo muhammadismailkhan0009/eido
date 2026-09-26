@@ -7,6 +7,17 @@ import ../semantic/symbols/ids
 import statements
 
 type
+  HirField* = object
+    span*: SourceSpan
+    sourceName*: string
+    typ*: EidoType
+
+  HirClass* = object
+    span*: SourceSpan
+    sourceName*: string
+    typ*: EidoType
+    fields*: seq[HirField]
+
   HirParameter* = object
     span*: SourceSpan
     localId*: LocalId

@@ -7,6 +7,7 @@ proc analyzeConditional(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
+  classes: ClassSymbols,
   functionResult: FunctionResult,
   loopDepth: int
 ): hirStatements.HirStmt =
@@ -14,13 +15,15 @@ proc analyzeConditional(
     stmt.condition,
     etBool,
     locals,
-    functions
+    functions,
+    classes
   )
 
   let thenBranch = analyzeScopedStatementBlock(
     stmt.thenBranch,
     locals,
     functions,
+    classes,
     functionResult,
     loopDepth
   )
@@ -29,6 +32,7 @@ proc analyzeConditional(
     stmt.elseBranch,
     locals,
     functions,
+    classes,
     functionResult,
     loopDepth
   )

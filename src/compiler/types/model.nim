@@ -1,37 +1,80 @@
-## Defines Eido primitive semantic types independently of source spelling or Nim.
-## Example: source `Int` resolves to one 64-bit integer semantic type; there is no separate Long type.
+## Defines Eido semantic types independently of source spelling or backend representation.
+## Primitive constants preserve the compact existing API while nominal classes carry their source-level type identity.
 
 type
-  EidoType* = enum
-    etBool,
-    etByte,
-    etShort,
-    etInt,
-    etFloat,
-    etChar
+  PrimitiveType* = enum
+    ptBool,
+    ptByte,
+    ptShort,
+    ptInt,
+    ptFloat,
+    ptChar
+
+  EidoTypeKind* = enum
+    etkPrimitive,
+    etkClass
+
+  EidoType* = object
+    case kind*: EidoTypeKind
+    of etkPrimitive:
+      primitive*: PrimitiveType
+    of etkClass:
+      className*: string
+
+const
+  etBool* = EidoType(kind: etkPrimitive, primitive: ptBool)
+  etByte* = EidoType(kind: etkPrimitive, primitive: ptByte)
+  etShort* = EidoType(kind: etkPrimitive, primitive: ptShort)
+  etInt* = EidoType(kind: etkPrimitive, primitive: ptInt)
+  etFloat* = EidoType(kind: etkPrimitive, primitive: ptFloat)
+  etChar* = EidoType(kind: etkPrimitive, primitive: ptChar)
+
+## Creates a nominal class type without choosing value/reference/heap semantics.
+## Example: classType("Employee") identifies the declared Employee type.
+proc classType*(name: string): EidoType =
+  EidoType(kind: etkClass, className: name)
+
+## Compares semantic types by primitive identity or nominal class identity.
+proc `==`*(left, right: EidoType): bool =
+  if left.kind != right.kind:
+    return false
+
+  case left.kind
+  of etkPrimitive:
+    left.primitive == right.primitive
+  of etkClass:
+    left.className == right.className
 
 ## Returns the human-readable Eido type name.
-## Example: `etFloat` is displayed as `Float`.
+## Example: etFloat displays as Float while classType("Employee") displays as Employee.
 proc displayName*(typ: EidoType): string =
-  case typ
-  of etBool: "Bool"
-  of etByte: "Byte"
-  of etShort: "Short"
-  of etInt: "Int"
-  of etFloat: "Float"
-  of etChar: "Char"
+  case typ.kind
+  of etkClass:
+    typ.className
+  of etkPrimitive:
+    case typ.primitive
+    of ptBool: "Bool"
+    of ptByte: "Byte"
+    of ptShort: "Short"
+    of ptInt: "Int"
+    of ptFloat: "Float"
+    of ptChar: "Char"
 
-## Reports whether a primitive is an integer-number type.
-## Example: Byte, Short, and Int are integral, while Float is not.
+## Reports whether a semantic type is primitive.
+proc isPrimitive*(typ: EidoType): bool =
+  typ.kind == etkPrimitive
+
+## Reports whether a type is an integer-number primitive.
 proc isIntegral*(typ: EidoType): bool =
-  typ in {etByte, etShort, etInt}
+  typ.kind == etkPrimitive and
+    typ.primitive in {ptByte, ptShort, ptInt}
 
-## Reports whether a primitive supports the currently implemented arithmetic operators.
-## Example: Int and Float support arithmetic; Bool and Char do not.
+## Reports whether a type supports the currently implemented arithmetic operators.
 proc isArithmetic*(typ: EidoType): bool =
-  typ in {etInt, etFloat}
+  typ.kind == etkPrimitive and
+    typ.primitive in {ptInt, ptFloat}
 
-## Reports whether a primitive supports ordered numeric comparison.
-## Example: Byte, Short, Int, and Float are numeric; Bool and Char are not.
+## Reports whether a type supports ordered numeric comparison.
 proc isNumeric*(typ: EidoType): bool =
-  typ in {etByte, etShort, etInt, etFloat}
+  typ.kind == etkPrimitive and
+    typ.primitive in {ptByte, ptShort, ptInt, ptFloat}

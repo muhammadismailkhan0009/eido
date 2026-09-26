@@ -7,6 +7,7 @@ proc analyzeScopedStatementBlock(
   statements: seq[astStatements.Stmt],
   parentLocals: var LocalScope,
   functions: FunctionSymbols,
+  classes: ClassSymbols,
   functionResult: FunctionResult,
   loopDepth: int
 ): seq[hirStatements.HirStmt] =
@@ -17,6 +18,7 @@ proc analyzeScopedStatementBlock(
       statement,
       blockLocals,
       functions,
+      classes,
       functionResult,
       loopDepth
     )

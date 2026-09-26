@@ -82,6 +82,17 @@ suite "Lexer scanner":
     check tokens[6].kind == tkGreaterEqual
     check tokens[7].kind == tkEof
 
+  test "tokenizes construction field separator":
+    # Given
+    let source = ":"
+
+    # When
+    let tokens = lexAll(source)
+
+    # Then
+    check tokens[0].kind == tkColon
+    check tokens[1].kind == tkEof
+
   test "tokenizes all three grouping delimiter pairs":
     # Given
     let source = "()[]{}"

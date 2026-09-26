@@ -10,6 +10,7 @@ import names
 proc renderExpr*(expr: hirExpressions.HirExpr): string
 
 include expression/boolean_operators
+include expression/construction_expressions
 
 ## Renders a resolved function call without deciding whether its result is used.
 ## Example: resolved `add(1, 2)` becomes `eido_fn_1_add(int64(1), int64(2))`.
@@ -24,12 +25,21 @@ proc renderCall*(call: hirExpressions.HirCall): string =
 ## Renders a typed integral literal with its Nim representation.
 ## Example: Eido Byte literal value 7 becomes `int8(7)`, while ordinary Int becomes `int64(...)`.
 proc renderIntegerLiteral(expr: hirExpressions.HirExpr): string =
-  case expr.typ
-  of etByte: "int8(" & $expr.intValue & ")"
-  of etShort: "int16(" & $expr.intValue & ")"
-  of etInt: "int64(" & $expr.intValue & ")"
+  if expr.typ.kind != etkPrimitive:
+    raise newException(
+      ValueError,
+      "backend invariant: integer HIR has non-integral type"
+    )
+
+  case expr.typ.primitive
+  of ptByte: "int8(" & $expr.intValue & ")"
+  of ptShort: "int16(" & $expr.intValue & ")"
+  of ptInt: "int64(" & $expr.intValue & ")"
   else:
-    raise newException(ValueError, "backend invariant: integer HIR has non-integral type")
+    raise newException(
+      ValueError,
+      "backend invariant: integer HIR has non-integral type"
+    )
 
 ## Renders an Eido Float literal as 64-bit Nim floating point.
 ## Example: Eido `1.5` becomes `float64(1.5)`.
@@ -54,6 +64,8 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     result = localName(expr.localId, expr.sourceName)
   of hirExpressions.hekCall:
     result = renderCall(expr.call)
+  of hirExpressions.hekConstruct:
+    result = renderConstruction(expr)
   of hirExpressions.hekUnary:
     case expr.unaryOp
     of hirExpressions.huoNegate:

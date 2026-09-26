@@ -13,6 +13,7 @@ They complement `tests/compiler/`, which tests lexer/parser/semantic/backend res
 Files are broad navigation boundaries; suites inside them name the smallest useful semantic group.
 
 - `expression/` — expression-family catalogs split into arithmetic, grouping, unary negation, comparisons, and Boolean operators; start with `expression/README.md` for the coverage matrix and known gaps
+- `classes/` — nominal class declarations, class-type resolution, and named construction; start with `classes/README.md`
 - `control_flow/` — conditionals, `else if` chains, `while`/classic `for` loops, `break`/`continue`, structured scope isolation, and return-path coverage; start with `control_flow/README.md`
 - `function_variants_test.nim` — signature cardinality, zero-result returns, call resolution/arity, and result contracts
 - `primitive_variants_test.nim` — supported primitive values, Byte bounds, numeric suffix rejection, and removed numeric type names

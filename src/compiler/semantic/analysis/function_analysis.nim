@@ -9,6 +9,7 @@ import ../../types/function_result
 import type_resolution
 import ../symbols/model
 import ../symbols/functions
+import ../symbols/classes
 import ../symbols/scope
 import statement_analysis
 
@@ -16,7 +17,8 @@ import statement_analysis
 proc analyzeFunction*(
   fn: FunctionDecl,
   symbol: FunctionSymbol,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirDeclarations.HirFunction =
   var locals = initLocalScope()
   var parameters: seq[HirParameter]
@@ -45,7 +47,13 @@ proc analyzeFunction*(
 
   var body: seq[HirStmt]
   for stmt in fn.body:
-    body.add analyzeStmt(stmt, locals, functions, symbol.result)
+    body.add analyzeStmt(
+      stmt,
+      locals,
+      functions,
+      classes,
+      symbol.result
+    )
 
   if symbol.result.kind == frSingle:
     if not blockAlwaysReturns(body):

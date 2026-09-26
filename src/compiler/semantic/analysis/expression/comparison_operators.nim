@@ -6,23 +6,24 @@
 proc analyzeComparisonOperands(
   leftExpr, rightExpr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): tuple[left, right: hirExpressions.HirExpr] =
   if leftExpr.kind == astExpressions.ekInteger and
       rightExpr.kind != astExpressions.ekInteger:
-    let right = analyzeExpr(rightExpr, locals, functions)
+    let right = analyzeExpr(rightExpr, locals, functions, classes)
     if right.typ.isIntegral:
       return (analyzeIntegerAs(leftExpr, right.typ), right)
 
   if rightExpr.kind == astExpressions.ekInteger and
       leftExpr.kind != astExpressions.ekInteger:
-    let left = analyzeExpr(leftExpr, locals, functions)
+    let left = analyzeExpr(leftExpr, locals, functions, classes)
     if left.typ.isIntegral:
       return (left, analyzeIntegerAs(rightExpr, left.typ))
 
   (
-    analyzeExpr(leftExpr, locals, functions),
-    analyzeExpr(rightExpr, locals, functions)
+    analyzeExpr(leftExpr, locals, functions, classes),
+    analyzeExpr(rightExpr, locals, functions, classes)
   )
 
 ## Analyzes one equality or ordered-comparison expression.
@@ -30,15 +31,18 @@ proc analyzeComparisonOperands(
 proc analyzeComparison(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
   let operands = analyzeComparisonOperands(
-    expr.left, expr.right, locals, functions
+    expr.left, expr.right, locals, functions, classes
   )
   let left = operands.left
   let right = operands.right
 
-  if left.typ != right.typ:
+  if left.typ != right.typ or
+      not left.typ.isPrimitive or
+      not right.typ.isPrimitive:
     failAt(
       expr.span,
       "comparison operands must have the same primitive type"

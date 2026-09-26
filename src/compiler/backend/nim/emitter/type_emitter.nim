@@ -1,15 +1,19 @@
-## Maps Eido primitive semantic types to Nim representations.
-## Example: Eido `Int` emits `int64` and Eido `Float` emits `float64`.
+## Maps Eido semantic types to backend Nim type spellings.
+## Class lowering remains representation-neutral semantically even though the backend has a stable generated name.
 
 import ../../../types/model
+import names
 
-## Converts an Eido primitive type to Nim source syntax.
-## Example: `etFloat` renders as `float64`.
+## Converts one Eido semantic type to Nim source syntax.
 proc renderType*(typ: EidoType): string =
-  case typ
-  of etBool: "bool"
-  of etByte: "int8"
-  of etShort: "int16"
-  of etInt: "int64"
-  of etFloat: "float64"
-  of etChar: "uint16"
+  case typ.kind
+  of etkClass:
+    className(typ.className)
+  of etkPrimitive:
+    case typ.primitive
+    of ptBool: "bool"
+    of ptByte: "int8"
+    of ptShort: "int16"
+    of ptInt: "int64"
+    of ptFloat: "float64"
+    of ptChar: "uint16"

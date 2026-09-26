@@ -29,8 +29,14 @@ type
     ekChar,
     ekIdentifier,
     ekCall,
+    ekConstruct,
     ekUnary,
     ekBinary
+
+  ConstructionField* = object
+    span*: SourceSpan
+    name*: string
+    value*: Expr
 
   Expr* = ref object
     span*: SourceSpan
@@ -48,6 +54,9 @@ type
     of ekCall:
       callee*: string
       arguments*: seq[Expr]
+    of ekConstruct:
+      typeName*: string
+      fields*: seq[ConstructionField]
     of ekUnary:
       unaryOp*: UnaryOp
       operand*: Expr

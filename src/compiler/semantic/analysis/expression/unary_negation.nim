@@ -6,10 +6,11 @@
 proc analyzeUnaryNegation(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
-  let operand = analyzeExpr(expr.operand, locals, functions)
-  if operand.typ notin {etInt, etFloat}:
+  let operand = analyzeExpr(expr.operand, locals, functions, classes)
+  if operand.typ != etInt and operand.typ != etFloat:
     failAt(
       expr.span,
       "unary '-' requires Int or Float but got " & operand.typ.displayName

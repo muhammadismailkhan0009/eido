@@ -23,3 +23,14 @@ type
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
     span*: SourceSpan
+
+  ClassFieldSymbol* = object
+    name*: string
+    typ*: EidoType
+    span*: SourceSpan
+
+  ClassSymbol* = object
+    name*: string
+    typ*: EidoType
+    fields*: seq[ClassFieldSymbol]
+    span*: SourceSpan

@@ -1,4 +1,4 @@
-## Parses the top-level sequence of functions into one program AST. Example: `main` plus `add` becomes a program containing two functions.
+## Parses top-level class and function declarations into one program AST.
 
 import ../../diagnostics/errors
 import ../lexer/token
@@ -6,12 +6,20 @@ import ../ast/program
 import core
 import declaration_parser
 
-## Parses all top-level functions into one program AST. Example: source containing `main` and `add` yields two function declarations.
+## Parses all supported top-level declarations.
 proc parseProgram*(tokens: seq[Token]): Program =
   var parser = initParser(tokens)
 
   while not parser.check(tkEof):
-    result.functions.add parser.parseFunction()
+    if parser.check(tkClass):
+      result.classes.add parser.parseClass()
+    elif parser.check(tkFunction):
+      result.functions.add parser.parseFunction()
+    else:
+      failAt(
+        parser.peek.span,
+        "expected top-level class or function declaration"
+      )
 
-  if result.functions.len == 0:
-    failAt(parser.peek.span, "expected at least one function")
+  if result.classes.len == 0 and result.functions.len == 0:
+    failAt(parser.peek.span, "expected at least one declaration")

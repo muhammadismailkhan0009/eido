@@ -32,8 +32,14 @@ type
     hekChar,
     hekLocal,
     hekCall,
+    hekConstruct,
     hekUnary,
     hekBinary
+
+  HirConstructionField* = object
+    span*: SourceSpan
+    sourceName*: string
+    value*: HirExpr
 
   HirCall* = ref object
     span*: SourceSpan
@@ -59,6 +65,9 @@ type
       sourceName*: string
     of hekCall:
       call*: HirCall
+    of hekConstruct:
+      constructedTypeName*: string
+      fields*: seq[HirConstructionField]
     of hekUnary:
       unaryOp*: HirUnaryOp
       operand*: HirExpr

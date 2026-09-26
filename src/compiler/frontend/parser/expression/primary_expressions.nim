@@ -12,6 +12,8 @@ proc parsePrimary(parser: var Parser): Expr =
     let token = parser.advance()
     if parser.check(tkLParen):
       return parser.parseCall(token)
+    if parser.check(tkLBrace):
+      return parser.parseConstruction(token)
     return Expr(
       kind: ekIdentifier,
       span: token.span,

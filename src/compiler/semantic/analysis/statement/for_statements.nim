@@ -7,6 +7,7 @@ proc analyzeFor(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
+  classes: ClassSymbols,
   functionResult: FunctionResult,
   loopDepth: int
 ): hirStatements.HirStmt =
@@ -16,6 +17,7 @@ proc analyzeFor(
     stmt.forInitializer,
     forLocals,
     functions,
+    classes,
     functionResult,
     loopDepth
   )
@@ -24,13 +26,15 @@ proc analyzeFor(
     stmt.forCondition,
     etBool,
     forLocals,
-    functions
+    functions,
+    classes
   )
 
   let update = analyzeStmt(
     stmt.forUpdate,
     forLocals,
     functions,
+    classes,
     functionResult,
     loopDepth + 1
   )
@@ -39,6 +43,7 @@ proc analyzeFor(
     stmt.forBody,
     forLocals,
     functions,
+    classes,
     functionResult,
     loopDepth + 1
   )

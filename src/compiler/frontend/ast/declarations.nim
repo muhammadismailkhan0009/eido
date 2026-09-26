@@ -13,6 +13,16 @@ type
     name*: string
     typeRef*: TypeRef
 
+  FieldDecl* = object
+    span*: SourceSpan
+    name*: string
+    typeRef*: TypeRef
+
+  ClassDecl* = object
+    span*: SourceSpan
+    name*: string
+    fields*: seq[FieldDecl]
+
   FunctionResultRefKind* = enum
     frrNone,
     frrSingle

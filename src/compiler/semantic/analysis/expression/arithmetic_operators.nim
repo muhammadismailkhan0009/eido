@@ -6,10 +6,11 @@
 proc analyzeArithmetic(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
-  let left = analyzeExpr(expr.left, locals, functions)
-  let right = analyzeExpr(expr.right, locals, functions)
+  let left = analyzeExpr(expr.left, locals, functions, classes)
+  let right = analyzeExpr(expr.right, locals, functions, classes)
 
   if left.typ != right.typ or not left.typ.isArithmetic:
     failAt(

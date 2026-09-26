@@ -9,6 +9,7 @@ import ../../types/model
 import ../../types/function_result
 import ../symbols/model
 import ../symbols/functions
+import ../symbols/classes
 import ../symbols/scope
 import expression_analysis
 
@@ -18,6 +19,7 @@ proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
+  classes: ClassSymbols,
   functionResult: FunctionResult,
   loopDepth: int = 0
 ): hirStatements.HirStmt
@@ -33,6 +35,7 @@ proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
+  classes: ClassSymbols,
   functionResult: FunctionResult,
   loopDepth: int = 0
 ): hirStatements.HirStmt =
@@ -41,7 +44,7 @@ proc analyzeStmt*(
     if locals.contains(stmt.name):
       failAt(stmt.span, "duplicate local '" & stmt.name & "'")
 
-    let initializer = analyzeExpr(stmt.initializer, locals, functions)
+    let initializer = analyzeExpr(stmt.initializer, locals, functions, classes)
 
     if stmt.initializer.kind == astExpressions.ekIdentifier:
       failAt(
@@ -76,11 +79,19 @@ proc analyzeStmt*(
     if target.kind != bkVariable:
       failAt(stmt.span, "parameter reassignment is not supported")
 
+    if target.typ.kind == etkClass and
+        stmt.assignedValue.kind == astExpressions.ekIdentifier:
+      failAt(
+        stmt.assignedValue.span,
+        "class identifier assignment requires explicit copy or ref"
+      )
+
     let value = analyzeExprExpected(
       stmt.assignedValue,
       target.typ,
       locals,
-      functions
+      functions,
+      classes
     )
 
     HirStmt(
@@ -95,7 +106,7 @@ proc analyzeStmt*(
     HirStmt(
       kind: hskCall,
       span: stmt.span,
-      call: analyzeCall(stmt.call, locals, functions)
+      call: analyzeCall(stmt.call, locals, functions, classes)
     )
 
   of astStatements.skReturn:
@@ -122,7 +133,8 @@ proc analyzeStmt*(
           stmt.value,
           functionResult.typ,
           locals,
-          functions
+          functions,
+          classes
         )
       )
 
@@ -131,6 +143,7 @@ proc analyzeStmt*(
       stmt,
       locals,
       functions,
+      classes,
       functionResult,
       loopDepth
     )
@@ -140,6 +153,7 @@ proc analyzeStmt*(
       stmt,
       locals,
       functions,
+      classes,
       functionResult,
       loopDepth
     )
@@ -149,6 +163,7 @@ proc analyzeStmt*(
       stmt,
       locals,
       functions,
+      classes,
       functionResult,
       loopDepth
     )

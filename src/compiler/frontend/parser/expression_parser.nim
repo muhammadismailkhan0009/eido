@@ -24,6 +24,7 @@ proc binarySpan(left, right: Expr): SourceSpan =
 
 include expression/literal_expressions
 include expression/call_expressions
+include expression/construction_expressions
 include expression/grouping_expressions
 include expression/primary_expressions
 include expression/unary_negation

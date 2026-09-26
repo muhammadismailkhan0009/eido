@@ -8,10 +8,18 @@ import ../ast/statements
 import core
 import statement_parser
 
-## Parses source-level primitive type syntax. Example: parameter type `Float` becomes a `TypeRef` whose name is `Float`.
-proc parseTypeRef(parser: var Parser): TypeRef =
+## Parses source-level primitive type syntax used by the currently primitive-only function signatures.
+proc parsePrimitiveTypeRef(parser: var Parser): TypeRef =
   let typeToken = parser.consume(tkPrimitiveType, "expected primitive type")
   TypeRef(span: typeToken.span, name: typeToken.lexeme)
+
+## Parses a field type, which may be primitive or a nominal class name.
+proc parseFieldTypeRef(parser: var Parser): TypeRef =
+  if parser.check(tkPrimitiveType) or parser.check(tkIdentifier):
+    let typeToken = parser.advance()
+    return TypeRef(span: typeToken.span, name: typeToken.lexeme)
+
+  failAt(parser.peek.span, "expected field type")
 
 ## Parses comma-separated Java-style typed parameters with no fixed count. Example: `Int a, Bool b, Float c` becomes three parameter AST nodes.
 proc parseParameters(parser: var Parser): seq[Parameter] =
@@ -19,7 +27,7 @@ proc parseParameters(parser: var Parser): seq[Parameter] =
     return
 
   while true:
-    let typeRef = parser.parseTypeRef()
+    let typeRef = parser.parsePrimitiveTypeRef()
     let nameToken = parser.consume(tkIdentifier, "expected parameter name")
     result.add Parameter(
       span: SourceSpan(
@@ -44,7 +52,7 @@ proc parseFunctionResult(parser: var Parser): FunctionResultRef =
   discard parser.advance()
   FunctionResultRef(
     kind: frrSingle,
-    typeRef: parser.parseTypeRef()
+    typeRef: parser.parsePrimitiveTypeRef()
   )
 
 ## Parses one complete function declaration. Example: `function add(Int a, Int b) returns Int { return a + b; }` becomes a `FunctionDecl`.
@@ -79,3 +87,5 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
     result: functionResult,
     body: body
   )
+
+include declaration/class_declarations

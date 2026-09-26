@@ -3,9 +3,10 @@
 proc analyzeBooleanNot(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
-  let operand = analyzeExpr(expr.operand, locals, functions)
+  let operand = analyzeExpr(expr.operand, locals, functions, classes)
   if operand.typ != etBool:
     failAt(
       expr.span,
@@ -25,10 +26,11 @@ proc analyzeBooleanNot(
 proc analyzeBooleanBinary(
   expr: astExpressions.Expr,
   locals: LocalScope,
-  functions: FunctionSymbols
+  functions: FunctionSymbols,
+  classes: ClassSymbols
 ): hirExpressions.HirExpr =
-  let left = analyzeExpr(expr.left, locals, functions)
-  let right = analyzeExpr(expr.right, locals, functions)
+  let left = analyzeExpr(expr.left, locals, functions, classes)
+  let right = analyzeExpr(expr.right, locals, functions, classes)
 
   if left.typ != etBool or right.typ != etBool:
     failAt(

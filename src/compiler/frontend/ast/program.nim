@@ -4,4 +4,5 @@ import declarations
 
 type
   Program* = object
+    classes*: seq[ClassDecl]
     functions*: seq[FunctionDecl]

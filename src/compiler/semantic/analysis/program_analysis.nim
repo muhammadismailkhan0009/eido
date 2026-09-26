@@ -1,4 +1,5 @@
-## Runs program-level semantic analysis in passes: collect signatures first, then analyze bodies. Example: `main` may call a later-declared function with any number of primitive parameters.
+## Runs program-level semantic analysis in declaration passes.
+## Class names are collected before class fields are resolved; function signatures are collected before bodies.
 
 import ../../diagnostics/errors
 import ../../frontend/ast/program as astProgram
@@ -8,11 +9,43 @@ import ../../types/model
 import ../symbols/ids
 import type_resolution
 import ../symbols/model
+import ../symbols/classes
 import ../symbols/functions
+import class_analysis
 import function_analysis
 
-## Collects every function signature, validates zero-argument `main`, then analyzes all bodies. Example: a 12-parameter function is fully registered before any call to it is checked.
+## Collects nominal classes and function signatures before analyzing their contents.
 proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
+  var classes = initClassSymbols()
+
+  # Pass 1: establish nominal class identities so fields may reference later classes.
+  for sourceClass in program.classes:
+    if classes.contains(sourceClass.name):
+      failAt(sourceClass.span, "duplicate class '" & sourceClass.name & "'")
+
+    classes.add ClassSymbol(
+      name: sourceClass.name,
+      typ: classType(sourceClass.name),
+      fields: @[],
+      span: sourceClass.span
+    )
+
+  # Pass 2: resolve field types against the complete class registry.
+  var analyzedClasses: seq[HirClass]
+  for sourceClass in program.classes:
+    let analyzedClass = analyzeClass(sourceClass, classes)
+    analyzedClasses.add analyzedClass
+
+    var classSymbol = classes.get(sourceClass.name)
+    for field in analyzedClass.fields:
+      classSymbol.fields.add ClassFieldSymbol(
+        name: field.sourceName,
+        typ: field.typ,
+        span: field.span
+      )
+    classes.add classSymbol
+
+  # Existing function-signature collection remains primitive-only for this class slice.
   var functions = initFunctionSymbols()
   var mainFound = false
   var mainId = FunctionId(-1)
@@ -49,10 +82,12 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
     analyzedFunctions.add analyzeFunction(
       fn,
       functions.get(fn.name),
-      functions
+      functions,
+      classes
     )
 
   hirProgram.HirProgram(
+    classes: analyzedClasses,
     functions: analyzedFunctions,
     mainFunctionId: mainId
   )

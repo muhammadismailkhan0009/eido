@@ -48,6 +48,10 @@ tests/
       unary_negation_variants_test.nim
       comparison_variants_test.nim
       boolean_operator_variants_test.nim
+    classes/
+      README.md
+      class_declaration_variants_test.nim
+      class_construction_variants_test.nim
     control_flow/
       README.md
       conditional_variants_test.nim

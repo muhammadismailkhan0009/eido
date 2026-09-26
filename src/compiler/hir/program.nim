@@ -5,5 +5,6 @@ import declarations
 
 type
   HirProgram* = object
+    classes*: seq[HirClass]
     functions*: seq[HirFunction]
     mainFunctionId*: FunctionId

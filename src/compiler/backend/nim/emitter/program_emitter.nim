@@ -4,10 +4,13 @@ import ../../../hir/program as hirProgram
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import names
+import class_emitter
 import function_emitter
 
 ## Renders the full HIR program to compilable Nim source. Example: a zero-result Eido `main` is called directly, while a one-result `main` is echoed by the development harness.
 proc emitNim*(program: hirProgram.HirProgram): string =
+  result.add renderClasses(program.classes)
+
   for fn in program.functions:
     result.add renderSignature(fn) & "\n"
 

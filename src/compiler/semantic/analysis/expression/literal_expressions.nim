@@ -4,12 +4,15 @@
 ## Checks whether an integer literal fits the requested integral primitive.
 ## Example: 127 fits Byte; Int accepts the full parsed signed 64-bit range.
 proc integerFits(value: int64, typ: EidoType): bool =
-  case typ
-  of etByte:
+  if typ.kind != etkPrimitive:
+    return false
+
+  case typ.primitive
+  of ptByte:
     value >= -128'i64 and value <= 127'i64
-  of etShort:
+  of ptShort:
     value >= -32768'i64 and value <= 32767'i64
-  of etInt:
+  of ptInt:
     true
   else:
     false
