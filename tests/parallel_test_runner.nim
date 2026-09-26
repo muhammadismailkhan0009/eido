@@ -26,7 +26,7 @@ proc runTests() =
   if detectedJobs <= 0:
     detectedJobs = 1
 
-  var jobs = max(1, detectedJobs - 4)
+  var jobs = max(1, detectedJobs - 2)
   let jobsOverride = getEnv("EIDO_TEST_JOBS")
   if jobsOverride.len > 0:
     try:

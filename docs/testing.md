@@ -53,6 +53,7 @@ tests/
       conditional_variants_test.nim
       else_if_variants_test.nim
       while_variants_test.nim
+      for_variants_test.nim
       loop_control_variants_test.nim
     function_variants_test.nim
     primitive_variants_test.nim
@@ -144,7 +145,7 @@ The canonical test task is parallel and CPU-adaptive:
 6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
 7. Successful child output is suppressed; failed child output is replayed with its selector.
 
-Worker count defaults to `max(1, countProcessors() - 4)` so two logical cores remain free for the OS and other work. Override it when needed:
+Worker count defaults to `max(1, countProcessors() - 2)` so two logical cores remain free for the OS and other work. Override it when needed:
 
 ```text
 EIDO_TEST_JOBS=4 nimble test

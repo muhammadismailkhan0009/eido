@@ -25,6 +25,7 @@ proc analyzeStmt*(
 include statement/scoped_blocks
 include statement/conditional_statements
 include statement/while_statements
+include statement/for_statements
 include statement/loop_control_statements
 
 ## Checks one AST statement and lowers it to HIR. Example: `b = a;` verifies `b` exists, checks types, and stores both bindings by semantic ID.
@@ -136,6 +137,15 @@ proc analyzeStmt*(
 
   of astStatements.skWhile:
     analyzeWhile(
+      stmt,
+      locals,
+      functions,
+      functionResult,
+      loopDepth
+    )
+
+  of astStatements.skFor:
+    analyzeFor(
       stmt,
       locals,
       functions,

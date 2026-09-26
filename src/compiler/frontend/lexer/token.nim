@@ -18,6 +18,7 @@ type
     tkIf,
     tkElse,
     tkWhile,
+    tkFor,
     tkBreak,
     tkContinue,
     tkNot,

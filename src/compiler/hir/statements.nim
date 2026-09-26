@@ -13,6 +13,7 @@ type
     hskReturn,
     hskIf,
     hskWhile,
+    hskFor,
     hskBreak,
     hskContinue
 
@@ -39,5 +40,10 @@ type
     of hskWhile:
       whileCondition*: HirExpr
       body*: seq[HirStmt]
+    of hskFor:
+      forInitializer*: HirStmt
+      forCondition*: HirExpr
+      forUpdate*: HirStmt
+      forBody*: seq[HirStmt]
     of hskBreak, hskContinue:
       discard

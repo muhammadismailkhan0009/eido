@@ -22,6 +22,7 @@ proc renderStmtAt*(
 
 include statement/conditional_statements
 include statement/while_statements
+include statement/for_statements
 include statement/loop_control_statements
 
 ## Renders one HIR statement at an explicit indentation level.
@@ -59,6 +60,9 @@ proc renderStmtAt*(
 
   of hirStatements.hskWhile:
     renderWhile(stmt, indent)
+
+  of hirStatements.hskFor:
+    renderFor(stmt, indent)
 
   of hirStatements.hskBreak, hirStatements.hskContinue:
     renderLoopControl(stmt, indent)

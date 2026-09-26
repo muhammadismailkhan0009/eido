@@ -43,6 +43,19 @@ branch locals.
 - loop-local scope isolation
 - conservative return coverage
 
+## For loops
+
+`for_variants_test.nim` covers:
+
+- initializer / condition / body / update execution
+- zero iterations when the initial condition is false
+- update-aware `continue;`
+- early exit with `break;`
+- nearest-loop targeting in nested for loops
+- initializer scope isolation
+- Bool-only conditions
+- mandatory header parentheses
+
 ## Loop control
 
 `loop_control_variants_test.nim` covers:

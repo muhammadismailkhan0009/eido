@@ -11,6 +11,7 @@ type
     skReturn,
     skIf,
     skWhile,
+    skFor,
     skBreak,
     skContinue
 
@@ -34,5 +35,10 @@ type
     of skWhile:
       whileCondition*: Expr
       body*: seq[Stmt]
+    of skFor:
+      forInitializer*: Stmt
+      forCondition*: Expr
+      forUpdate*: Stmt
+      forBody*: seq[Stmt]
     of skBreak, skContinue:
       discard

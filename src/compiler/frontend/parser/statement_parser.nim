@@ -105,6 +105,7 @@ proc parseReturnStmt*(parser: var Parser): Stmt =
 include statement/braced_blocks
 include statement/conditional_statements
 include statement/while_statements
+include statement/for_statements
 include statement/loop_control_statements
 
 ## Parses one statement by dispatching to its semantic statement family.
@@ -122,6 +123,9 @@ proc parseStatement*(parser: var Parser): Stmt =
   if parser.check(tkWhile):
     return parser.parseWhileStmt()
 
+  if parser.check(tkFor):
+    return parser.parseForStmt()
+
   if parser.check(tkBreak):
     return parser.parseBreakStmt()
 
@@ -136,5 +140,5 @@ proc parseStatement*(parser: var Parser): Stmt =
 
   failAt(
     parser.peek.span,
-    "expected variable declaration, assignment, function call, return, if, while, break, continue, or '}'"
+    "expected variable declaration, assignment, function call, return, if, while, for, break, continue, or '}'"
   )

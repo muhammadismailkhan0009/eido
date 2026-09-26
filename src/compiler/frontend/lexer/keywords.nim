@@ -5,6 +5,7 @@ import token
 include keywords/boolean_operators
 include keywords/conditional_statements
 include keywords/while_statements
+include keywords/for_statements
 include keywords/loop_control_statements
 
 ## Maps identifier text to its token kind.
@@ -21,6 +22,10 @@ proc keywordKind*(text: string): TokenKind =
   let whileKeyword = whileKeywordKind(text)
   if whileKeyword != tkIdentifier:
     return whileKeyword
+
+  let forKeyword = forKeywordKind(text)
+  if forKeyword != tkIdentifier:
+    return forKeyword
 
   let loopControlKeyword = loopControlKeywordKind(text)
   if loopControlKeyword != tkIdentifier:
