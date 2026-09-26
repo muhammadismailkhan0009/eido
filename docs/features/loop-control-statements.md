@@ -26,7 +26,7 @@ Both statements require a trailing semicolon.
 var count = 0;
 
 while (count < 10) {
-    count = count + 1;
+    set count = count + 1;
 
     if (count == 3) {
         break;
@@ -48,13 +48,13 @@ var count = 0;
 var total = 0;
 
 while (count < 5) {
-    count = count + 1;
+    set count = count + 1;
 
     if (count == 3) {
         continue;
     }
 
-    total = total + count;
+    set total = total + count;
 }
 ```
 

@@ -76,12 +76,12 @@ suite "Local binding analysis":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "allows reassignment of an existing primitive local":
+  test "allows set mutation of an existing primitive local":
     # Given
     let source = """
       function main() returns Int {
         var value = 5;
-        value = value + 1;
+        set value = value + 1;
         return value;
       }
     """
@@ -92,13 +92,13 @@ suite "Local binding analysis":
     # Then
     check program.functions[0].body[1].kind == hskAssign
 
-  test "allows assignment from another existing primitive local":
+  test "allows set from another existing primitive local":
     # Given
     let source = """
       function main() returns Int {
         var a = 5;
         var b = 10;
-        b = a;
+        set b = a;
         return b;
       }
     """
@@ -109,11 +109,11 @@ suite "Local binding analysis":
     # Then
     check program.functions[0].body[2].kind == hskAssign
 
-  test "rejects an unknown assignment target":
+  test "rejects an unknown set target":
     # Given
     let source = """
       function main() returns Int {
-        missing = 5;
+        set missing = 5;
         return 0;
       }
     """
@@ -122,12 +122,12 @@ suite "Local binding analysis":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "rejects an unknown identifier on assignment right hand side":
+  test "rejects an unknown identifier on set right hand side":
     # Given
     let source = """
       function main() returns Int {
         var value = 5;
-        value = missing + 1;
+        set value = missing + 1;
         return value;
       }
     """
@@ -150,11 +150,11 @@ suite "Local binding analysis":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "rejects parameter reassignment":
+  test "rejects parameter mutation with set":
     # Given
     let source = """
       function change(Int value) returns Int {
-        value = 20;
+        set value = 20;
         return value;
       }
       function main() returns Int { return change(10); }

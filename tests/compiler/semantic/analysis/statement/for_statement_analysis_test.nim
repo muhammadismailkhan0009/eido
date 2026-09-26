@@ -10,8 +10,8 @@ suite "For statement semantics":
     let source = """
       function main() returns Int {
         var total = 0;
-        for (var i = 0; i < 3; i = i + 1) {
-          total = total + i;
+        for (var i = 0; i < 3; set i = i + 1) {
+          set total = total + i;
         }
         return total;
       }
@@ -31,7 +31,7 @@ suite "For statement semantics":
     # Given
     let source = """
       function main() returns Int {
-        for (var i = 0; 1; i = i + 1) {
+        for (var i = 0; 1; set i = i + 1) {
           return i;
         }
         return 0;
@@ -46,7 +46,7 @@ suite "For statement semantics":
     # Given
     let source = """
       function main() returns Int {
-        for (var i = 0; i < 1; i = i + 1) {
+        for (var i = 0; i < 1; set i = i + 1) {
         }
         return i;
       }
@@ -60,7 +60,7 @@ suite "For statement semantics":
     # Given
     let source = """
       function main() returns Int {
-        for (var i = 0; i < 1; inside = inside + 1) {
+        for (var i = 0; i < 1; set inside = inside + 1) {
           var inside = 0;
         }
         return 0;
@@ -75,7 +75,7 @@ suite "For statement semantics":
     # Given
     let source = """
       function value() returns Int {
-        for (var i = 0; i < 1; i = i + 1) {
+        for (var i = 0; i < 1; set i = i + 1) {
           return 1;
         }
       }

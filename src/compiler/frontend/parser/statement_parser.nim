@@ -35,23 +35,25 @@ proc parseVarStmt*(parser: var Parser): Stmt =
     initializer: initializer
   )
 
-## Parses reassignment to an existing primitive local. Example: `salary = 6000;` becomes `skAssign`.
-proc parseAssignStmt*(parser: var Parser): Stmt =
-  let target = parser.consume(tkIdentifier, "expected assignment target")
-  discard parser.consume(tkEqual, "expected '=' after assignment target")
+## Parses explicit mutation of an existing binding or own-class field.
+## Example: `set salary = 6000;` becomes `skAssign`.
+proc parseSetStmt*(parser: var Parser): Stmt =
+  let start = parser.consume(tkSet, "expected 'set'")
+  let target = parser.consume(tkIdentifier, "expected set target")
+  discard parser.consume(tkEqual, "expected '=' after set target")
   let value = parser.parseExpression()
   let semicolon = parser.consume(
     tkSemicolon,
-    "expected ';' after assignment"
+    "expected ';' after set statement"
   )
 
   Stmt(
     kind: skAssign,
     span: SourceSpan(
-      startOffset: target.span.startOffset,
+      startOffset: start.span.startOffset,
       endOffset: semicolon.span.endOffset,
-      line: target.span.line,
-      column: target.span.column
+      line: start.span.line,
+      column: start.span.column
     ),
     target: target.lexeme,
     assignedValue: value
@@ -132,8 +134,8 @@ proc parseStatement*(parser: var Parser): Stmt =
   if parser.check(tkContinue):
     return parser.parseContinueStmt()
 
-  if parser.check(tkIdentifier) and parser.checkNext(tkEqual):
-    return parser.parseAssignStmt()
+  if parser.check(tkSet):
+    return parser.parseSetStmt()
 
   if parser.check(tkIdentifier) and
       (parser.checkNext(tkLParen) or parser.checkNext(tkDot)):
@@ -141,5 +143,5 @@ proc parseStatement*(parser: var Parser): Stmt =
 
   failAt(
     parser.peek.span,
-    "expected variable declaration, assignment, function call, return, if, while, for, break, continue, or '}'"
+    "expected variable declaration, set statement, function call, return, if, while, for, break, continue, or '}'"
   )

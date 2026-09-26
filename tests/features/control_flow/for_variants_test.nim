@@ -8,8 +8,8 @@ suite "For execution":
       function main() returns Int {
         var total = 0;
 
-        for (var i = 0; i < 4; i = i + 1) {
-          total = total + i;
+        for (var i = 0; i < 4; set i = i + 1) {
+          set total = total + i;
         }
 
         return total;
@@ -28,8 +28,8 @@ suite "For execution":
       function main() returns Int {
         var total = 7;
 
-        for (var i = 5; i < 5; i = i + 1) {
-          total = 9;
+        for (var i = 5; i < 5; set i = i + 1) {
+          set total = 9;
         }
 
         return total;
@@ -49,12 +49,12 @@ suite "For loop control":
       function main() returns Int {
         var total = 0;
 
-        for (var i = 0; i < 5; i = i + 1) {
+        for (var i = 0; i < 5; set i = i + 1) {
           if (i == 2) {
             continue;
           }
 
-          total = total + i;
+          set total = total + i;
         }
 
         return total;
@@ -73,12 +73,12 @@ suite "For loop control":
       function main() returns Int {
         var result = 0;
 
-        for (var i = 0; i < 10; i = i + 1) {
+        for (var i = 0; i < 10; set i = i + 1) {
           if (i == 3) {
             break;
           }
 
-          result = result + 1;
+          set result = result + 1;
         }
 
         return result;
@@ -97,8 +97,8 @@ suite "For loop control":
       function main() returns Int {
         var total = 0;
 
-        for (var outer = 0; outer < 2; outer = outer + 1) {
-          for (var inner = 0; inner < 4; inner = inner + 1) {
+        for (var outer = 0; outer < 2; set outer = outer + 1) {
+          for (var inner = 0; inner < 4; set inner = inner + 1) {
             if (inner == 1) {
               continue;
             }
@@ -107,7 +107,7 @@ suite "For loop control":
               break;
             }
 
-            total = total + 1;
+            set total = total + 1;
           }
         }
 
@@ -126,7 +126,7 @@ suite "For syntax type and scope":
     # Given
     let source = """
       function main() returns Int {
-        for (var i = 0; i < 1; i = i + 1) {
+        for (var i = 0; i < 1; set i = i + 1) {
         }
 
         return i;
@@ -141,7 +141,7 @@ suite "For syntax type and scope":
     # Given
     let source = """
       function main() returns Int {
-        for (var i = 0; 1; i = i + 1) {
+        for (var i = 0; 1; set i = i + 1) {
         }
 
         return 0;
@@ -156,7 +156,7 @@ suite "For syntax type and scope":
     # Given
     let source = """
       function main() returns Int {
-        for var i = 0; i < 1; i = i + 1 {
+        for var i = 0; i < 1; set i = i + 1 {
         }
 
         return 0;

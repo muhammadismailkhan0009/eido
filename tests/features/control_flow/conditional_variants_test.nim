@@ -8,7 +8,7 @@ suite "Conditional branch selection":
       function main() returns Int {
         var result = 0;
         if (2 > 1) {
-          result = 7;
+          set result = 7;
         }
         return result;
       }
@@ -26,7 +26,7 @@ suite "Conditional branch selection":
       function main() returns Int {
         var result = 3;
         if (false) {
-          result = 9;
+          set result = 9;
         }
         return result;
       }

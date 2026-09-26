@@ -49,7 +49,7 @@ suite "Nim emitter":
     let source = """
       function main() returns Int {
         var salary = 5000;
-        salary = salary + 500;
+        set salary = salary + 500;
         return salary;
       }
     """

@@ -43,6 +43,11 @@ proc renderStmtAt*(
     pad & localName(stmt.targetId, stmt.targetName) &
       " = " & renderExpr(stmt.assignedValue) & "\n"
 
+  of hirStatements.hskFieldSet:
+    pad & localName(stmt.receiverId, "receiver") & "." &
+      fieldName(stmt.fieldName) & " = " &
+      renderExpr(stmt.fieldValue) & "\n"
+
   of hirStatements.hskCall:
     if stmt.call.result.kind == frNone:
       pad & renderCall(stmt.call) & "\n"

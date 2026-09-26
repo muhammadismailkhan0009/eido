@@ -213,22 +213,27 @@ suite "Class method uniqueness":
     expect ValueError:
       discard analyzeSource(nestedLocal)
 
-suite "Class method mutation boundary":
-  test "own field mutation is still rejected before set semantics are implemented":
+suite "Class method mutation":
+  test "own primitive field may be mutated with set":
     # Given
     let source = """
       class Account {
         Int balance;
 
         function withdraw(Int amount) returns Int {
-          balance = balance - amount;
+          set balance = balance - amount;
           return balance;
         }
       }
 
-      function main() {}
+      function main() returns Int {
+        var account = Account { balance: 100; };
+        return account.withdraw(25);
+      }
     """
 
-    # When / Then
-    expect ValueError:
-      discard analyzeSource(source)
+    # When
+    let output = runFeatureSource(source, "method_set_own_field")
+
+    # Then
+    check output == "75"

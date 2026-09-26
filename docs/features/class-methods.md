@@ -66,7 +66,8 @@ Method bodies reuse the existing function/statement semantics:
 - arithmetic and Boolean expressions;
 - conditionals;
 - loops and loop control;
-- top-level function calls.
+- top-level function calls;
+- `set` mutation of locals and own primitive fields.
 
 The current signature slice remains primitive-only for explicit method
 parameters and results, matching top-level function signatures.
@@ -119,22 +120,20 @@ supported. Different classes may use the same method name.
 
 ## Mutation boundary
 
-This method slice is read-only with respect to class fields.
-
-A method may read:
+A method may read and mutate its own primitive fields by unqualified name:
 
 ```eido
-balance
+function withdraw(Int amount) returns Int {
+    set balance = balance - amount;
+    return balance;
+}
 ```
 
-but field mutation is still rejected:
+Only class-owned behavior receives this field-mutation authority. External
+postfix field mutation such as `set account.balance = 0;` is invalid.
 
-```eido
-balance = balance - amount;
-```
-
-The later mutation feature will define `set` semantics and restrict class
-field mutation to behavior owned by that class.
+Class-valued fields remain non-mutable until explicit copy/reference semantics
+are defined.
 
 ## Backend representation
 
@@ -146,7 +145,7 @@ does not add receiver syntax to Eido.
 
 Not yet included:
 
-- field mutation / `set`;
+- class-valued field mutation;
 - class-valued explicit method parameters/results;
 - method overloading;
 - interfaces;

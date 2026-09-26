@@ -64,6 +64,7 @@ tests/
     function_variants_test.nim
     primitive_variants_test.nim
     variable_variants_test.nim
+    set_variants_test.nim
 
   support/
   compiler_test_suite.nim
@@ -89,7 +90,7 @@ These tests answer questions such as:
 - do 0-, 1-, 2-, and N-parameter functions work?
 - which parameter-count/result-count combinations have been exercised?
 - which primitive types have been exercised through real Eido programs?
-- which variable initialization/reassignment variants work?
+- which variable initialization/`set` mutation variants work?
 - which expression forms work?
 
 Some behavior is intentionally covered by both layers because the boundary risk is different:

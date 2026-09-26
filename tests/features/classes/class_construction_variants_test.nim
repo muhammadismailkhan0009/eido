@@ -120,14 +120,14 @@ suite "Class representation boundaries":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "bare class reassignment requires future explicit copy or ref semantics":
+  test "setting from an existing class value requires future explicit copy or ref semantics":
     # Given
     let source = """
       class Marker {}
       function main() {
         var first = Marker {};
         var second = Marker {};
-        second = first;
+        set second = first;
       }
     """
 

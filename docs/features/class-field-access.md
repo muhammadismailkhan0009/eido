@@ -86,10 +86,10 @@ Therefore this is currently rejected:
 var address = employee.address;
 ```
 
-and so is implicit reassignment from a class-valued field:
+and so is setting from an existing class-valued field:
 
 ```eido
-otherAddress = employee.address;
+set otherAddress = employee.address;
 ```
 
 Fresh construction remains valid because it does not require choosing whether an
@@ -97,12 +97,20 @@ existing class value is copied or aliased.
 
 ## Mutation boundary
 
-This feature is read-only field access.
+Postfix field access remains observational outside the owning class.
 
-Field mutation such as:
+External field mutation is not legal syntax:
 
 ```eido
-point.x = 20;
+set point.x = 20; // invalid
 ```
 
-is not yet supported and will be designed separately.
+Inside a class method, an own primitive field may be mutated through its
+unqualified name:
+
+```eido
+set x = 20;
+```
+
+Class-valued field mutation remains deferred until explicit copy/reference
+semantics exist.

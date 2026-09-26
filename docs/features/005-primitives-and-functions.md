@@ -114,5 +114,5 @@ Byte or Short.
 Arithmetic currently accepts matching Int operands or matching Float operands.
 Byte, Short, Char, and Bool arithmetic/promotion rules remain separate work.
 
-Parameter reassignment remains unsupported; mutable local `var` bindings keep
-the existing primitive reassignment behavior.
+Parameter mutation with `set` remains unsupported; mutable local `var` bindings use
+the explicit `set` mutation behavior.

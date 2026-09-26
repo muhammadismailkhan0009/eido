@@ -19,7 +19,7 @@
 - initializer type checking
 - no implicit field-to-field initializer visibility
 - no implicit class equality
-- no bare class-to-class reassignment before copy/ref semantics
+- no setting from existing class values before copy/ref semantics
 
 `class_field_access_variants_test.nim` covers:
 

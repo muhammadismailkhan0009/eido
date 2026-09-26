@@ -8,7 +8,7 @@ suite "Loop control statement emission":
       function main() returns Int {
         var count = 0;
         while (count < 3) {
-          count = count + 1;
+          set count = count + 1;
           if (count == 1) {
             continue;
           }

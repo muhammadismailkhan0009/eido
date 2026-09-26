@@ -25,7 +25,7 @@ the only supported type. Feature 005 later generalizes parameters/results across
 all primitive types and adds zero-result functions.
 
 Parameters enter function scope as readable typed bindings. A local `var`
-may not redeclare a parameter. Parameter reassignment is intentionally not
+may not redeclare a parameter. Parameter mutation with `set` is intentionally not
 defined by Feature 004; only local `var` bindings are currently mutable.
 
 A direct initializer from an existing parameter or local remains invalid:

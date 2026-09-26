@@ -45,13 +45,13 @@ suite "Local initialization forms":
     expect ValueError:
       discard analyzeSource(source)
 
-suite "Local reassignment forms":
-  test "literal reassignment: existing local can receive a new literal":
+suite "Local set forms":
+  test "literal set: existing local can receive a new literal":
     # Given
     let source = """
       function main() returns Int {
         var value = 5;
-        value = 9;
+        set value = 9;
         return value;
       }
     """
@@ -61,12 +61,12 @@ suite "Local reassignment forms":
 
     # Then
     check output == "9"
-  test "computed reassignment: existing local can use its current value":
+  test "computed set: existing local can use its current value":
     # Given
     let source = """
       function main() returns Int {
         var value = 5;
-        value = value + 2;
+        set value = value + 2;
         return value;
       }
     """
@@ -76,13 +76,13 @@ suite "Local reassignment forms":
 
     # Then
     check output == "7"
-  test "identifier reassignment: existing primitive local can receive another local":
+  test "identifier set: existing primitive local can receive another local":
     # Given
     let source = """
       function main() returns Int {
         var first = 5;
         var second = 9;
-        second = first;
+        set second = first;
         return second;
       }
     """

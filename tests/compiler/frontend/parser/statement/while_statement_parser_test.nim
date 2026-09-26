@@ -10,7 +10,7 @@ suite "While statement parsing":
       function main() returns Int {
         var count = 0;
         while (count < 3) {
-          count = count + 1;
+          set count = count + 1;
         }
         return count;
       }
@@ -33,9 +33,9 @@ suite "While statement parsing":
         while (outer < 2) {
           var inner = 0;
           while (inner < 2) {
-            inner = inner + 1;
+            set inner = inner + 1;
           }
-          outer = outer + 1;
+          set outer = outer + 1;
         }
         return outer;
       }

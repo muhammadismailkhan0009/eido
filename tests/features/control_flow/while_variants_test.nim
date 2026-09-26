@@ -8,7 +8,7 @@ suite "While execution":
       function main() returns Int {
         var count = 0;
         while (count < 5) {
-          count = count + 1;
+          set count = count + 1;
         }
         return count;
       }
@@ -26,7 +26,7 @@ suite "While execution":
       function main() returns Int {
         var value = 7;
         while (false) {
-          value = 9;
+          set value = 9;
         }
         return value;
       }
@@ -65,10 +65,10 @@ suite "While nesting":
         while (outer < 2) {
           var inner = 0;
           while (inner < 3) {
-            total = total + 1;
-            inner = inner + 1;
+            set total = total + 1;
+            set inner = inner + 1;
           }
-          outer = outer + 1;
+          set outer = outer + 1;
         }
 
         return total;
@@ -88,7 +88,7 @@ suite "While condition rules":
       function main() returns Int {
         var count = 0;
         while (count < 3 and true) {
-          count = count + 1;
+          set count = count + 1;
         }
         return count;
       }

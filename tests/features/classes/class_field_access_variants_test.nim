@@ -123,7 +123,7 @@ suite "Class field access representation boundaries":
       function main() {
         var first = Box { marker: Marker {}; };
         var second = Marker {};
-        second = first.marker;
+        set second = first.marker;
       }
     """
 

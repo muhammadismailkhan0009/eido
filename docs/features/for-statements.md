@@ -3,7 +3,7 @@
 Eido supports classic declaration-condition-update `for` loops.
 
 ```eido
-for (var i = 0; i < 10; i = i + 1) {
+for (var i = 0; i < 10; set i = i + 1) {
     ...
 }
 ```
@@ -14,12 +14,12 @@ The first version intentionally uses a fixed three-clause form:
 
 1. initializer — a `var` declaration;
 2. condition — a `Bool` expression;
-3. update — assignment to an existing variable.
+3. update — `set` mutation of an existing variable.
 
 All three clauses are required, and the complete header must be parenthesized.
 
 ```eido
-for (var i = 0; i < 10; i = i + 1) {
+for (var i = 0; i < 10; set i = i + 1) {
     ...
 }
 ```
@@ -47,7 +47,7 @@ visible to the update or after the loop.
 update before reevaluating the condition.
 
 ```eido
-for (var i = 0; i < 5; i = i + 1) {
+for (var i = 0; i < 5; set i = i + 1) {
     if (i == 2) {
         continue;
     }
@@ -66,7 +66,7 @@ because its condition may be false before the first iteration.
 This first version does not yet support:
 
 - omitted initializer, condition, or update clauses;
-- assignment-only initializers;
+- `set` initializers;
 - multiple initializer/update expressions;
 - `for item in collection`;
 - ranges or iterator protocols.

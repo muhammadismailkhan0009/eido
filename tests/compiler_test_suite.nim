@@ -9,6 +9,7 @@ import compiler/frontend/lexer/keywords/boolean_operator_keyword_test
 import compiler/frontend/lexer/keywords/conditional_keyword_test
 import compiler/frontend/lexer/keywords/while_keyword_test
 import compiler/frontend/lexer/keywords/for_keyword_test
+import compiler/frontend/lexer/keywords/set_keyword_test
 import compiler/frontend/lexer/keywords/loop_control_keyword_test
 import compiler/frontend/lexer/keywords/class_keyword_test
 import compiler/frontend/parser/expression/literal_expression_parser_test
@@ -28,6 +29,7 @@ import compiler/frontend/parser/statement/conditional_statement_parser_test
 import compiler/frontend/parser/statement/while_statement_parser_test
 import compiler/frontend/parser/statement/for_statement_parser_test
 import compiler/frontend/parser/statement/loop_control_statement_parser_test
+import compiler/frontend/parser/statement/set_statement_parser_test
 import compiler/semantic/analysis/local_binding_analysis_test
 import compiler/semantic/analysis/function_analysis_test
 import compiler/semantic/analysis/class_declaration_analysis_test
@@ -36,6 +38,7 @@ import compiler/semantic/analysis/statement/conditional_statement_analysis_test
 import compiler/semantic/analysis/statement/while_statement_analysis_test
 import compiler/semantic/analysis/statement/for_statement_analysis_test
 import compiler/semantic/analysis/statement/loop_control_statement_analysis_test
+import compiler/semantic/analysis/statement/set_statement_analysis_test
 import compiler/semantic/analysis/expression/literal_expression_analysis_test
 import compiler/semantic/analysis/expression/expected_type_analysis_test
 import compiler/semantic/analysis/expression/identifier_expression_analysis_test
@@ -56,6 +59,7 @@ import compiler/backend/nim/emitter/statement/conditional_statement_emitter_test
 import compiler/backend/nim/emitter/statement/while_statement_emitter_test
 import compiler/backend/nim/emitter/statement/for_statement_emitter_test
 import compiler/backend/nim/emitter/statement/loop_control_statement_emitter_test
+import compiler/backend/nim/emitter/statement/set_statement_emitter_test
 import compiler/pipeline/compiler_pipeline_test
 
 import features/expression/arithmetic_variants_test
@@ -75,3 +79,4 @@ import features/control_flow/for_variants_test
 import features/control_flow/loop_control_variants_test
 import features/primitive_variants_test
 import features/variable_variants_test
+import features/set_variants_test

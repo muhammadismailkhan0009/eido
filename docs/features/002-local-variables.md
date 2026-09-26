@@ -36,4 +36,4 @@ Using an identifier as part of a computed expression is valid:
 var b = a + 1;
 ```
 
-At the Feature 002 milestone, only `Int` existed and reassignment was not yet implemented. Later features extend both capabilities.
+At the Feature 002 milestone, only `Int` existed and `set` mutation was not yet implemented. Later features extend both capabilities.

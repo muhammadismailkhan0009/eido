@@ -30,7 +30,7 @@ include statement/while_statements
 include statement/for_statements
 include statement/loop_control_statements
 
-## Checks one AST statement and lowers it to HIR. Example: `b = a;` verifies `b` exists, checks types, and stores both bindings by semantic ID.
+## Checks one AST statement and lowers it to HIR. Example: `set b = a;` verifies `b` exists, checks types, and stores resolved mutation HIR.
 proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
@@ -93,42 +93,59 @@ proc analyzeStmt*(
 
   of astStatements.skAssign:
     if not locals.contains(stmt.target):
-      failAt(stmt.span, "unknown assignment target '" & stmt.target & "'")
+      failAt(stmt.span, "unknown set target '" & stmt.target & "'")
 
     let target = locals.get(stmt.target)
     case target.kind
     of bkParameter:
-      failAt(stmt.span, "parameter reassignment is not supported")
+      failAt(stmt.span, "parameters cannot be mutated with set")
+
     of bkField:
-      failAt(
-        stmt.span,
-        "field mutation is not supported before set semantics"
+      if target.typ.kind == etkClass:
+        failAt(
+          stmt.span,
+          "class-valued field mutation requires explicit copy or ref semantics"
+        )
+
+      let value = analyzeExprExpected(
+        stmt.assignedValue,
+        target.typ,
+        locals,
+        functions,
+        classes
       )
+
+      HirStmt(
+        kind: hskFieldSet,
+        span: stmt.span,
+        receiverId: target.receiverId,
+        fieldName: target.name,
+        fieldValue: value
+      )
+
     of bkVariable:
-      discard
-
-    let value = analyzeExprExpected(
-      stmt.assignedValue,
-      target.typ,
-      locals,
-      functions,
-      classes
-    )
-
-    if target.typ.kind == etkClass and
-        stmt.assignedValue.kind != astExpressions.ekConstruct:
-      failAt(
-        stmt.assignedValue.span,
-        "class-valued assignment requires explicit copy or ref"
+      let value = analyzeExprExpected(
+        stmt.assignedValue,
+        target.typ,
+        locals,
+        functions,
+        classes
       )
 
-    HirStmt(
-      kind: hskAssign,
-      span: stmt.span,
-      targetId: target.id,
-      targetName: target.name,
-      assignedValue: value
-    )
+      if target.typ.kind == etkClass and
+          stmt.assignedValue.kind != astExpressions.ekConstruct:
+        failAt(
+          stmt.assignedValue.span,
+          "class-valued set requires explicit copy or ref"
+        )
+
+      HirStmt(
+        kind: hskAssign,
+        span: stmt.span,
+        targetId: target.id,
+        targetName: target.name,
+        assignedValue: value
+      )
 
   of astStatements.skCall:
     case stmt.call.kind

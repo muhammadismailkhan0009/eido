@@ -9,7 +9,7 @@ suite "Break execution":
         var count = 0;
 
         while (count < 10) {
-          count = count + 1;
+          set count = count + 1;
           if (count == 3) {
             break;
           }
@@ -36,14 +36,14 @@ suite "Break execution":
           var inner = 0;
 
           while (inner < 5) {
-            inner = inner + 1;
+            set inner = inner + 1;
             if (inner == 2) {
               break;
             }
-            total = total + 1;
+            set total = total + 1;
           }
 
-          outer = outer + 1;
+          set outer = outer + 1;
         }
 
         return total;
@@ -65,13 +65,13 @@ suite "Continue execution":
         var total = 0;
 
         while (count < 5) {
-          count = count + 1;
+          set count = count + 1;
 
           if (count == 3) {
             continue;
           }
 
-          total = total + count;
+          set total = total + count;
         }
 
         return total;
@@ -95,16 +95,16 @@ suite "Continue execution":
           var inner = 0;
 
           while (inner < 3) {
-            inner = inner + 1;
+            set inner = inner + 1;
 
             if (inner == 2) {
               continue;
             }
 
-            total = total + 1;
+            set total = total + 1;
           }
 
-          outer = outer + 1;
+          set outer = outer + 1;
         }
 
         return total;

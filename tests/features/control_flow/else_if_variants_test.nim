@@ -82,9 +82,9 @@ suite "Else if chains":
       function main() returns Int {
         var result = 7;
         if (false) {
-          result = 1;
+          set result = 1;
         } else if (false) {
-          result = 2;
+          set result = 2;
         }
         return result;
       }

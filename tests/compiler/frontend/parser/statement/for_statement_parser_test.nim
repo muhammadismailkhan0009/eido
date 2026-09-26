@@ -9,8 +9,8 @@ suite "For statement parsing":
     let source = """
       function main() returns Int {
         var total = 0;
-        for (var i = 0; i < 3; i = i + 1) {
-          total = total + i;
+        for (var i = 0; i < 3; set i = i + 1) {
+          set total = total + i;
         }
         return total;
       }
@@ -32,9 +32,9 @@ suite "For statement parsing":
     let source = """
       function main() returns Int {
         var total = 0;
-        for (var outer = 0; outer < 2; outer = outer + 1) {
-          for (var inner = 0; inner < 2; inner = inner + 1) {
-            total = total + 1;
+        for (var outer = 0; outer < 2; set outer = outer + 1) {
+          for (var inner = 0; inner < 2; set inner = inner + 1) {
+            set total = total + 1;
           }
         }
         return total;
@@ -52,7 +52,7 @@ suite "For statement parsing":
     # Given
     let source = """
       function main() returns Int {
-        for var i = 0; i < 3; i = i + 1 {
+        for var i = 0; i < 3; set i = i + 1 {
           return i;
         }
         return 0;

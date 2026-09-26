@@ -86,10 +86,10 @@ Eido still does not define:
 - class reference identity;
 - implicit class copying;
 - class equality;
-- bare class-to-class reassignment semantics;
+- setting class-valued locals from existing class values;
 - garbage-collection or ownership semantics.
 
-Bare class identifier reassignment remains rejected until explicit copy/ref
+Setting a class-valued local from an existing class identifier remains rejected until explicit copy/ref
 semantics are designed.
 
 ## Current boundary

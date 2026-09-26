@@ -16,7 +16,7 @@ The condition must be enclosed in parentheses and must have type `Bool`.
 var count = 0;
 
 while (count < 10) {
-    count = count + 1;
+    set count = count + 1;
 }
 ```
 
@@ -31,7 +31,7 @@ the body executes zero times.
 A loop body is an isolated local scope:
 
 - outer locals and parameters are visible inside the body;
-- existing outer variables may be reassigned;
+- existing outer variables may be mutated with `set`;
 - locals declared inside the loop body do not leak outside the loop;
 - nested loops and conditionals are allowed;
 - function-wide LocalIds remain unique for loop-local declarations.
@@ -60,4 +60,4 @@ conservative and sound.
 `break;` and `continue;` are supported inside while loops and target the
 nearest enclosing loop. See `loop-control-statements.md`.
 
-The current loop family still does not include `do while` or `for` loops.
+The current loop family does not include `do while`; classic `for` loops are supported separately.

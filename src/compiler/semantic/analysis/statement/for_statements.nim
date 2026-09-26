@@ -2,7 +2,7 @@
 ## Example: the initializer binding is visible to condition, update, and body but not after the loop.
 
 ## Analyzes one for loop and preserves nearest-loop control semantics through loop depth.
-## Example: `for (var i = 0; i < 10; i = i + 1) { ... }` requires a Bool condition.
+## Example: `for (var i = 0; i < 10; set i = i + 1) { ... }` requires a Bool condition.
 proc analyzeFor(
   stmt: astStatements.Stmt,
   locals: var LocalScope,

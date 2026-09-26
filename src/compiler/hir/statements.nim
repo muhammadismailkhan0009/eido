@@ -9,6 +9,7 @@ type
   HirStmtKind* = enum
     hskVar,
     hskAssign,
+    hskFieldSet,
     hskCall,
     hskMethodCall,
     hskReturn,
@@ -30,6 +31,10 @@ type
       targetId*: LocalId
       targetName*: string
       assignedValue*: HirExpr
+    of hskFieldSet:
+      receiverId*: LocalId
+      fieldName*: string
+      fieldValue*: HirExpr
     of hskCall:
       call*: HirCall
     of hskMethodCall:

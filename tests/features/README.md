@@ -17,7 +17,7 @@ Files are broad navigation boundaries; suites inside them name the smallest usef
 - `control_flow/` — conditionals, `else if` chains, `while`/classic `for` loops, `break`/`continue`, structured scope isolation, and return-path coverage; start with `control_flow/README.md`
 - `function_variants_test.nim` — signature cardinality, zero-result returns, call resolution/arity, and result contracts
 - `primitive_variants_test.nim` — supported primitive values, Byte bounds, numeric suffix rejection, and removed numeric type names
-- `variable_variants_test.nim` — initialization forms, reassignment forms, declaration ordering, and declaration uniqueness
+- `variable_variants_test.nim` — initialization forms, `set` mutation forms, declaration ordering, and declaration uniqueness
 
 ## Function matrix
 

@@ -7,8 +7,8 @@ suite "For statement emission":
     let source = """
       function main() returns Int {
         var total = 0;
-        for (var i = 0; i < 3; i = i + 1) {
-          total = total + i;
+        for (var i = 0; i < 3; set i = i + 1) {
+          set total = total + i;
         }
         return total;
       }
@@ -27,11 +27,11 @@ suite "For statement emission":
     let source = """
       function main() returns Int {
         var total = 0;
-        for (var i = 0; i < 3; i = i + 1) {
+        for (var i = 0; i < 3; set i = i + 1) {
           if (i == 1) {
             continue;
           }
-          total = total + i;
+          set total = total + i;
         }
         return total;
       }

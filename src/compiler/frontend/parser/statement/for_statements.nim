@@ -1,12 +1,16 @@
 ## Parses classic declaration-condition-update for loops.
-## Example: `for (var i = 0; i < 10; i = i + 1) { ... }`.
+## Example: `for (var i = 0; i < 10; set i = i + 1) { ... }`.
 
-## Parses the assignment update clause without a trailing semicolon.
-## Example: `i = i + 1` becomes an assignment AST statement whose span ends at the value.
+## Parses the explicit set update clause without a trailing semicolon.
+## Example: `set i = i + 1` becomes an assignment AST statement.
 proc parseForUpdate(parser: var Parser): Stmt =
+  let start = parser.consume(
+    tkSet,
+    "expected 'set' in for update"
+  )
   let target = parser.consume(
     tkIdentifier,
-    "expected assignment target in for update"
+    "expected set target in for update"
   )
   discard parser.consume(
     tkEqual,
@@ -17,10 +21,10 @@ proc parseForUpdate(parser: var Parser): Stmt =
   Stmt(
     kind: skAssign,
     span: SourceSpan(
-      startOffset: target.span.startOffset,
+      startOffset: start.span.startOffset,
       endOffset: value.span.endOffset,
-      line: target.span.line,
-      column: target.span.column
+      line: start.span.line,
+      column: start.span.column
     ),
     target: target.lexeme,
     assignedValue: value
