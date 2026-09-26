@@ -64,6 +64,9 @@ compiler/semantic/symbols/
 
 compiler/semantic/analysis/
     type resolution plus expression, statement, function, and program semantic passes
+    expression_analysis.nim is a thin expression semantic coordinator
+    expression/ groups literal/contextual typing, identifiers, calls, unary
+    negation, arithmetic, comparisons, and Boolean rules by semantic ownership
 
 compiler/hir/
     resolved and typed compiler representation

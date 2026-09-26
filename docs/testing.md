@@ -55,7 +55,7 @@ tests/
 
 ### Compiler-internal tests
 
-`tests/compiler/` mirrors production responsibilities. Expression-parser tests mirror the focused modules under `src/compiler/frontend/parser/expression/` rather than accumulating in one generic parser test file.
+`tests/compiler/` mirrors production responsibilities. Expression parser and expression semantic-analysis tests mirror the focused modules under `src/compiler/frontend/parser/expression/` and `src/compiler/semantic/analysis/expression/` rather than accumulating in generic expression test files.
 
 These tests answer questions such as:
 

@@ -35,19 +35,6 @@ suite "Local binding analysis":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "rejects an unknown local":
-    # Given
-    let source = """
-      function main() returns Int {
-        var value = missing + 1;
-        return value;
-      }
-    """
-
-    # When / Then
-    expect ValueError:
-      discard analyzeSource(source)
-
   test "rejects a local used before declaration":
     # Given
     let source = """

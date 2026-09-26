@@ -16,8 +16,13 @@ import compiler/frontend/parser/expression/boolean_operator_parser_test
 import compiler/frontend/parser/function_parser_test
 import compiler/semantic/analysis/local_binding_analysis_test
 import compiler/semantic/analysis/function_analysis_test
-import compiler/semantic/analysis/primitive_type_analysis_test
-import compiler/semantic/analysis/comparison_analysis_test
+import compiler/semantic/analysis/expression/literal_expression_analysis_test
+import compiler/semantic/analysis/expression/expected_type_analysis_test
+import compiler/semantic/analysis/expression/identifier_expression_analysis_test
+import compiler/semantic/analysis/expression/call_expression_analysis_test
+import compiler/semantic/analysis/expression/unary_negation_analysis_test
+import compiler/semantic/analysis/expression/arithmetic_operator_analysis_test
+import compiler/semantic/analysis/expression/comparison_operator_analysis_test
 import compiler/semantic/analysis/expression/boolean_operator_analysis_test
 import compiler/backend/nim/emitter/nim_emitter_test
 import compiler/backend/nim/emitter/expression/boolean_operator_emitter_test
