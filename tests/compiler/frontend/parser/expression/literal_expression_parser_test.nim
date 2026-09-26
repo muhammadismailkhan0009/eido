@@ -2,7 +2,7 @@ import std/unittest
 import compiler/frontend/ast/[expressions, statements]
 import support/compiler_test_support
 
-suite "Primitive literal parser":
+suite "Literal expression parsing":
   test "parses Bool Int Float and Char literal forms":
     # Given
     let source = """

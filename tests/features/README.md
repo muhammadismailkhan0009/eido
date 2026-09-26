@@ -12,11 +12,10 @@ They complement `tests/compiler/`, which tests lexer/parser/semantic/backend res
 
 Files are broad navigation boundaries; suites inside them name the smallest useful semantic group.
 
+- `expression/` — expression-family catalogs split into arithmetic, grouping, unary negation, comparisons, and Boolean operators; start with `expression/README.md` for the coverage matrix and known gaps
 - `function_variants_test.nim` — signature cardinality, zero-result returns, call resolution/arity, and result contracts
 - `primitive_variants_test.nim` — supported primitive values, Byte bounds, numeric suffix rejection, and removed numeric type names
 - `variable_variants_test.nim` — initialization forms, reassignment forms, declaration ordering, and declaration uniqueness
-- `expression_variants_test.nim` — arithmetic, grouping, unary negation, comparisons, and their precedence/type compatibility
-- `boolean_expression_variants_test.nim` — Boolean word operators, Boolean precedence, short-circuit behavior, and symbolic-operator exclusion
 
 ## Function matrix
 
@@ -52,7 +51,7 @@ over:
 
 `test function parser case 7`
 
-Successful variants should normally compile through the real native pipeline when an observable result is available. Rejection variants may stop at semantic analysis when native compilation is not meaningful.
+Successful variants should normally run through the full Eido compiler to generated Nim and execute with `nim e` when an observable result is available. Dedicated compiler-pipeline tests retain real native-compilation coverage. Rejection variants may stop at semantic analysis when execution is not meaningful.
 
 Do not organize these tests by historical milestone number. Add a scenario to the file for the language feature it demonstrates.
 

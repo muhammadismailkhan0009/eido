@@ -52,6 +52,9 @@ compiler/frontend/ast/
 
 compiler/frontend/parser/
     parser mechanics and grammar grouped by construct
+    expression_parser.nim is a thin expression-entry/precedence coordinator
+    expression/ groups literals, calls, grouping, unary negation, arithmetic,
+    comparisons, and Boolean operators by semantic ownership
 
 compiler/types/
     core Eido semantic type model

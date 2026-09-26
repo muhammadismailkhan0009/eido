@@ -38,8 +38,13 @@ tests/
     pipeline/
 
   features/
-    expression_variants_test.nim
-    boolean_expression_variants_test.nim
+    expression/
+      README.md
+      arithmetic_variants_test.nim
+      grouping_variants_test.nim
+      unary_negation_variants_test.nim
+      comparison_variants_test.nim
+      boolean_operator_variants_test.nim
     function_variants_test.nim
     primitive_variants_test.nim
     variable_variants_test.nim
@@ -50,7 +55,7 @@ tests/
 
 ### Compiler-internal tests
 
-`tests/compiler/` mirrors production responsibilities.
+`tests/compiler/` mirrors production responsibilities. Expression-parser tests mirror the focused modules under `src/compiler/frontend/parser/expression/` rather than accumulating in one generic parser test file.
 
 These tests answer questions such as:
 
