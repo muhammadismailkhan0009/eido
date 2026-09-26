@@ -1,0 +1,2 @@
+## Project Map Preflight
+Use the project-map lifecycle for repository work. Prefer the trusted project-local Codex hooks when available; otherwise consult `$project-map` / `.project-map.md` before broad repository exploration. Current source remains authoritative. Complete the requested repository work before maintaining the map. After repository work is done and before the final response, reconcile and aggressively prune `.project-map.md` from durable navigation knowledge learned across the whole turn.

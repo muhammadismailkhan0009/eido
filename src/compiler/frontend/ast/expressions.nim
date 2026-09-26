@@ -1,0 +1,54 @@
+## Defines syntax-tree nodes for Eido expressions.
+## Example: `-value` becomes a unary negation expression, while `a + 5` becomes a binary expression.
+
+import ../../source/span
+
+type
+  UnaryOp* = enum
+    uoNegate
+
+  BinaryOp* = enum
+    boAdd,
+    boSubtract,
+    boMultiply,
+    boDivide,
+    boEqual,
+    boNotEqual,
+    boLess,
+    boLessEqual,
+    boGreater,
+    boGreaterEqual
+
+  ExprKind* = enum
+    ekInteger,
+    ekFloat,
+    ekBoolean,
+    ekChar,
+    ekIdentifier,
+    ekCall,
+    ekUnary,
+    ekBinary
+
+  Expr* = ref object
+    span*: SourceSpan
+    case kind*: ExprKind
+    of ekInteger:
+      intValue*: int64
+    of ekFloat:
+      floatValue*: float64
+    of ekBoolean:
+      boolValue*: bool
+    of ekChar:
+      charValue*: uint16
+    of ekIdentifier:
+      name*: string
+    of ekCall:
+      callee*: string
+      arguments*: seq[Expr]
+    of ekUnary:
+      unaryOp*: UnaryOp
+      operand*: Expr
+    of ekBinary:
+      op*: BinaryOp
+      left*: Expr
+      right*: Expr

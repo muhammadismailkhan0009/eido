@@ -1,0 +1,74 @@
+## Renders resolved HIR expressions and calls as Nim source.
+## Example: Eido Int literal `2147483648` becomes `int64(2147483648)`.
+
+import ../../../hir/expressions as hirExpressions
+import ../../../types/model
+import names
+
+## Renders one resolved HIR expression as Nim source.
+## Example: local Int `x + 5` renders as `(eido_local_0_x + int64(5))`.
+proc renderExpr*(expr: hirExpressions.HirExpr): string
+
+## Renders a resolved function call without deciding whether its result is used.
+## Example: resolved `add(1, 2)` becomes `eido_fn_1_add(int64(1), int64(2))`.
+proc renderCall*(call: hirExpressions.HirCall): string =
+  result = functionName(call.functionId, call.functionName) & "("
+  for index, argument in call.arguments:
+    if index > 0:
+      result.add ", "
+    result.add renderExpr(argument)
+  result.add ")"
+
+## Renders a typed integral literal with its Nim representation.
+## Example: Eido Byte literal value 7 becomes `int8(7)`, while ordinary Int becomes `int64(...)`.
+proc renderIntegerLiteral(expr: hirExpressions.HirExpr): string =
+  case expr.typ
+  of etByte: "int8(" & $expr.intValue & ")"
+  of etShort: "int16(" & $expr.intValue & ")"
+  of etInt: "int64(" & $expr.intValue & ")"
+  else:
+    raise newException(ValueError, "backend invariant: integer HIR has non-integral type")
+
+## Renders an Eido Float literal as 64-bit Nim floating point.
+## Example: Eido `1.5` becomes `float64(1.5)`.
+proc renderFloatingLiteral(expr: hirExpressions.HirExpr): string =
+  if expr.typ != etFloat:
+    raise newException(ValueError, "backend invariant: floating HIR is not Float")
+  "float64(" & $expr.floatValue & ")"
+
+## Renders one resolved HIR expression as Nim source.
+## Example: local Float `x / 2.0` renders with Nim floating-point division.
+proc renderExpr*(expr: hirExpressions.HirExpr): string =
+  case expr.kind
+  of hirExpressions.hekInteger:
+    result = renderIntegerLiteral(expr)
+  of hirExpressions.hekFloating:
+    result = renderFloatingLiteral(expr)
+  of hirExpressions.hekBoolean:
+    result = if expr.boolValue: "true" else: "false"
+  of hirExpressions.hekChar:
+    result = "uint16(" & $expr.charValue & ")"
+  of hirExpressions.hekLocal:
+    result = localName(expr.localId, expr.sourceName)
+  of hirExpressions.hekCall:
+    result = renderCall(expr.call)
+  of hirExpressions.hekUnary:
+    case expr.unaryOp
+    of hirExpressions.huoNegate:
+      result = "(-" & renderExpr(expr.operand) & ")"
+  of hirExpressions.hekBinary:
+    let operator =
+      case expr.op
+      of hirExpressions.hboAdd: "+"
+      of hirExpressions.hboSubtract: "-"
+      of hirExpressions.hboMultiply: "*"
+      of hirExpressions.hboDivide:
+        if expr.typ.isIntegral: "div" else: "/"
+      of hirExpressions.hboEqual: "=="
+      of hirExpressions.hboNotEqual: "!="
+      of hirExpressions.hboLess: "<"
+      of hirExpressions.hboLessEqual: "<="
+      of hirExpressions.hboGreater: ">"
+      of hirExpressions.hboGreaterEqual: ">="
+    result = "(" & renderExpr(expr.left) & " " & operator & " " &
+      renderExpr(expr.right) & ")"

@@ -1,0 +1,26 @@
+# Eido / Nim build outputs
+/bin/
+/nimcache/
+/.nimcache/
+
+# Native/object artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.pdb
+
+# Test executables produced by direct `nim c -r` runs
+/tests/**/*_test
+/tests/compiler_test_suite
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+/examples
