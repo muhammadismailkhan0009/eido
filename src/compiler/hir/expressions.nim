@@ -8,7 +8,8 @@ import ../semantic/symbols/ids
 
 type
   HirUnaryOp* = enum
-    huoNegate
+    huoNegate,
+    huoNot
 
   HirBinaryOp* = enum
     hboAdd,
@@ -20,7 +21,9 @@ type
     hboLess,
     hboLessEqual,
     hboGreater,
-    hboGreaterEqual
+    hboGreaterEqual,
+    hboAnd,
+    hboOr
 
   HirExprKind* = enum
     hekInteger,

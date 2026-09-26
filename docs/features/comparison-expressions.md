@@ -69,7 +69,13 @@ unary -
 + -
 < <= > >=
 == !=
+not
+and
+or
 ```
+
+Boolean word operators bind below comparisons; see `boolean-expressions.md`
+for their type and short-circuit rules.
 
 Thus:
 

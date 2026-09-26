@@ -56,6 +56,8 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     case expr.unaryOp
     of hirExpressions.huoNegate:
       result = "(-" & renderExpr(expr.operand) & ")"
+    of hirExpressions.huoNot:
+      result = "(not " & renderExpr(expr.operand) & ")"
   of hirExpressions.hekBinary:
     let operator =
       case expr.op
@@ -70,5 +72,7 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
       of hirExpressions.hboLessEqual: "<="
       of hirExpressions.hboGreater: ">"
       of hirExpressions.hboGreaterEqual: ">="
+      of hirExpressions.hboAnd: "and"
+      of hirExpressions.hboOr: "or"
     result = "(" & renderExpr(expr.left) & " " & operator & " " &
       renderExpr(expr.right) & ")"

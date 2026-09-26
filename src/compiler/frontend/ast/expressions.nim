@@ -5,7 +5,8 @@ import ../../source/span
 
 type
   UnaryOp* = enum
-    uoNegate
+    uoNegate,
+    uoNot
 
   BinaryOp* = enum
     boAdd,
@@ -17,7 +18,9 @@ type
     boLess,
     boLessEqual,
     boGreater,
-    boGreaterEqual
+    boGreaterEqual,
+    boAnd,
+    boOr
 
   ExprKind* = enum
     ekInteger,

@@ -11,6 +11,9 @@ proc keywordKind*(text: string): TokenKind =
   of "returns": tkReturns
   of "return": tkReturn
   of "var": tkVar
+  of "not": tkNot
+  of "and": tkAnd
+  of "or": tkOr
   of "Bool", "Byte", "Short", "Int", "Float", "Char":
     tkPrimitiveType
   of "true", "false":

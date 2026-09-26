@@ -204,21 +204,61 @@ proc analyzeExpr*(
 
   of astExpressions.ekUnary:
     let operand = analyzeExpr(expr.operand, locals, functions)
-    if operand.typ notin {etInt, etFloat}:
-      failAt(
-        expr.span,
-        "unary '-' requires Int or Float but got " & operand.typ.displayName
+
+    case expr.unaryOp
+    of astExpressions.uoNegate:
+      if operand.typ notin {etInt, etFloat}:
+        failAt(
+          expr.span,
+          "unary '-' requires Int or Float but got " & operand.typ.displayName
+        )
+
+      HirExpr(
+        kind: hekUnary,
+        span: expr.span,
+        typ: operand.typ,
+        unaryOp: huoNegate,
+        operand: operand
       )
 
-    HirExpr(
-      kind: hekUnary,
-      span: expr.span,
-      typ: operand.typ,
-      unaryOp: huoNegate,
-      operand: operand
-    )
+    of astExpressions.uoNot:
+      if operand.typ != etBool:
+        failAt(
+          expr.span,
+          "'not' requires Bool but got " & operand.typ.displayName
+        )
+
+      HirExpr(
+        kind: hekUnary,
+        span: expr.span,
+        typ: etBool,
+        unaryOp: huoNot,
+        operand: operand
+      )
 
   of astExpressions.ekBinary:
+    if expr.op in {astExpressions.boAnd, astExpressions.boOr}:
+      let left = analyzeExpr(expr.left, locals, functions)
+      let right = analyzeExpr(expr.right, locals, functions)
+
+      if left.typ != etBool or right.typ != etBool:
+        failAt(
+          expr.span,
+          "'and' and 'or' require Bool operands"
+        )
+
+      let op =
+        if expr.op == astExpressions.boAnd: hboAnd else: hboOr
+
+      return HirExpr(
+        kind: hekBinary,
+        span: expr.span,
+        typ: etBool,
+        op: op,
+        left: left,
+        right: right
+      )
+
     if expr.op in {
       astExpressions.boEqual,
       astExpressions.boNotEqual,

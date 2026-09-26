@@ -12,6 +12,7 @@ import compiler/semantic/analysis/local_binding_analysis_test
 import compiler/semantic/analysis/function_analysis_test
 import compiler/semantic/analysis/primitive_type_analysis_test
 import compiler/semantic/analysis/comparison_analysis_test
+import compiler/semantic/analysis/boolean_analysis_test
 import compiler/backend/nim/emitter/nim_emitter_test
 import compiler/pipeline/compiler_pipeline_test
 
