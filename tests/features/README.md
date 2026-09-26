@@ -15,7 +15,8 @@ Files are broad navigation boundaries; suites inside them name the smallest usef
 - `function_variants_test.nim` — signature cardinality, zero-result returns, call resolution/arity, and result contracts
 - `primitive_variants_test.nim` — supported primitive values, Byte bounds, numeric suffix rejection, and removed numeric type names
 - `variable_variants_test.nim` — initialization forms, reassignment forms, declaration ordering, and declaration uniqueness
-- `expression_variants_test.nim` — arithmetic, grouping, unary negation, comparisons, Boolean word operators, precedence/type compatibility, and short-circuit behavior
+- `expression_variants_test.nim` — arithmetic, grouping, unary negation, comparisons, and their precedence/type compatibility
+- `boolean_expression_variants_test.nim` — Boolean word operators, Boolean precedence, short-circuit behavior, and symbolic-operator exclusion
 
 ## Function matrix
 

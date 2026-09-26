@@ -28,13 +28,18 @@ tests/
   compiler/
     architecture/
     frontend/lexer/
+      keywords/
     frontend/parser/
+      expression/
     semantic/analysis/
+      expression/
     backend/nim/emitter/
+      expression/
     pipeline/
 
   features/
     expression_variants_test.nim
+    boolean_expression_variants_test.nim
     function_variants_test.nim
     primitive_variants_test.nim
     variable_variants_test.nim

@@ -9,6 +9,8 @@ import names
 ## Example: local Int `x + 5` renders as `(eido_local_0_x + int64(5))`.
 proc renderExpr*(expr: hirExpressions.HirExpr): string
 
+include expression/boolean_operators
+
 ## Renders a resolved function call without deciding whether its result is used.
 ## Example: resolved `add(1, 2)` becomes `eido_fn_1_add(int64(1), int64(2))`.
 proc renderCall*(call: hirExpressions.HirCall): string =
@@ -57,8 +59,11 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     of hirExpressions.huoNegate:
       result = "(-" & renderExpr(expr.operand) & ")"
     of hirExpressions.huoNot:
-      result = "(not " & renderExpr(expr.operand) & ")"
+      result = renderBooleanNot(expr)
   of hirExpressions.hekBinary:
+    if expr.op in {hirExpressions.hboAnd, hirExpressions.hboOr}:
+      return renderBooleanBinary(expr)
+
     let operator =
       case expr.op
       of hirExpressions.hboAdd: "+"
@@ -72,7 +77,10 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
       of hirExpressions.hboLessEqual: "<="
       of hirExpressions.hboGreater: ">"
       of hirExpressions.hboGreaterEqual: ">="
-      of hirExpressions.hboAnd: "and"
-      of hirExpressions.hboOr: "or"
+      else:
+        raise newException(
+          ValueError,
+          "backend invariant: Boolean operator reached scalar emitter"
+        )
     result = "(" & renderExpr(expr.left) & " " & operator & " " &
       renderExpr(expr.right) & ")"

@@ -92,13 +92,18 @@ cli/
 
 ## Growth rule
 
-When a capability grows, split by cohesive responsibility inside its existing directory.
-For example, parser expression precedence belongs in the parser expression module;
-it does not justify one file per operator.
+When a capability grows, split by semantic ownership inside its existing area rather
+than allowing a generic hub file to accumulate feature-specific behavior. Stable hub
+modules should coordinate shared dispatch and entry points; independently meaningful
+families belong in focused subdirectories.
 
-Create a new nested directory only when the capability has multiple independently
-meaningful sub-responsibilities. Architecture should reduce navigation cost rather
-than manufacture folder depth.
+For example, Boolean expression behavior lives under the expression areas for lexer
+keywords, parsing, semantic analysis, emission, and tests. This does not imply one
+file per token or operator: compact canonical vocabularies such as token and AST/HIR
+operator enums remain centralized while they are still cohesive.
+
+Create nested directories when they reduce navigation cost by grouping meaningful
+behavior families, not merely to reduce line counts or manufacture folder depth.
 
 ## Readability rule
 

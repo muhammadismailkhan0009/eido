@@ -141,6 +141,8 @@ proc analyzeComparisonOperands(
     analyzeExpr(rightExpr, locals, functions)
   )
 
+include expression/boolean_operators
+
 ## Resolves names and types in an AST expression and produces HIR.
 ## Example: `2147483648` is still Int and `2.5` is Float.
 proc analyzeExpr*(
@@ -222,42 +224,11 @@ proc analyzeExpr*(
       )
 
     of astExpressions.uoNot:
-      if operand.typ != etBool:
-        failAt(
-          expr.span,
-          "'not' requires Bool but got " & operand.typ.displayName
-        )
-
-      HirExpr(
-        kind: hekUnary,
-        span: expr.span,
-        typ: etBool,
-        unaryOp: huoNot,
-        operand: operand
-      )
+      analyzeBooleanNot(expr, locals, functions)
 
   of astExpressions.ekBinary:
     if expr.op in {astExpressions.boAnd, astExpressions.boOr}:
-      let left = analyzeExpr(expr.left, locals, functions)
-      let right = analyzeExpr(expr.right, locals, functions)
-
-      if left.typ != etBool or right.typ != etBool:
-        failAt(
-          expr.span,
-          "'and' and 'or' require Bool operands"
-        )
-
-      let op =
-        if expr.op == astExpressions.boAnd: hboAnd else: hboOr
-
-      return HirExpr(
-        kind: hekBinary,
-        span: expr.span,
-        typ: etBool,
-        op: op,
-        left: left,
-        right: right
-      )
+      return analyzeBooleanBinary(expr, locals, functions)
 
     if expr.op in {
       astExpressions.boEqual,
