@@ -6,6 +6,7 @@
 import compiler/architecture/compiler_architecture_test
 import compiler/frontend/lexer/scanner_test
 import compiler/frontend/lexer/keywords/boolean_operator_keyword_test
+import compiler/frontend/lexer/keywords/conditional_keyword_test
 import compiler/frontend/parser/expression/literal_expression_parser_test
 import compiler/frontend/parser/expression/call_expression_parser_test
 import compiler/frontend/parser/expression/grouping_expression_parser_test
@@ -14,8 +15,10 @@ import compiler/frontend/parser/expression/arithmetic_operator_parser_test
 import compiler/frontend/parser/expression/comparison_operator_parser_test
 import compiler/frontend/parser/expression/boolean_operator_parser_test
 import compiler/frontend/parser/function_parser_test
+import compiler/frontend/parser/statement/conditional_statement_parser_test
 import compiler/semantic/analysis/local_binding_analysis_test
 import compiler/semantic/analysis/function_analysis_test
+import compiler/semantic/analysis/statement/conditional_statement_analysis_test
 import compiler/semantic/analysis/expression/literal_expression_analysis_test
 import compiler/semantic/analysis/expression/expected_type_analysis_test
 import compiler/semantic/analysis/expression/identifier_expression_analysis_test
@@ -26,6 +29,7 @@ import compiler/semantic/analysis/expression/comparison_operator_analysis_test
 import compiler/semantic/analysis/expression/boolean_operator_analysis_test
 import compiler/backend/nim/emitter/nim_emitter_test
 import compiler/backend/nim/emitter/expression/boolean_operator_emitter_test
+import compiler/backend/nim/emitter/statement/conditional_statement_emitter_test
 import compiler/pipeline/compiler_pipeline_test
 
 import features/expression/arithmetic_variants_test
@@ -34,5 +38,7 @@ import features/expression/unary_negation_variants_test
 import features/expression/comparison_variants_test
 import features/expression/boolean_operator_variants_test
 import features/function_variants_test
+import features/control_flow/conditional_variants_test
+import features/control_flow/else_if_variants_test
 import features/primitive_variants_test
 import features/variable_variants_test

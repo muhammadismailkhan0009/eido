@@ -55,6 +55,7 @@ compiler/frontend/parser/
     expression_parser.nim is a thin expression-entry/precedence coordinator
     expression/ groups literals, calls, grouping, unary negation, arithmetic,
     comparisons, and Boolean operators by semantic ownership
+    statement/ contains statement-family grammar such as conditional control flow
 
 compiler/types/
     core Eido semantic type model
@@ -67,12 +68,15 @@ compiler/semantic/analysis/
     expression_analysis.nim is a thin expression semantic coordinator
     expression/ groups literal/contextual typing, identifiers, calls, unary
     negation, arithmetic, comparisons, and Boolean rules by semantic ownership
+    statement/ contains statement-family rules such as conditional scopes and
+    definite-return analysis
 
 compiler/hir/
     resolved and typed compiler representation
 
 compiler/backend/nim/emitter/
     pure HIR → Nim source translation
+    statement/ contains structured statement-family emitters such as conditionals
 
 compiler/backend/nim/toolchain/
     generated artifacts and Nim process invocation

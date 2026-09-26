@@ -1,31 +1,61 @@
-## Renders HIR statements as Nim statements. Example: a no-result `notify(10);` call emits a direct proc call, while a value-returning call used as a statement emits `discard`.
+## Renders typed HIR statements as Nim while preserving structured indentation.
+## Example: function-level statements start at two spaces and nested conditional bodies indent further.
 
+import std/strutils
 import ../../../hir/statements as hirStatements
 import ../../../types/function_result
 import names
 import type_emitter
 import expression_emitter
 
-## Renders one HIR statement as Nim source. Example: an HIR variable declaration becomes `var eido_local_0_x: int64 = int64(5)`.
-proc renderStmt*(stmt: hirStatements.HirStmt): string =
+## Returns spaces for one emitted statement indentation level.
+## Example: indentation(4) prefixes a statement nested inside a function-level conditional.
+proc indentation(level: int): string =
+  repeat(' ', level)
+
+## Renders one HIR statement at an explicit indentation level.
+## Example: conditional emission recursively calls this for branch statements.
+proc renderStmtAt*(
+  stmt: hirStatements.HirStmt,
+  indent: int
+): string
+
+include statement/conditional_statements
+
+## Renders one HIR statement at an explicit indentation level.
+## Example: an HIR variable declaration nested at four spaces keeps that indentation.
+proc renderStmtAt*(
+  stmt: hirStatements.HirStmt,
+  indent: int
+): string =
+  let pad = indentation(indent)
+
   case stmt.kind
   of hirStatements.hskVar:
-    "  var " & localName(stmt.localId, stmt.sourceName) &
+    pad & "var " & localName(stmt.localId, stmt.sourceName) &
       ": " & renderType(stmt.typ) & " = " &
       renderExpr(stmt.initializer) & "\n"
 
   of hirStatements.hskAssign:
-    "  " & localName(stmt.targetId, stmt.targetName) &
+    pad & localName(stmt.targetId, stmt.targetName) &
       " = " & renderExpr(stmt.assignedValue) & "\n"
 
   of hirStatements.hskCall:
     if stmt.call.result.kind == frNone:
-      "  " & renderCall(stmt.call) & "\n"
+      pad & renderCall(stmt.call) & "\n"
     else:
-      "  discard " & renderCall(stmt.call) & "\n"
+      pad & "discard " & renderCall(stmt.call) & "\n"
 
   of hirStatements.hskReturn:
     if stmt.value.isNil:
-      "  return\n"
+      pad & "return\n"
     else:
-      "  return " & renderExpr(stmt.value) & "\n"
+      pad & "return " & renderExpr(stmt.value) & "\n"
+
+  of hirStatements.hskIf:
+    renderConditional(stmt, indent)
+
+## Renders one function-level HIR statement.
+## Example: top-level function statements begin with two spaces in generated Nim.
+proc renderStmt*(stmt: hirStatements.HirStmt): string =
+  renderStmtAt(stmt, 2)

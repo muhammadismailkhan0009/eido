@@ -31,10 +31,13 @@ tests/
       keywords/
     frontend/parser/
       expression/
+      statement/
     semantic/analysis/
       expression/
+      statement/
     backend/nim/emitter/
       expression/
+      statement/
     pipeline/
 
   features/
@@ -45,6 +48,10 @@ tests/
       unary_negation_variants_test.nim
       comparison_variants_test.nim
       boolean_operator_variants_test.nim
+    control_flow/
+      README.md
+      conditional_variants_test.nim
+      else_if_variants_test.nim
     function_variants_test.nim
     primitive_variants_test.nim
     variable_variants_test.nim
@@ -55,7 +62,7 @@ tests/
 
 ### Compiler-internal tests
 
-`tests/compiler/` mirrors production responsibilities. Expression parser and expression semantic-analysis tests mirror the focused modules under `src/compiler/frontend/parser/expression/` and `src/compiler/semantic/analysis/expression/` rather than accumulating in generic expression test files.
+`tests/compiler/` mirrors production responsibilities. Expression parser/analysis tests mirror their focused expression modules, while structured statement features such as conditionals mirror the focused `statement/` modules across parser, semantic analysis, and emitter layers.
 
 These tests answer questions such as:
 

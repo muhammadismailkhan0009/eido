@@ -8,7 +8,8 @@ type
     skVar,
     skAssign,
     skCall,
-    skReturn
+    skReturn,
+    skIf
 
   Stmt* = ref object
     span*: SourceSpan
@@ -23,3 +24,7 @@ type
       call*: Expr
     of skReturn:
       value*: Expr
+    of skIf:
+      condition*: Expr
+      thenBranch*: seq[Stmt]
+      elseBranch*: seq[Stmt]

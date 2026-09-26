@@ -10,7 +10,8 @@ type
     hskVar,
     hskAssign,
     hskCall,
-    hskReturn
+    hskReturn,
+    hskIf
 
   HirStmt* = ref object
     span*: SourceSpan
@@ -28,3 +29,7 @@ type
       call*: HirCall
     of hskReturn:
       value*: HirExpr
+    of hskIf:
+      condition*: HirExpr
+      thenBranch*: seq[HirStmt]
+      elseBranch*: seq[HirStmt]

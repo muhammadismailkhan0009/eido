@@ -8,6 +8,10 @@ import ../ast/expressions
 import core
 import expression_parser
 
+## Parses one statement using the owning statement-family parser.
+## Example: declarations, assignments, calls, returns, and conditionals dispatch here.
+proc parseStatement*(parser: var Parser): Stmt
+
 ## Parses a `var` declaration statement. Example: `var salary = 5000;` becomes `skVar` with initializer `5000`.
 proc parseVarStmt*(parser: var Parser): Stmt =
   let start = parser.consume(tkVar, "expected 'var'")
@@ -96,4 +100,29 @@ proc parseReturnStmt*(parser: var Parser): Stmt =
       column: start.span.column
     ),
     value: value
+  )
+
+include statement/conditional_statements
+
+## Parses one statement by dispatching to its semantic statement family.
+## Example: `if ready { return; }` delegates to conditional parsing.
+proc parseStatement*(parser: var Parser): Stmt =
+  if parser.check(tkVar):
+    return parser.parseVarStmt()
+
+  if parser.check(tkReturn):
+    return parser.parseReturnStmt()
+
+  if parser.check(tkIf):
+    return parser.parseIfStmt()
+
+  if parser.check(tkIdentifier) and parser.checkNext(tkEqual):
+    return parser.parseAssignStmt()
+
+  if parser.check(tkIdentifier) and parser.checkNext(tkLParen):
+    return parser.parseCallStmt()
+
+  failAt(
+    parser.peek.span,
+    "expected variable declaration, assignment, function call, return, if, or '}'"
   )

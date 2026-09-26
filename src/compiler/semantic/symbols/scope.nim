@@ -36,3 +36,17 @@ proc add*(
 proc nextLocalId*(scope: var LocalScope): LocalId =
   result = LocalId(scope.nextId)
   inc scope.nextId
+
+## Creates an isolated branch scope containing the currently visible bindings.
+## Example: an if-branch may read outer locals while branch declarations do not leak back out.
+proc fork*(scope: LocalScope): LocalScope =
+  result = initLocalScope()
+  result.nextId = scope.nextId
+  for name, symbol in scope.byName.pairs:
+    result.byName[name] = symbol
+
+## Advances a parent scope's local-ID allocator after analyzing an isolated branch.
+## Example: locals created in then/else branches still receive unique function-wide LocalIds.
+proc synchronizeNextId*(scope: var LocalScope, branch: LocalScope) =
+  if branch.nextId > scope.nextId:
+    scope.nextId = branch.nextId

@@ -58,21 +58,12 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
   discard parser.consume(tkLBrace, "expected '{' before function body")
 
   var body: seq[Stmt]
-  while not parser.check(tkRBrace) and not parser.check(tkReturn):
-    if parser.check(tkVar):
-      body.add parser.parseVarStmt()
-    elif parser.check(tkIdentifier) and parser.checkNext(tkEqual):
-      body.add parser.parseAssignStmt()
-    elif parser.check(tkIdentifier) and parser.checkNext(tkLParen):
-      body.add parser.parseCallStmt()
-    else:
-      failAt(
-        parser.peek.span,
-        "expected variable declaration, assignment, function call, return, or '}'"
-      )
+  while not parser.check(tkRBrace):
+    body.add parser.parseStatement()
 
-  if parser.check(tkReturn):
-    body.add parser.parseReturnStmt()
+    # Preserve the existing rule that a direct return ends the function body.
+    if body[^1].kind == skReturn and not parser.check(tkRBrace):
+      failAt(parser.peek.span, "expected '}' after return")
 
   let closeBrace = parser.consume(tkRBrace, "expected '}' after function body")
 

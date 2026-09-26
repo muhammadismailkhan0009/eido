@@ -15,6 +15,8 @@ type
     tkReturns,
     tkReturn,
     tkVar,
+    tkIf,
+    tkElse,
     tkNot,
     tkAnd,
     tkOr,

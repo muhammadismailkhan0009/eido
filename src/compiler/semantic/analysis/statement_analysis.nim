@@ -12,6 +12,17 @@ import ../symbols/functions
 import ../symbols/scope
 import expression_analysis
 
+## Checks one AST statement and lowers it to HIR.
+## Example: conditional branches recursively reuse the same statement-analysis entry point.
+proc analyzeStmt*(
+  stmt: astStatements.Stmt,
+  locals: var LocalScope,
+  functions: FunctionSymbols,
+  functionResult: FunctionResult
+): hirStatements.HirStmt
+
+include statement/conditional_statements
+
 ## Checks one AST statement and lowers it to HIR. Example: `b = a;` verifies `b` exists, checks types, and stores both bindings by semantic ID.
 proc analyzeStmt*(
   stmt: astStatements.Stmt,
@@ -108,3 +119,6 @@ proc analyzeStmt*(
           functions
         )
       )
+
+  of astStatements.skIf:
+    analyzeConditional(stmt, locals, functions, functionResult)

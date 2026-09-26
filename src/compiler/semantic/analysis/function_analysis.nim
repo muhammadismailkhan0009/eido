@@ -48,7 +48,7 @@ proc analyzeFunction*(
     body.add analyzeStmt(stmt, locals, functions, symbol.result)
 
   if symbol.result.kind == frSingle:
-    if body.len == 0 or body[^1].kind != hskReturn:
+    if not blockAlwaysReturns(body):
       failAt(
         fn.span,
         "function '" & fn.name & "' must return " & symbol.result.typ.displayName
