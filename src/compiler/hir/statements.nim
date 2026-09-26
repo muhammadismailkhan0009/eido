@@ -11,7 +11,10 @@ type
     hskAssign,
     hskCall,
     hskReturn,
-    hskIf
+    hskIf,
+    hskWhile,
+    hskBreak,
+    hskContinue
 
   HirStmt* = ref object
     span*: SourceSpan
@@ -33,3 +36,8 @@ type
       condition*: HirExpr
       thenBranch*: seq[HirStmt]
       elseBranch*: seq[HirStmt]
+    of hskWhile:
+      whileCondition*: HirExpr
+      body*: seq[HirStmt]
+    of hskBreak, hskContinue:
+      discard

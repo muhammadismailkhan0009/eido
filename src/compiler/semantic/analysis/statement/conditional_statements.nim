@@ -1,33 +1,14 @@
 ## Analyzes conditional control flow with isolated branch-local scopes.
 ## Example: both branches may read outer locals, but branch declarations do not leak outward.
 
-## Analyzes one conditional branch in an isolated child scope.
-## Example: locals declared inside a then-branch remain unavailable after the branch.
-proc analyzeConditionalBranch(
-  statements: seq[astStatements.Stmt],
-  parentLocals: var LocalScope,
-  functions: FunctionSymbols,
-  functionResult: FunctionResult
-): seq[hirStatements.HirStmt] =
-  var branchLocals = parentLocals.fork()
-
-  for statement in statements:
-    result.add analyzeStmt(
-      statement,
-      branchLocals,
-      functions,
-      functionResult
-    )
-
-  parentLocals.synchronizeNextId(branchLocals)
-
 ## Analyzes an if/else statement and requires its condition to be Bool.
 ## Example: `if (count > 0) { ... }` lowers to HIR with isolated branch bodies.
 proc analyzeConditional(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  functionResult: FunctionResult
+  functionResult: FunctionResult,
+  loopDepth: int
 ): hirStatements.HirStmt =
   let condition = analyzeExprExpected(
     stmt.condition,
@@ -36,18 +17,20 @@ proc analyzeConditional(
     functions
   )
 
-  let thenBranch = analyzeConditionalBranch(
+  let thenBranch = analyzeScopedStatementBlock(
     stmt.thenBranch,
     locals,
     functions,
-    functionResult
+    functionResult,
+    loopDepth
   )
 
-  let elseBranch = analyzeConditionalBranch(
+  let elseBranch = analyzeScopedStatementBlock(
     stmt.elseBranch,
     locals,
     functions,
-    functionResult
+    functionResult,
+    loopDepth
   )
 
   HirStmt(

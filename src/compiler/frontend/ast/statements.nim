@@ -9,7 +9,10 @@ type
     skAssign,
     skCall,
     skReturn,
-    skIf
+    skIf,
+    skWhile,
+    skBreak,
+    skContinue
 
   Stmt* = ref object
     span*: SourceSpan
@@ -28,3 +31,8 @@ type
       condition*: Expr
       thenBranch*: seq[Stmt]
       elseBranch*: seq[Stmt]
+    of skWhile:
+      whileCondition*: Expr
+      body*: seq[Stmt]
+    of skBreak, skContinue:
+      discard

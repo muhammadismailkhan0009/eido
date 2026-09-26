@@ -4,6 +4,8 @@
 import token
 include keywords/boolean_operators
 include keywords/conditional_statements
+include keywords/while_statements
+include keywords/loop_control_statements
 
 ## Maps identifier text to its token kind.
 ## Example: `"true"` becomes `tkBoolean`, while `"Long"` stays `tkIdentifier`.
@@ -15,6 +17,14 @@ proc keywordKind*(text: string): TokenKind =
   let conditionalKeyword = conditionalKeywordKind(text)
   if conditionalKeyword != tkIdentifier:
     return conditionalKeyword
+
+  let whileKeyword = whileKeywordKind(text)
+  if whileKeyword != tkIdentifier:
+    return whileKeyword
+
+  let loopControlKeyword = loopControlKeywordKind(text)
+  if loopControlKeyword != tkIdentifier:
+    return loopControlKeyword
 
   case text
   of "function": tkFunction

@@ -18,17 +18,22 @@ proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  functionResult: FunctionResult
+  functionResult: FunctionResult,
+  loopDepth: int = 0
 ): hirStatements.HirStmt
 
+include statement/scoped_blocks
 include statement/conditional_statements
+include statement/while_statements
+include statement/loop_control_statements
 
 ## Checks one AST statement and lowers it to HIR. Example: `b = a;` verifies `b` exists, checks types, and stores both bindings by semantic ID.
 proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  functionResult: FunctionResult
+  functionResult: FunctionResult,
+  loopDepth: int = 0
 ): hirStatements.HirStmt =
   case stmt.kind
   of astStatements.skVar:
@@ -121,4 +126,22 @@ proc analyzeStmt*(
       )
 
   of astStatements.skIf:
-    analyzeConditional(stmt, locals, functions, functionResult)
+    analyzeConditional(
+      stmt,
+      locals,
+      functions,
+      functionResult,
+      loopDepth
+    )
+
+  of astStatements.skWhile:
+    analyzeWhile(
+      stmt,
+      locals,
+      functions,
+      functionResult,
+      loopDepth
+    )
+
+  of astStatements.skBreak, astStatements.skContinue:
+    analyzeLoopControl(stmt, loopDepth)

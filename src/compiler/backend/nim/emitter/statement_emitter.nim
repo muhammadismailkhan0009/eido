@@ -21,6 +21,8 @@ proc renderStmtAt*(
 ): string
 
 include statement/conditional_statements
+include statement/while_statements
+include statement/loop_control_statements
 
 ## Renders one HIR statement at an explicit indentation level.
 ## Example: an HIR variable declaration nested at four spaces keeps that indentation.
@@ -54,6 +56,12 @@ proc renderStmtAt*(
 
   of hirStatements.hskIf:
     renderConditional(stmt, indent)
+
+  of hirStatements.hskWhile:
+    renderWhile(stmt, indent)
+
+  of hirStatements.hskBreak, hirStatements.hskContinue:
+    renderLoopControl(stmt, indent)
 
 ## Renders one function-level HIR statement.
 ## Example: top-level function statements begin with two spaces in generated Nim.

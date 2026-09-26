@@ -52,6 +52,8 @@ tests/
       README.md
       conditional_variants_test.nim
       else_if_variants_test.nim
+      while_variants_test.nim
+      loop_control_variants_test.nim
     function_variants_test.nim
     primitive_variants_test.nim
     variable_variants_test.nim
@@ -62,7 +64,7 @@ tests/
 
 ### Compiler-internal tests
 
-`tests/compiler/` mirrors production responsibilities. Expression parser/analysis tests mirror their focused expression modules, while structured statement features such as conditionals mirror the focused `statement/` modules across parser, semantic analysis, and emitter layers.
+`tests/compiler/` mirrors production responsibilities. Expression parser/analysis tests mirror their focused expression modules, while structured statement features such as conditionals and loops mirror the focused `statement/` modules across parser, semantic analysis, and emitter layers.
 
 These tests answer questions such as:
 

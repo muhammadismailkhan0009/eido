@@ -102,10 +102,13 @@ proc parseReturnStmt*(parser: var Parser): Stmt =
     value: value
   )
 
+include statement/braced_blocks
 include statement/conditional_statements
+include statement/while_statements
+include statement/loop_control_statements
 
 ## Parses one statement by dispatching to its semantic statement family.
-## Example: `if ready { return; }` delegates to conditional parsing.
+## Example: `if (ready) { return; }` and `while (ready) { ... }` delegate to focused parsers.
 proc parseStatement*(parser: var Parser): Stmt =
   if parser.check(tkVar):
     return parser.parseVarStmt()
@@ -116,6 +119,15 @@ proc parseStatement*(parser: var Parser): Stmt =
   if parser.check(tkIf):
     return parser.parseIfStmt()
 
+  if parser.check(tkWhile):
+    return parser.parseWhileStmt()
+
+  if parser.check(tkBreak):
+    return parser.parseBreakStmt()
+
+  if parser.check(tkContinue):
+    return parser.parseContinueStmt()
+
   if parser.check(tkIdentifier) and parser.checkNext(tkEqual):
     return parser.parseAssignStmt()
 
@@ -124,5 +136,5 @@ proc parseStatement*(parser: var Parser): Stmt =
 
   failAt(
     parser.peek.span,
-    "expected variable declaration, assignment, function call, return, if, or '}'"
+    "expected variable declaration, assignment, function call, return, if, while, break, continue, or '}'"
   )
