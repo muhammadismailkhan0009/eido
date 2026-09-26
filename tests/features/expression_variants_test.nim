@@ -1,5 +1,5 @@
 import std/unittest
-import support/[compiler_test_support, native_test_support]
+import support/[compiler_test_support, feature_test_support]
 
 suite "Binary arithmetic operations":
   test "Int addition":
@@ -7,7 +7,7 @@ suite "Binary arithmetic operations":
     let source = "function main() returns Int { return 10 + 5; }"
 
     # When
-    let output = runNativeSource(source, "expression_add")
+    let output = runFeatureSource(source, "expression_add")
 
     # Then
     check output == "15"
@@ -16,7 +16,7 @@ suite "Binary arithmetic operations":
     let source = "function main() returns Int { return 10 - 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_subtract")
+    let output = runFeatureSource(source, "expression_subtract")
 
     # Then
     check output == "7"
@@ -25,7 +25,7 @@ suite "Binary arithmetic operations":
     let source = "function main() returns Int { return 6 * 7; }"
 
     # When
-    let output = runNativeSource(source, "expression_multiply")
+    let output = runFeatureSource(source, "expression_multiply")
 
     # Then
     check output == "42"
@@ -34,7 +34,7 @@ suite "Binary arithmetic operations":
     let source = "function main() returns Int { return 10 / 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_int_divide")
+    let output = runFeatureSource(source, "expression_int_divide")
 
     # Then
     check output == "3"
@@ -43,7 +43,7 @@ suite "Binary arithmetic operations":
     let source = "function main() returns Float { return 1.5 + 2.5; }"
 
     # When
-    let output = runNativeSource(source, "expression_float_add")
+    let output = runFeatureSource(source, "expression_float_add")
 
     # Then
     check output == "4.0"
@@ -52,7 +52,7 @@ suite "Binary arithmetic operations":
     let source = "function main() returns Float { return 5.0 / 2.0; }"
 
     # When
-    let output = runNativeSource(source, "expression_float_divide")
+    let output = runFeatureSource(source, "expression_float_divide")
 
     # Then
     check output == "2.5"
@@ -63,7 +63,7 @@ suite "Binary operator precedence":
     let source = "function main() returns Int { return 10 + 20 * 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_precedence")
+    let output = runFeatureSource(source, "expression_precedence")
 
     # Then
     check output == "70"
@@ -72,7 +72,7 @@ suite "Binary operator precedence":
     let source = "function main() returns Int { return 10 + 20 / 5; }"
 
     # When
-    let output = runNativeSource(source, "expression_div_before_add")
+    let output = runFeatureSource(source, "expression_div_before_add")
 
     # Then
     check output == "14"
@@ -81,7 +81,7 @@ suite "Binary operator precedence":
     let source = "function main() returns Int { return 20 - 3 * 4; }"
 
     # When
-    let output = runNativeSource(source, "expression_mul_before_sub")
+    let output = runFeatureSource(source, "expression_mul_before_sub")
 
     # Then
     check output == "8"
@@ -92,7 +92,7 @@ suite "Equal-precedence binary associativity":
     let source = "function main() returns Int { return 20 / 5 * 2; }"
 
     # When
-    let output = runNativeSource(source, "expression_mul_div_left_to_right")
+    let output = runFeatureSource(source, "expression_mul_div_left_to_right")
 
     # Then
     check output == "8"
@@ -101,7 +101,7 @@ suite "Equal-precedence binary associativity":
     let source = "function main() returns Int { return 10 - 3 + 2; }"
 
     # When
-    let output = runNativeSource(source, "expression_add_sub_left_to_right")
+    let output = runFeatureSource(source, "expression_add_sub_left_to_right")
 
     # Then
     check output == "9"
@@ -112,7 +112,7 @@ suite "Grouping delimiter equivalence":
     let source = "function main() returns Int { return (10 + 20) * 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_parentheses")
+    let output = runFeatureSource(source, "expression_parentheses")
 
     # Then
     check output == "90"
@@ -121,7 +121,7 @@ suite "Grouping delimiter equivalence":
     let source = "function main() returns Int { return [10 + 20] * 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_square_group")
+    let output = runFeatureSource(source, "expression_square_group")
 
     # Then
     check output == "90"
@@ -130,7 +130,7 @@ suite "Grouping delimiter equivalence":
     let source = "function main() returns Int { return {10 + 20} * 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_curly_group")
+    let output = runFeatureSource(source, "expression_curly_group")
 
     # Then
     check output == "90"
@@ -140,7 +140,7 @@ suite "Grouping delimiter equivalence":
       "function main() returns Int { return [{(10 + 20) * 2} + 5] * 2; }"
 
     # When
-    let output = runNativeSource(source, "expression_nested_groups")
+    let output = runFeatureSource(source, "expression_nested_groups")
 
     # Then
     check output == "130"
@@ -150,7 +150,7 @@ suite "Grouping delimiter equivalence":
       "function main() returns Int { return {2 + [3 * (4 + 1)]}; }"
 
     # When
-    let output = runNativeSource(source, "expression_group_equivalence")
+    let output = runFeatureSource(source, "expression_group_equivalence")
 
     # Then
     check output == "17"
@@ -161,7 +161,7 @@ suite "Unary numeric negation":
     let source = "function main() returns Int { return -5; }"
 
     # When
-    let output = runNativeSource(source, "expression_negative_int")
+    let output = runFeatureSource(source, "expression_negative_int")
 
     # Then
     check output == "-5"
@@ -170,7 +170,7 @@ suite "Unary numeric negation":
     let source = "function main() returns Float { return -2.5; }"
 
     # When
-    let output = runNativeSource(source, "expression_negative_float")
+    let output = runFeatureSource(source, "expression_negative_float")
 
     # Then
     check output == "-2.5"
@@ -187,7 +187,7 @@ suite "Unary numeric negation":
     """
 
     # When
-    let output = runNativeSource(source, "expression_negate_variable")
+    let output = runFeatureSource(source, "expression_negate_variable")
 
     # Then
     check output == "-7"
@@ -200,7 +200,7 @@ suite "Unary numeric negation":
     """
 
     # When
-    let output = runNativeSource(source, "expression_negate_call")
+    let output = runFeatureSource(source, "expression_negate_call")
 
     # Then
     check output == "-7"
@@ -210,7 +210,7 @@ suite "Unary numeric negation":
     let source = "function main() returns Int { return -(10 + 5); }"
 
     # When
-    let output = runNativeSource(source, "expression_negate_group")
+    let output = runFeatureSource(source, "expression_negate_group")
 
     # Then
     check output == "-15"
@@ -220,7 +220,7 @@ suite "Unary numeric negation":
     let source = "function main() returns Int { return --5; }"
 
     # When
-    let output = runNativeSource(source, "expression_double_negation")
+    let output = runFeatureSource(source, "expression_double_negation")
 
     # Then
     check output == "5"
@@ -270,7 +270,7 @@ suite "Unary negation binding":
     let source = "function main() returns Int { return -2 * 3; }"
 
     # When
-    let output = runNativeSource(source, "expression_negation_binding")
+    let output = runFeatureSource(source, "expression_negation_binding")
 
     # Then
     check output == "-6"
@@ -280,7 +280,7 @@ suite "Unary negation binding":
     let source = "function main() returns Int { return 10 - -5; }"
 
     # When
-    let output = runNativeSource(source, "expression_subtract_negative")
+    let output = runFeatureSource(source, "expression_subtract_negative")
 
     # Then
     check output == "15"
@@ -291,7 +291,7 @@ suite "Equality comparison":
     let source = "function main() returns Bool { return 10 == 10; }"
 
     # When
-    let output = runNativeSource(source, "comparison_int_equal")
+    let output = runFeatureSource(source, "comparison_int_equal")
 
     # Then
     check output == "true"
@@ -301,7 +301,7 @@ suite "Equality comparison":
     let source = "function main() returns Bool { return true != false; }"
 
     # When
-    let output = runNativeSource(source, "comparison_bool_not_equal")
+    let output = runFeatureSource(source, "comparison_bool_not_equal")
 
     # Then
     check output == "true"
@@ -311,7 +311,7 @@ suite "Equality comparison":
     let source = "function main() returns Bool { return 'A' == 'A'; }"
 
     # When
-    let output = runNativeSource(source, "comparison_char_equal")
+    let output = runFeatureSource(source, "comparison_char_equal")
 
     # Then
     check output == "true"
@@ -325,7 +325,7 @@ suite "Ordered numeric comparison":
     """
 
     # When
-    let output = runNativeSource(source, "comparison_byte_less")
+    let output = runFeatureSource(source, "comparison_byte_less")
 
     # Then
     check output == "true"
@@ -338,7 +338,7 @@ suite "Ordered numeric comparison":
     """
 
     # When
-    let output = runNativeSource(source, "comparison_short_less_equal")
+    let output = runFeatureSource(source, "comparison_short_less_equal")
 
     # Then
     check output == "true"
@@ -348,7 +348,7 @@ suite "Ordered numeric comparison":
     let source = "function main() returns Bool { return 10 > 3; }"
 
     # When
-    let output = runNativeSource(source, "comparison_int_greater")
+    let output = runFeatureSource(source, "comparison_int_greater")
 
     # Then
     check output == "true"
@@ -358,7 +358,7 @@ suite "Ordered numeric comparison":
     let source = "function main() returns Bool { return 2.5 >= 2.5; }"
 
     # When
-    let output = runNativeSource(source, "comparison_float_greater_equal")
+    let output = runFeatureSource(source, "comparison_float_greater_equal")
 
     # Then
     check output == "true"
@@ -386,7 +386,7 @@ suite "Comparison binding":
     let source = "function main() returns Bool { return 1 + 2 < 4 * 2; }"
 
     # When
-    let output = runNativeSource(source, "comparison_arithmetic_binding")
+    let output = runFeatureSource(source, "comparison_arithmetic_binding")
 
     # Then
     check output == "true"
@@ -396,7 +396,7 @@ suite "Comparison binding":
     let source = "function main() returns Bool { return 1 < 2 == true; }"
 
     # When
-    let output = runNativeSource(source, "comparison_equality_binding")
+    let output = runFeatureSource(source, "comparison_equality_binding")
 
     # Then
     check output == "true"

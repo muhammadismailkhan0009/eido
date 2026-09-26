@@ -1,5 +1,5 @@
 import std/unittest
-import support/[compiler_test_support, native_test_support]
+import support/[compiler_test_support, feature_test_support]
 
 suite "Supported primitive type values":
   test "Bool parameter + Bool result":
@@ -15,7 +15,7 @@ suite "Supported primitive type values":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_bool")
+    let output = runFeatureSource(source, "primitive_bool")
 
     # Then
     check output == "true"
@@ -32,7 +32,7 @@ suite "Supported primitive type values":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_byte")
+    let output = runFeatureSource(source, "primitive_byte")
 
     # Then
     check output == "127"
@@ -49,7 +49,7 @@ suite "Supported primitive type values":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_short")
+    let output = runFeatureSource(source, "primitive_short")
 
     # Then
     check output == "300"
@@ -66,7 +66,7 @@ suite "Supported primitive type values":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_int")
+    let output = runFeatureSource(source, "primitive_int")
 
     # Then
     check output == "2147483648"
@@ -83,7 +83,7 @@ suite "Supported primitive type values":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_float")
+    let output = runFeatureSource(source, "primitive_float")
 
     # Then
     check output == "2.5"
@@ -100,7 +100,7 @@ suite "Supported primitive type values":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_char")
+    let output = runFeatureSource(source, "primitive_char")
 
     # Then
     check output == "65"
@@ -119,7 +119,7 @@ suite "Byte literal bounds":
     """
 
     # When
-    let output = runNativeSource(source, "primitive_byte_zero")
+    let output = runFeatureSource(source, "primitive_byte_zero")
 
     # Then
     check output == "0"

@@ -19,23 +19,31 @@ proc runNative(source: string, caseName: string): string =
   execProcess(outputPath).strip()
 
 suite "Compiler pipeline":
-  test "compiles a value returning program to a native executable":
+  test "compiles value-returning primitive representations to a native executable":
     # Given
     let source = """
-      function add(Int a, Int b) returns Int {
-        return a + b;
-      }
+      function boolValue() returns Bool { return true; }
+      function byteValue() returns Byte { return 127; }
+      function shortValue() returns Short { return 300; }
+      function intValue() returns Int { return 2147483648; }
+      function floatValue() returns Float { return 123456789.125; }
+      function charValue() returns Char { return 'A'; }
 
       function main() returns Int {
-        return add(10, 20);
+        boolValue();
+        byteValue();
+        shortValue();
+        floatValue();
+        charValue();
+        return intValue();
       }
     """
 
     # When
-    let output = runNative(source, "value_result")
+    let output = runNative(source, "primitive_results")
 
     # Then
-    check output == "30"
+    check output == "2147483648"
 
   test "compiles a zero result main to a native executable":
     # Given
@@ -51,32 +59,3 @@ suite "Compiler pipeline":
 
     # Then
     check output == ""
-
-
-  test "keeps large integer values in Int without a Long suffix":
-    # Given
-    let source = """
-      function main() returns Int {
-        return 2147483648;
-      }
-    """
-
-    # When
-    let output = runNative(source, "wide_int")
-
-    # Then
-    check output == "2147483648"
-
-  test "keeps decimal values in Float without a Double type or suffix":
-    # Given
-    let source = """
-      function main() returns Float {
-        return 123456789.125;
-      }
-    """
-
-    # When
-    let output = runNative(source, "wide_float")
-
-    # Then
-    check output == "123456789.125"

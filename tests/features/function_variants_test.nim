@@ -1,5 +1,5 @@
 import std/unittest
-import support/[compiler_test_support, native_test_support]
+import support/[compiler_test_support, feature_test_support]
 
 suite "Function signature cardinality variants":
   test "0 params + 0 result: empty function can be called":
@@ -13,7 +13,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_0p_0r")
+    let output = runFeatureSource(source, "function_0p_0r")
 
     # Then
     check output == ""
@@ -30,7 +30,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_0p_1r")
+    let output = runFeatureSource(source, "function_0p_1r")
 
     # Then
     check output == "7"
@@ -45,7 +45,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_1p_0r")
+    let output = runFeatureSource(source, "function_1p_0r")
 
     # Then
     check output == ""
@@ -62,7 +62,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_1p_1r")
+    let output = runFeatureSource(source, "function_1p_1r")
 
     # Then
     check output == "7"
@@ -77,7 +77,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_2p_0r")
+    let output = runFeatureSource(source, "function_2p_0r")
 
     # Then
     check output == ""
@@ -94,7 +94,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_2p_1r")
+    let output = runFeatureSource(source, "function_2p_1r")
 
     # Then
     check output == "30"
@@ -113,7 +113,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_np_0r")
+    let output = runFeatureSource(source, "function_np_0r")
 
     # Then
     check output == ""
@@ -134,7 +134,7 @@ suite "Function signature cardinality variants":
     """
 
     # When
-    let output = runNativeSource(source, "function_np_1r")
+    let output = runFeatureSource(source, "function_np_1r")
 
     # Then
     check output == "12"
@@ -153,7 +153,7 @@ suite "Zero-result return statements":
     """
 
     # When
-    let output = runNativeSource(source, "function_0p_0r_return")
+    let output = runFeatureSource(source, "function_0p_0r_return")
 
     # Then
     check output == ""
@@ -172,7 +172,7 @@ suite "Function call resolution":
     """
 
     # When
-    let output = runNativeSource(source, "function_forward_call")
+    let output = runFeatureSource(source, "function_forward_call")
 
     # Then
     check output == "9"

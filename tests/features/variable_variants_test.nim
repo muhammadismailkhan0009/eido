@@ -1,5 +1,5 @@
 import std/unittest
-import support/[compiler_test_support, native_test_support]
+import support/[compiler_test_support, feature_test_support]
 
 suite "Local initialization forms":
   test "literal initialization: new local can start from a literal":
@@ -12,7 +12,7 @@ suite "Local initialization forms":
     """
 
     # When
-    let output = runNativeSource(source, "variable_literal_init")
+    let output = runFeatureSource(source, "variable_literal_init")
 
     # Then
     check output == "5"
@@ -27,7 +27,7 @@ suite "Local initialization forms":
     """
 
     # When
-    let output = runNativeSource(source, "variable_computed_init")
+    let output = runFeatureSource(source, "variable_computed_init")
 
     # Then
     check output == "7"
@@ -57,7 +57,7 @@ suite "Local reassignment forms":
     """
 
     # When
-    let output = runNativeSource(source, "variable_literal_reassign")
+    let output = runFeatureSource(source, "variable_literal_reassign")
 
     # Then
     check output == "9"
@@ -72,7 +72,7 @@ suite "Local reassignment forms":
     """
 
     # When
-    let output = runNativeSource(source, "variable_computed_reassign")
+    let output = runFeatureSource(source, "variable_computed_reassign")
 
     # Then
     check output == "7"
@@ -88,7 +88,7 @@ suite "Local reassignment forms":
     """
 
     # When
-    let output = runNativeSource(source, "variable_identifier_reassign")
+    let output = runFeatureSource(source, "variable_identifier_reassign")
 
     # Then
     check output == "5"

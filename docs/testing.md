@@ -81,7 +81,7 @@ test "2 params + 1 result: function can combine both arguments":
   let source = "..."
 
   # When
-  let output = runNativeSource(source, "function_2p_1r")
+  let output = runFeatureSource(source, "function_2p_1r")
 
   # Then
   check output == "30"
@@ -94,8 +94,8 @@ Names describe visible behavior rather than implementation details.
 - Lexer/parser tests prove syntax/token/AST behavior.
 - Semantic-analysis tests prove name resolution, typing, contracts, and HIR meaning.
 - Backend tests prove HIR-to-Nim translation.
-- Pipeline tests exercise the complete real path through the Nim toolchain.
-- Feature tests exercise complete user-facing Eido variants and serve as the readable capability catalog.
+- Pipeline tests exercise the complete real path through native Nim compilation.
+- Feature tests exercise complete user-facing Eido variants through generated Nim executed by `nim e`; this preserves end-to-end language behavior without paying native compilation cost per scenario.
 - Architecture tests prove dependency/readability/test-organization constraints.
 - Test through public phase entry points; do not test private procedures directly.
 
@@ -103,7 +103,7 @@ Names describe visible behavior rather than implementation details.
 
 `tests/support/compiler_test_support.nim` exposes concise real-phase entry points such as source → AST, source → HIR, and source → Nim.
 
-`tests/support/native_test_support.nim` compiles and executes complete Eido programs for feature acceptance tests.
+`tests/support/feature_test_support.nim` runs complete Eido programs through the Eido compiler and executes the generated Nim with the Nim VM (`nim e`). Native code generation remains covered separately by `tests/compiler/pipeline/`.
 
 Test support must not duplicate compiler logic or become a generic utilities directory.
 
