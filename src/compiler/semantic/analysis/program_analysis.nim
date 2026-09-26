@@ -1,5 +1,5 @@
 ## Runs program-level semantic analysis in declaration passes.
-## Class names are collected before class fields are resolved; function signatures are collected before bodies.
+## Class names/fields/method signatures and top-level function signatures are collected before any callable body is analyzed.
 
 import ../../diagnostics/errors
 import ../../frontend/ast/program as astProgram
@@ -12,13 +12,14 @@ import ../symbols/model
 import ../symbols/classes
 import ../symbols/functions
 import class_analysis
+import method_analysis
 import function_analysis
 
-## Collects nominal classes and function signatures before analyzing their contents.
+## Collects declarations in dependency-safe passes, then analyzes method/function bodies.
 proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
   var classes = initClassSymbols()
 
-  # Pass 1: establish nominal class identities so fields may reference later classes.
+  # Pass 1: establish nominal class identities.
   for sourceClass in program.classes:
     if classes.contains(sourceClass.name):
       failAt(sourceClass.span, "duplicate class '" & sourceClass.name & "'")
@@ -27,10 +28,11 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
       name: sourceClass.name,
       typ: classType(sourceClass.name),
       fields: @[],
+      methods: @[],
       span: sourceClass.span
     )
 
-  # Pass 2: resolve field types against the complete class registry.
+  # Pass 2: resolve field schemas against the complete class registry.
   var analyzedClasses: seq[HirClass]
   for sourceClass in program.classes:
     let analyzedClass = analyzeClass(sourceClass, classes)
@@ -45,14 +47,42 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
       )
     classes.add classSymbol
 
-  # Existing function-signature collection remains primitive-only for this class slice.
+  # Pass 3: collect every class method signature before any method body.
+  var nextMethodId = 0
+  for sourceClass in program.classes:
+    var classSymbol = classes.get(sourceClass.name)
+
+    for sourceMethod in sourceClass.methods:
+      if classSymbol.containsMethod(sourceMethod.name):
+        failAt(
+          sourceMethod.span,
+          "duplicate method '" & sourceMethod.name &
+            "' in class '" & sourceClass.name & "'"
+        )
+
+      var parameterTypes: seq[EidoType]
+      for parameter in sourceMethod.parameters:
+        parameterTypes.add resolveType(parameter.typeRef)
+
+      classSymbol.methods.add MethodSymbol(
+        id: MethodId(nextMethodId),
+        name: sourceMethod.name,
+        parameterTypes: parameterTypes,
+        result: resolveFunctionResult(sourceMethod.result),
+        span: sourceMethod.span
+      )
+      inc nextMethodId
+
+    classes.add classSymbol
+
+  # Pass 4: collect top-level function signatures before analyzing methods.
   var functions = initFunctionSymbols()
   var mainFound = false
   var mainId = FunctionId(-1)
 
   for index, fn in program.functions:
     if functions.contains(fn.name):
-      raise newException(ValueError, "duplicate function '" & fn.name & "'")
+      failAt(fn.span, "duplicate function '" & fn.name & "'")
 
     var parameterTypes: seq[EidoType]
     for parameter in fn.parameters:
@@ -77,6 +107,19 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
   if not mainFound:
     raise newException(ValueError, "program must declare function main()")
 
+  # Pass 5: analyze class-owned method bodies with implicit receivers.
+  for classIndex, sourceClass in program.classes:
+    let owner = classes.get(sourceClass.name)
+    for sourceMethod in sourceClass.methods:
+      analyzedClasses[classIndex].methods.add analyzeMethod(
+        sourceMethod,
+        owner,
+        owner.getMethod(sourceMethod.name),
+        functions,
+        classes
+      )
+
+  # Pass 6: analyze top-level function bodies.
   var analyzedFunctions: seq[HirFunction]
   for fn in program.functions:
     analyzedFunctions.add analyzeFunction(

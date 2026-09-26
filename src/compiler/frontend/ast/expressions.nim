@@ -31,6 +31,7 @@ type
     ekCall,
     ekConstruct,
     ekFieldAccess,
+    ekMethodCall,
     ekUnary,
     ekBinary
 
@@ -61,6 +62,10 @@ type
     of ekFieldAccess:
       target*: Expr
       fieldName*: string
+    of ekMethodCall:
+      receiver*: Expr
+      methodName*: string
+      methodArguments*: seq[Expr]
     of ekUnary:
       unaryOp*: UnaryOp
       operand*: Expr

@@ -60,8 +60,8 @@ proc parseAssignStmt*(parser: var Parser): Stmt =
 ## Parses a standalone function call statement. Example: `notify(10);` becomes `skCall` and may later discard a returned value.
 proc parseCallStmt*(parser: var Parser): Stmt =
   let call = parser.parseExpression()
-  if call.kind != ekCall:
-    failAt(call.span, "only a function call may be used as an expression statement")
+  if call.kind notin {ekCall, ekMethodCall}:
+    failAt(call.span, "only a function or method call may be used as an expression statement")
 
   let semicolon = parser.consume(
     tkSemicolon,
@@ -135,7 +135,8 @@ proc parseStatement*(parser: var Parser): Stmt =
   if parser.check(tkIdentifier) and parser.checkNext(tkEqual):
     return parser.parseAssignStmt()
 
-  if parser.check(tkIdentifier) and parser.checkNext(tkLParen):
+  if parser.check(tkIdentifier) and
+      (parser.checkNext(tkLParen) or parser.checkNext(tkDot)):
     return parser.parseCallStmt()
 
   failAt(

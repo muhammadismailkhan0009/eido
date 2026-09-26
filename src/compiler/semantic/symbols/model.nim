@@ -1,4 +1,4 @@
-## Defines resolved symbol records used during semantic analysis. Example: function `notify(Int id)` stores one Int parameter type and an `frNone` result contract.
+## Defines resolved symbol records used during semantic analysis.
 
 import ../../source/span
 import ../../types/model
@@ -8,17 +8,29 @@ import ids
 type
   BindingKind* = enum
     bkParameter,
-    bkVariable
+    bkVariable,
+    bkField
 
   LocalSymbol* = object
-    id*: LocalId
     name*: string
     typ*: EidoType
-    kind*: BindingKind
     span*: SourceSpan
+    case kind*: BindingKind
+    of bkParameter, bkVariable:
+      id*: LocalId
+    of bkField:
+      receiverId*: LocalId
+      ownerType*: EidoType
 
   FunctionSymbol* = object
     id*: FunctionId
+    name*: string
+    parameterTypes*: seq[EidoType]
+    result*: FunctionResult
+    span*: SourceSpan
+
+  MethodSymbol* = object
+    id*: MethodId
     name*: string
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
@@ -33,4 +45,5 @@ type
     name*: string
     typ*: EidoType
     fields*: seq[ClassFieldSymbol]
+    methods*: seq[MethodSymbol]
     span*: SourceSpan

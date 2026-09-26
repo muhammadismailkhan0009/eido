@@ -7,9 +7,9 @@ behavior lives here.
 ## Modules
 
 - `literal_expressions.nim` — Int, Float, Bool, and Char literals
-- `call_expressions.nim` — function-call expressions and argument parsing
+- `call_expressions.nim` — shared call-argument parsing and top-level function calls
 - `construction_expressions.nim` — named class construction expressions
-- `field_access_expressions.nim` — postfix `.field` access chains
+- `field_access_expressions.nim` — postfix `.field` access and `.method(...)` instance-call chains
 - `grouping_expressions.nim` — `()`, `[]`, and `{}` grouping/matching
 - `primary_expressions.nim` — primary-atom dispatch plus postfix access application
 - `unary_negation.nim` — recursive numeric unary `-`

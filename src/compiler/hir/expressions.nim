@@ -34,6 +34,7 @@ type
     hekCall,
     hekConstruct,
     hekFieldAccess,
+    hekMethodCall,
     hekUnary,
     hekBinary
 
@@ -46,6 +47,15 @@ type
     span*: SourceSpan
     functionId*: FunctionId
     functionName*: string
+    arguments*: seq[HirExpr]
+    result*: FunctionResult
+
+  HirMethodCall* = ref object
+    span*: SourceSpan
+    methodId*: MethodId
+    methodName*: string
+    ownerType*: EidoType
+    receiver*: HirExpr
     arguments*: seq[HirExpr]
     result*: FunctionResult
 
@@ -72,6 +82,8 @@ type
     of hekFieldAccess:
       target*: HirExpr
       sourceFieldName*: string
+    of hekMethodCall:
+      methodCall*: HirMethodCall
     of hekUnary:
       unaryOp*: HirUnaryOp
       operand*: HirExpr

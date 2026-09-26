@@ -1,6 +1,6 @@
 # Class declarations
 
-Eido's first class slice introduces nominal class declarations with fields only.
+Eido class declarations define nominal fields and may also contain instance methods.
 
 ```eido
 class Point {
@@ -83,6 +83,5 @@ See `class-construction.md` for exact-field, nesting, scope, and representation 
 Not yet included:
 
 - field mutation;
-- methods;
 - class types in function signatures;
 - interfaces or contracts.

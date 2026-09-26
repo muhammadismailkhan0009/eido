@@ -6,6 +6,7 @@ import ../../frontend/ast/expressions as astExpressions
 import ../../hir/expressions as hirExpressions
 import ../../types/model
 import ../../types/function_result
+import ../symbols/model
 import ../symbols/functions
 import ../symbols/classes
 import ../symbols/scope
@@ -35,6 +36,7 @@ include expression/identifier_expressions
 include expression/call_expressions
 include expression/construction_expressions
 include expression/field_access_expressions
+include expression/method_call_expressions
 include expression/unary_negation
 include expression/arithmetic_operators
 include expression/comparison_operators
@@ -66,6 +68,9 @@ proc analyzeExpr*(
 
   of astExpressions.ekFieldAccess:
     analyzeFieldAccess(expr, locals, functions, classes)
+
+  of astExpressions.ekMethodCall:
+    analyzeValueMethodCall(expr, locals, functions, classes)
 
   of astExpressions.ekUnary:
     case expr.unaryOp

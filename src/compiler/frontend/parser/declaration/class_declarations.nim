@@ -1,5 +1,5 @@
-## Parses field-only class declarations.
-## Example: `class Point { Int x; Int y; }`.
+## Parses class declarations containing fields and instance methods.
+## Example: `class Account { Int balance; function remaining(Int amount) returns Int { ... } }`.
 
 ## Parses one semicolon-terminated field declaration.
 proc parseFieldDecl(parser: var Parser): FieldDecl =
@@ -19,17 +19,22 @@ proc parseFieldDecl(parser: var Parser): FieldDecl =
     typeRef: typeRef
   )
 
-## Parses one field-only class declaration. The closing brace ends the declaration.
+## Parses one class declaration. Fields and methods may appear in either order.
 proc parseClass*(parser: var Parser): ClassDecl =
   let start = parser.consume(tkClass, "expected 'class'")
   let name = parser.consume(tkIdentifier, "expected class name")
   discard parser.consume(tkLBrace, "expected '{' before class body")
 
   var fields: seq[FieldDecl]
+  var methods: seq[FunctionDecl]
   while not parser.check(tkRBrace):
     if parser.check(tkEof):
       failAt(parser.peek.span, "expected '}' after class body")
-    fields.add parser.parseFieldDecl()
+
+    if parser.check(tkFunction):
+      methods.add parser.parseFunction()
+    else:
+      fields.add parser.parseFieldDecl()
 
   let closeBrace = parser.consume(tkRBrace, "expected '}' after class body")
 
@@ -41,5 +46,6 @@ proc parseClass*(parser: var Parser): ClassDecl =
       column: start.span.column
     ),
     name: name.lexeme,
-    fields: fields
+    fields: fields,
+    methods: methods
   )

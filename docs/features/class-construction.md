@@ -98,6 +98,5 @@ Not yet included:
 
 - field mutation;
 - class-valued function parameters/results;
-- methods;
 - interfaces;
 - contracts.

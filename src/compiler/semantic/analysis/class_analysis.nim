@@ -1,4 +1,4 @@
-## Resolves field-only class declarations after all nominal class names have been registered.
+## Resolves class field schemas after all nominal class names have been registered.
 
 import std/sets
 import ../../diagnostics/errors
@@ -30,5 +30,6 @@ proc analyzeClass*(
     span: source.span,
     sourceName: source.name,
     typ: classes.get(source.name).typ,
-    fields: fields
+    fields: fields,
+    methods: @[]
   )

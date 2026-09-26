@@ -31,5 +31,16 @@
 - primitive-receiver rejection
 - rejection of implicit alias/copy bindings from class-valued fields
 
-Field mutation, methods, interfaces, contracts, and class-valued function
+`class_method_variants_test.nim` covers:
+
+- read-only own-field access inside methods
+- method parameters/results and instance calls
+- zero-result method call statements
+- existing locals/control flow inside method bodies
+- method calls to top-level functions
+- method calls through class-valued fields
+- field/parameter/local/nested-local uniqueness constraints
+- rejection of field mutation before `set` semantics
+
+Field mutation, interfaces, contracts, and class-valued explicit function/method
 signatures remain outside the current class slice.

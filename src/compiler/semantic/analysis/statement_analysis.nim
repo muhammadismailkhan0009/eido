@@ -42,7 +42,20 @@ proc analyzeStmt*(
   case stmt.kind
   of astStatements.skVar:
     if locals.contains(stmt.name):
-      failAt(stmt.span, "duplicate local '" & stmt.name & "'")
+      let existing = locals.get(stmt.name)
+      case existing.kind
+      of bkField:
+        failAt(
+          stmt.span,
+          "local '" & stmt.name & "' conflicts with class field"
+        )
+      of bkParameter:
+        failAt(
+          stmt.span,
+          "local '" & stmt.name & "' conflicts with parameter"
+        )
+      of bkVariable:
+        failAt(stmt.span, "duplicate local '" & stmt.name & "'")
 
     let initializer = analyzeExpr(stmt.initializer, locals, functions, classes)
 
@@ -83,8 +96,16 @@ proc analyzeStmt*(
       failAt(stmt.span, "unknown assignment target '" & stmt.target & "'")
 
     let target = locals.get(stmt.target)
-    if target.kind != bkVariable:
+    case target.kind
+    of bkParameter:
       failAt(stmt.span, "parameter reassignment is not supported")
+    of bkField:
+      failAt(
+        stmt.span,
+        "field mutation is not supported before set semantics"
+      )
+    of bkVariable:
+      discard
 
     let value = analyzeExprExpected(
       stmt.assignedValue,
@@ -110,11 +131,29 @@ proc analyzeStmt*(
     )
 
   of astStatements.skCall:
-    HirStmt(
-      kind: hskCall,
-      span: stmt.span,
-      call: analyzeCall(stmt.call, locals, functions, classes)
-    )
+    case stmt.call.kind
+    of astExpressions.ekCall:
+      HirStmt(
+        kind: hskCall,
+        span: stmt.span,
+        call: analyzeCall(stmt.call, locals, functions, classes)
+      )
+    of astExpressions.ekMethodCall:
+      HirStmt(
+        kind: hskMethodCall,
+        span: stmt.span,
+        methodCall: analyzeMethodCall(
+          stmt.call,
+          locals,
+          functions,
+          classes
+        )
+      )
+    else:
+      raise newException(
+        ValueError,
+        "semantic invariant: call statement has non-call expression"
+      )
 
   of astStatements.skReturn:
     case functionResult.kind

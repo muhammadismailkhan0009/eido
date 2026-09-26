@@ -10,6 +10,7 @@ type
     hskVar,
     hskAssign,
     hskCall,
+    hskMethodCall,
     hskReturn,
     hskIf,
     hskWhile,
@@ -31,6 +32,8 @@ type
       assignedValue*: HirExpr
     of hskCall:
       call*: HirCall
+    of hskMethodCall:
+      methodCall*: HirMethodCall
     of hskReturn:
       value*: HirExpr
     of hskIf:

@@ -6,6 +6,14 @@ import ../../../semantic/symbols/ids
 proc functionName*(id: FunctionId, sourceName: string): string =
   "eido_fn_" & $id.value & "_" & sourceName
 
+## Builds a collision-safe Nim method name from semantic identity and owner.
+proc methodName*(
+  id: MethodId,
+  ownerName: string,
+  sourceName: string
+): string =
+  "eido_method_" & $id.value & "_" & ownerName & "_" & sourceName
+
 ## Builds a collision-safe Nim local name from semantic identity.
 proc localName*(id: LocalId, sourceName: string): string =
   "eido_local_" & $id.value & "_" & sourceName

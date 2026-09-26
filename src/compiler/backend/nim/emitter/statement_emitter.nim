@@ -49,6 +49,12 @@ proc renderStmtAt*(
     else:
       pad & "discard " & renderCall(stmt.call) & "\n"
 
+  of hirStatements.hskMethodCall:
+    if stmt.methodCall.result.kind == frNone:
+      pad & renderMethodCall(stmt.methodCall) & "\n"
+    else:
+      pad & "discard " & renderMethodCall(stmt.methodCall) & "\n"
+
   of hirStatements.hskReturn:
     if stmt.value.isNil:
       pad & "return\n"

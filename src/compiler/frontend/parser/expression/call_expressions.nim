@@ -1,28 +1,34 @@
-## Parses function-call primary expressions.
-## Example: `add(10, 20)` becomes a call expression with two arguments.
+## Parses function-call argument lists and top-level function calls.
+## The shared argument helper is also used by postfix instance method calls.
 
-## Parses a function-call expression after its name.
-## Example: `add(10, 20)` becomes a call with callee `add` and two arguments.
-proc parseCall(parser: var Parser, name: Token): Expr =
-  discard parser.consume(tkLParen, "expected '(' after function name")
-  var arguments: seq[Expr]
+## Parses one parenthesized comma-separated argument list.
+proc parseCallArguments(
+  parser: var Parser
+): tuple[arguments: seq[Expr], closeParen: Token] =
+  discard parser.consume(tkLParen, "expected '(' before arguments")
 
   if not parser.check(tkRParen):
     while true:
-      arguments.add parser.parseExpression()
+      result.arguments.add parser.parseExpression()
       if not parser.check(tkComma):
         break
       discard parser.advance()
 
-  let closeParen = parser.consume(tkRParen, "expected ')' after arguments")
+  result.closeParen =
+    parser.consume(tkRParen, "expected ')' after arguments")
+
+## Parses a top-level function-call expression after its name.
+proc parseCall(parser: var Parser, name: Token): Expr =
+  let parsed = parser.parseCallArguments()
+
   Expr(
     kind: ekCall,
     span: SourceSpan(
       startOffset: name.span.startOffset,
-      endOffset: closeParen.span.endOffset,
+      endOffset: parsed.closeParen.span.endOffset,
       line: name.span.line,
       column: name.span.column
     ),
     callee: name.lexeme,
-    arguments: arguments
+    arguments: parsed.arguments
   )

@@ -1,4 +1,5 @@
-## Defines syntax-tree nodes for typed parameters and functions. Example: `function notify(Int id) {}` stores one parameter and no result type.
+## Defines syntax-tree nodes for typed declarations.
+## Functions are reused as the source shape of class-owned methods.
 
 import ../../source/span
 import statements
@@ -18,11 +19,6 @@ type
     name*: string
     typeRef*: TypeRef
 
-  ClassDecl* = object
-    span*: SourceSpan
-    name*: string
-    fields*: seq[FieldDecl]
-
   FunctionResultRefKind* = enum
     frrNone,
     frrSingle
@@ -40,3 +36,9 @@ type
     parameters*: seq[Parameter]
     result*: FunctionResultRef
     body*: seq[Stmt]
+
+  ClassDecl* = object
+    span*: SourceSpan
+    name*: string
+    fields*: seq[FieldDecl]
+    methods*: seq[FunctionDecl]

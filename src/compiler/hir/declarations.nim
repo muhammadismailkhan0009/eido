@@ -1,4 +1,4 @@
-## Defines resolved HIR parameters and functions. Example: a no-result `notify` function stores `frNone`, while `returns Int` stores `frSingle(etInt)`.
+## Defines resolved HIR declarations consumed by backends.
 
 import ../source/span
 import ../types/model
@@ -12,17 +12,28 @@ type
     sourceName*: string
     typ*: EidoType
 
-  HirClass* = object
-    span*: SourceSpan
-    sourceName*: string
-    typ*: EidoType
-    fields*: seq[HirField]
-
   HirParameter* = object
     span*: SourceSpan
     localId*: LocalId
     sourceName*: string
     typ*: EidoType
+
+  HirMethod* = object
+    span*: SourceSpan
+    methodId*: MethodId
+    sourceName*: string
+    ownerType*: EidoType
+    receiverLocalId*: LocalId
+    parameters*: seq[HirParameter]
+    result*: FunctionResult
+    body*: seq[HirStmt]
+
+  HirClass* = object
+    span*: SourceSpan
+    sourceName*: string
+    typ*: EidoType
+    fields*: seq[HirField]
+    methods*: seq[HirMethod]
 
   HirFunction* = object
     span*: SourceSpan

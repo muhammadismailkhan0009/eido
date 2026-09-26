@@ -1,20 +1,31 @@
-## Renders a complete HIR program to Nim, including forward declarations and the temporary `main` harness.
+## Renders a complete HIR program to Nim, including class methods, functions, and the temporary main harness.
 
 import ../../../hir/program as hirProgram
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import names
 import class_emitter
+import method_emitter
 import function_emitter
 
-## Renders the full HIR program to compilable Nim source. Example: a zero-result Eido `main` is called directly, while a one-result `main` is echoed by the development harness.
+## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
   result.add renderClasses(program.classes)
+
+  # Forward declare every method and function before any callable body.
+  for classDecl in program.classes:
+    for methodDecl in classDecl.methods:
+      result.add renderMethodSignature(methodDecl) & "\n"
 
   for fn in program.functions:
     result.add renderSignature(fn) & "\n"
 
   result.add "\n"
+
+  for classDecl in program.classes:
+    for methodDecl in classDecl.methods:
+      result.add renderMethod(methodDecl)
+      result.add "\n"
 
   for fn in program.functions:
     result.add renderFunction(fn)
