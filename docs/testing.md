@@ -133,3 +133,23 @@ Run the complete internal + feature suite with:
 ```text
 nimble test
 ```
+
+The canonical test task is parallel and CPU-adaptive:
+
+1. `tests/parallel_test_runner.nim` discovers static unittest suites/tests.
+2. The complete `tests/compiler_test_suite.nim` aggregate is compiled once.
+3. Aggregate compilation uses `--parallelBuild:N`, where `N` is the effective worker count after reserving two logical cores by default.
+4. Compiler-internal tests run one process per suite.
+5. Language-facing feature tests run one process per individual test, because those cases are comparatively expensive and often execute generated Nim through `nim e`.
+6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
+7. Successful child output is suppressed; failed child output is replayed with its selector.
+
+Worker count defaults to `max(1, countProcessors() - 4)` so two logical cores remain free for the OS and other work. Override it when needed:
+
+```text
+EIDO_TEST_JOBS=4 nimble test
+```
+
+The override controls both aggregate build parallelism and test-process concurrency.
+
+The runner uses process isolation rather than threads so `std/unittest` fixtures and compiler/native-toolchain subprocesses remain independent.

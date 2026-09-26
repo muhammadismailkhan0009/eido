@@ -5,5 +5,5 @@ license       = "MIT"
 srcDir        = "src"
 bin           = @["eido"]
 
-task test, "Run compiler and language feature tests":
-  exec "nim c -r --path:src --path:tests -o:/tmp/eido_compiler_test_suite tests/compiler_test_suite.nim"
+task test, "Run compiler and language feature tests in parallel":
+  exec "nim r --hints:off --path:src --path:tests tests/parallel_test_runner.nim"

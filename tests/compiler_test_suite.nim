@@ -1,5 +1,5 @@
-## Aggregates compiler-internal tests and language-facing feature acceptance tests.
-## Example: `nimble test` runs both implementation contracts and executable Eido feature variants.
+## Aggregates all compiler-internal and language-facing test suites into one binary.
+## Example: the parallel test runner compiles this once, then executes selected suites concurrently.
 
 {.warning[UnusedImport]: off.}
 
