@@ -132,21 +132,16 @@ suite "Set rejection boundaries":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "own class-valued fields cannot be mutated yet":
+  test "own class-valued field rejects bare existing relationship replacement":
     # Given
     let source = """
-      class Address {
-        Int zip;
-      }
-
+      class Address { Int zip; }
       class Employee {
         Address address;
-
-        function replace() {
-          set self.address = Address { zip: 33100; };
+        function replace(Address other) {
+          set self.address = other;
         }
       }
-
       function main() {}
     """
 

@@ -82,10 +82,14 @@ See `class-construction.md` for exact-field, nesting, scope, and representation 
 
 ## Current boundary
 
-Not yet included in the current class slice:
+Class-valued own-field replacement through `set self.field = ...` is now part
+of the class model: fresh/detached values flow directly and existing objects
+require explicit `ref` or `copy`.
 
-- class-valued field mutation through `set`;
-- interfaces or contracts.
+Still outside the current class slice:
 
-Primitive own-field mutation through `set self.field = ...` and nominal class
-types in function/method signatures are now implemented.
+- interfaces;
+- contracts.
+
+Nominal class types in fields, function/method signatures, construction,
+relationship mutation, copy/ref identity flow, and detached returns are implemented.

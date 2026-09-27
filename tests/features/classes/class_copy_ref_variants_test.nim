@@ -245,3 +245,113 @@ suite "Class relation boundary execution":
     """
 
     check runFeatureSource(source, "detached_callable_flow") == "4070"
+
+suite "Class relationship mutation execution":
+  test "set ref rebinds a class local to existing identity":
+    let source = """
+      class Account {
+        Int balance;
+        function withdraw(Int amount) { set self.balance = self.balance - amount; }
+        function value() returns Int { return self.balance; }
+      }
+      function main() returns Int {
+        var first = Account { balance: 100; };
+        var current = Account { balance: 5; };
+        set current = ref first;
+        current.withdraw(20);
+        return first.value();
+      }
+    """
+
+    check runFeatureSource(source, "class_set_ref_local") == "80"
+
+  test "set copy rebinds a class local to detached identity":
+    let source = """
+      class Account {
+        Int balance;
+        function withdraw(Int amount) { set self.balance = self.balance - amount; }
+        function value() returns Int { return self.balance; }
+      }
+      function main() returns Int {
+        var first = Account { balance: 100; };
+        var current = Account { balance: 5; };
+        set current = copy first;
+        current.withdraw(20);
+        return first.value() * 1000 + current.value();
+      }
+    """
+
+    check runFeatureSource(source, "class_set_copy_local") == "100080"
+  test "set self field ref preserves supplied identity":
+    let source = """
+      class Account {
+        Int balance;
+        function withdraw(Int amount) { set self.balance = self.balance - amount; }
+        function value() returns Int { return self.balance; }
+      }
+      class Holder {
+        Account account;
+        function replace(Account other) { set self.account = ref other; }
+      }
+      function main() returns Int {
+        var first = Account { balance: 10; };
+        var second = Account { balance: 100; };
+        var holder = Holder { account: ref first; };
+        holder.replace(second);
+        holder.account.withdraw(20);
+        return second.value();
+      }
+    """
+
+    check runFeatureSource(source, "class_set_ref_field") == "80"
+
+  test "set self field copy detaches supplied identity":
+    let source = """
+      class Account {
+        Int balance;
+        function withdraw(Int amount) { set self.balance = self.balance - amount; }
+        function value() returns Int { return self.balance; }
+      }
+      class Holder {
+        Account account;
+        function replace(Account other) { set self.account = copy other; }
+      }
+      function main() returns Int {
+        var first = Account { balance: 10; };
+        var second = Account { balance: 100; };
+        var holder = Holder { account: ref first; };
+        holder.replace(second);
+        holder.account.withdraw(20);
+        return second.value() * 1000 + holder.account.value();
+      }
+    """
+
+    check runFeatureSource(source, "class_set_copy_field") == "100080"
+  test "set self field accepts fresh and detached callable results":
+    let source = """
+      class Account {
+        Int balance;
+        function value() returns Int { return self.balance; }
+      }
+      class Holder {
+        Account account;
+        function replaceFresh(Int balance) {
+          set self.account = Account { balance: balance; };
+        }
+        function replaceCall(Int balance) {
+          set self.account = create(balance);
+        }
+      }
+      function create(Int balance) returns Account {
+        return Account { balance: balance; };
+      }
+      function main() returns Int {
+        var holder = Holder { account: Account { balance: 1; }; };
+        holder.replaceFresh(40);
+        var first = holder.account.value();
+        holder.replaceCall(70);
+        return first * 100 + holder.account.value();
+      }
+    """
+
+    check runFeatureSource(source, "class_set_fresh_field") == "4070"

@@ -29,6 +29,7 @@ include statement/conditional_statements
 include statement/while_statements
 include statement/for_statements
 include statement/loop_control_statements
+include statement/class_relationship_mutation
 
 ## Checks one AST statement and lowers it to HIR. Example: `set b = a;` verifies `b` exists, checks types, and stores resolved mutation HIR.
 proc analyzeStmt*(
@@ -130,28 +131,31 @@ proc analyzeStmt*(
             target.name
         )
       of bkVariable:
-        let value = analyzeExprExpected(
-          stmt.assignedValue,
-          target.typ,
-          locals,
-          functions,
-          classes
-        )
-
-        if target.typ.kind == etkClass and
-            stmt.assignedValue.kind notin {
-              astExpressions.ekConstruct,
-              astExpressions.ekCall,
-              astExpressions.ekMethodCall
-            }:
-          failAt(
-            stmt.assignedValue.span,
-            "class-valued set requires a fresh/detached result"
-          )
+        let value =
+          if target.typ.kind == etkClass:
+            analyzeClassRelationshipMutationValue(
+              stmt.assignedValue,
+              target.typ,
+              locals,
+              functions,
+              classes
+            )
+          else:
+            analyzeExprExpected(
+              stmt.assignedValue,
+              target.typ,
+              locals,
+              functions,
+              classes
+            )
 
         if target.typ.kind == etkClass:
           var updatedTarget = target
-          updatedTarget.classValueProvenance = cvpDetached
+          updatedTarget.classValueProvenance = classValueProvenance(
+            stmt.assignedValue,
+            value,
+            locals
+          )
           locals.add(target.name, updatedTarget)
 
         HirStmt(
@@ -174,19 +178,23 @@ proc analyzeStmt*(
           "semantic invariant: self field set did not resolve to field access"
         )
 
-      if target.typ.kind == etkClass:
-        failAt(
-          stmt.span,
-          "class-valued field mutation requires explicit copy or ref semantics"
-        )
-
-      let value = analyzeExprExpected(
-        stmt.assignedValue,
-        target.typ,
-        locals,
-        functions,
-        classes
-      )
+      let value =
+        if target.typ.kind == etkClass:
+          analyzeClassRelationshipMutationValue(
+            stmt.assignedValue,
+            target.typ,
+            locals,
+            functions,
+            classes
+          )
+        else:
+          analyzeExprExpected(
+            stmt.assignedValue,
+            target.typ,
+            locals,
+            functions,
+            classes
+          )
 
       HirStmt(
         kind: hskFieldSet,

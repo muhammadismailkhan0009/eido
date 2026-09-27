@@ -71,7 +71,7 @@ proc analyzeExpr*(
   of astExpressions.ekClassRelation:
     failAt(
       expr.span,
-      "copy/ref are only valid for class local bindings or class construction fields"
+      "copy/ref are only valid at persistent class relationship boundaries"
     )
 
   of astExpressions.ekFieldAccess:

@@ -94,9 +94,21 @@ var alias = ref employee.address;
 var detached = copy employee.address;
 ```
 
-`set otherAddress = employee.address;` remains invalid because `copy`/`ref`
-are not set operands. Fresh construction and detached callable results may
-replace a class-valued local directly.
+Bare relationship replacement remains invalid:
+
+```eido
+set otherAddress = employee.address; // invalid
+```
+
+The relationship must be explicit for an existing class object:
+
+```eido
+set otherAddress = ref employee.address;
+set otherAddress = copy employee.address;
+```
+
+Fresh construction and detached callable results may still replace a
+class-valued local directly.
 
 ## Mutation boundary
 
@@ -108,8 +120,8 @@ External field mutation is not legal syntax:
 set point.x = 20; // invalid
 ```
 
-Inside a class method, an own non-class field must be accessed and replaced
-through `self`:
+Inside a class method, an own field must be accessed and replaced through
+`self`:
 
 ```eido
 set self.x = 20;
@@ -117,5 +129,6 @@ set self.x = 20;
 
 Unqualified own-field reads or mutations are rejected.
 
-Class-valued field mutation through `set self.field = ...` remains outside the
-current slice.
+Own class-valued fields may be replaced through `set self.field = ...`: fresh
+or detached values flow directly, while existing objects require explicit
+`ref` or `copy`. External postfix field mutation remains invalid.

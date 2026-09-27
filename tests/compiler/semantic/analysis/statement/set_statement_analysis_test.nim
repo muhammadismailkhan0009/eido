@@ -1,5 +1,5 @@
 import std/unittest
-import compiler/hir/statements
+import compiler/hir/[statements, expressions]
 import support/compiler_test_support
 
 suite "Set statement semantics":
@@ -40,6 +40,70 @@ suite "Set statement semantics":
     # Then
     check program.functions[0].body[1].kind == hskAssign
     check program.functions[0].body[1].targetName == "marker"
+
+  test "allows class-valued var mutation with explicit ref":
+    # Given
+    let source = """
+      class Marker { Int value; }
+      function main() returns Int {
+        var first = Marker { value: 1; };
+        var second = Marker { value: 2; };
+        set second = ref first;
+        return second.value;
+      }
+    """
+
+    # When
+    let body = analyzeSource(source).functions[0].body
+
+    # Then
+    check body[2].kind == hskAssign
+    check body[2].assignedValue.kind == hekClassRelation
+    check body[2].assignedValue.classRelationKind == hcvrRef
+
+  test "allows class-valued var mutation with explicit copy":
+    let source = """
+      class Marker { Int value; }
+      function main() returns Marker {
+        var first = Marker { value: 1; };
+        var second = Marker { value: 2; };
+        set second = copy first;
+        return second;
+      }
+    """
+
+    let body = analyzeSource(source).functions[0].body
+    check body[2].assignedValue.kind == hekClassRelation
+    check body[2].assignedValue.classRelationKind == hcvrCopy
+
+  test "set ref updates local provenance to existing identity":
+    let source = """
+      class Marker { Int value; }
+      function choose(Marker source) returns Marker {
+        var current = Marker { value: 0; };
+        set current = ref source;
+        return current;
+      }
+      function main() returns Int { return 0; }
+    """
+
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "rejects copy/ref mutation when the related class type mismatches":
+    let source = """
+      class First { Int value; }
+      class Second { Int value; }
+      function main() returns Int {
+        var first = First { value: 1; };
+        var second = Second { value: 2; };
+        set second = ref first;
+        return second.value;
+      }
+    """
+
+    expect ValueError:
+      discard analyzeSource(source)
 
   test "rejects class-valued var mutation from an existing class value":
     # Given
@@ -112,7 +176,48 @@ suite "Set statement semantics":
     check methodBody[0].kind == hskFieldSet
     check methodBody[0].fieldName == "balance"
 
-  test "rejects set on an own class-valued field":
+  test "allows fresh replacement of an own class-valued field":
+    let source = """
+      class Address { Int zip; }
+      class Employee {
+        Address address;
+        function replace() {
+          set self.address = Address { zip: 33100; };
+        }
+      }
+      function main() {}
+    """
+
+    let body = analyzeSource(source).classes[1].methods[0].body
+    check body[0].kind == hskFieldSet
+    check body[0].fieldValue.kind == hekConstruct
+
+  test "allows ref and copy replacement of an own class-valued field":
+    let refSource = """
+      class Address { Int zip; }
+      class Employee {
+        Address address;
+        function replace(Address other) { set self.address = ref other; }
+      }
+      function main() {}
+    """
+    let copySource = """
+      class Address { Int zip; }
+      class Employee {
+        Address address;
+        function replace(Address other) { set self.address = copy other; }
+      }
+      function main() {}
+    """
+
+    let refValue = analyzeSource(refSource).classes[1].methods[0].body[0].fieldValue
+    let copyValue = analyzeSource(copySource).classes[1].methods[0].body[0].fieldValue
+    check refValue.kind == hekClassRelation
+    check refValue.classRelationKind == hcvrRef
+    check copyValue.kind == hekClassRelation
+    check copyValue.classRelationKind == hcvrCopy
+
+  test "rejects bare existing class value for own class-valued field replacement":
     # Given
     let source = """
       class Address {
@@ -122,8 +227,8 @@ suite "Set statement semantics":
       class Employee {
         Address address;
 
-        function replace() {
-          set self.address = Address { zip: 33100; };
+        function replace(Address other) {
+          set self.address = other;
         }
       }
 

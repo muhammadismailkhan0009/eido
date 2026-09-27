@@ -100,13 +100,14 @@ The Nim backend currently lowers classes to generated `ref object` types and
 uses generated graph copiers for `copy`. Those are backend choices, not a
 commitment to GC, RC, heap allocation, or another memory-management model.
 
-Class equality and class-valued field mutation through `set` remain outside the
-current slice.
+Class equality remains outside the current slice. Class-valued own fields may
+now be replaced through `set self.field = ...` using the same relationship rule:
+fresh/detached values flow directly, while existing objects require explicit
+`ref` or `copy`.
 
 ## Current boundary
 
 Not yet included:
 
-- class-valued field mutation through `set`;
 - interfaces;
 - contracts.

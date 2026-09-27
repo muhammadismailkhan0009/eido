@@ -40,21 +40,28 @@ set second = first;
 ```
 
 Class-valued locals remain representation-neutral. They may be rebound from a
-fresh construction or detached callable result:
+fresh construction or detached callable result directly:
 
 ```eido
 var marker = Marker {};
 set marker = Marker {};
+set marker = createMarker();
 ```
 
-Setting from an existing class object remains rejected. `copy` and `ref`
-belong to new local-binding or construction-field relationships and are not
-legal `set` operands.
+When the replacement source is an existing class object, the relationship must
+be explicit:
+
+```eido
+set marker = ref otherMarker;   // preserve existing identity
+set marker = copy otherMarker;  // detached replacement
+```
+
+Bare `set marker = otherMarker;` is rejected.
 
 ## Own-field mutation
 
-Inside a class method, an own non-class field (primitive or String) may be
-replaced only through the explicit current receiver `self`:
+Inside a class method, an own field may be replaced only through the explicit
+current receiver `self`:
 
 ```eido
 class Account {
@@ -71,7 +78,16 @@ This works because `self` denotes the method's current class receiver and the
 method owns that receiver's state transition. Unqualified own-field mutation is
 rejected.
 
-Parameters remain immutable, and class-valued fields are not yet mutable.
+Parameters remain immutable. For an own class-valued field, fresh/detached
+values may flow directly while an existing class object requires explicit
+`ref` or `copy`:
+
+```eido
+set self.account = Account { balance: 0; };
+set self.account = createAccount();
+set self.account = ref otherAccount;
+set self.account = copy otherAccount;
+```
 
 External field mutation is not part of the grammar:
 

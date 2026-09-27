@@ -78,7 +78,7 @@ Method bodies reuse the existing function/statement semantics:
 - top-level function calls;
 - `self.method(...)` calls on the current instance;
 - `set` mutation of locals;
-- `set self.field = ...` mutation of own non-class fields, including String.
+- `set self.field = ...` mutation of own fields, including explicit class relationship replacement.
 
 Method parameters/results may use primitive, String, or declared nominal class types.
 Class parameters preserve caller identity for the call, while class-valued
@@ -132,7 +132,7 @@ supported. Different classes may use the same method name.
 
 ## Mutation boundary
 
-A method may replace an own non-class field (primitive or String) only through `self`:
+A method may replace an own field only through `self`:
 
 ```eido
 function withdraw(Int amount) returns Int {
@@ -145,9 +145,10 @@ Only class-owned behavior receives this field-mutation authority. External
 postfix field mutation such as `set account.balance = 0;` is invalid, and
 unqualified `set balance = ...` is rejected.
 
-Class-valued fields remain non-mutable through `set` in the current slice,
-even though copy/ref identity semantics are now defined for local bindings and
-construction fields.
+For a class-valued own field, fresh construction and detached callable results
+flow directly. Replacing it with an existing class object requires explicit
+`ref` or `copy`, matching local bindings, construction fields, and class-local
+rebinding.
 
 ## Backend representation
 
@@ -159,7 +160,6 @@ receiver; the generated parameter remains a backend implementation detail.
 
 Not yet included:
 
-- class-valued field mutation through `set`;
 - method overloading;
 - interfaces;
 - contracts and invariants.

@@ -78,7 +78,9 @@ return self.account; // existing field identity: invalid
 
 `copy` and `ref` are not return modifiers and cannot be written directly in
 a return statement. They are also not parameter modifiers or callable-result
-modifiers.
+modifiers. They are relationship markers at persistent class boundaries:
+new local bindings, construction fields, class-local rebinding, and own
+class-field replacement.
 A class-valued function/method call is already guaranteed to return detached
 identity, so its result may initialize a local directly:
 
@@ -87,6 +89,30 @@ var snapshot = account.snapshot();
 ```
 
 Wrapping a call result in `copy` or `ref` is invalid.
+
+## Relationship replacement with set
+
+Class-valued `set` uses the same explicit relationship rule as initialization.
+Fresh construction and detached callable results flow directly:
+
+```eido
+set current = Account { balance: 0; };
+set current = createAccount();
+```
+
+Existing class objects require an explicit choice:
+
+```eido
+set current = ref other;
+set current = copy other;
+set self.account = ref other;
+set self.account = copy other;
+```
+
+Bare existing-object replacement is rejected. A `ref` rebinding changes the
+local's provenance to existing identity; a `copy` rebinding changes it to
+detached identity, which also affects whether that local may be returned from
+a class-valued function.
 
 ## Mutation before copying
 

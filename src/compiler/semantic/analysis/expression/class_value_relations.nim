@@ -1,4 +1,4 @@
-## Resolves explicit class identity relations used at binding/construction boundaries.
+## Resolves explicit class identity relations used at persistent relationship boundaries.
 
 ## Validates one explicit copy/ref relation and lowers it to typed HIR.
 proc analyzeClassValueRelation*(

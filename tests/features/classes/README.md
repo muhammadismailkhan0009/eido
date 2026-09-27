@@ -39,7 +39,7 @@
 - existing locals/control flow inside method bodies
 - method calls to top-level functions
 - method calls through class-valued fields
-- `set self.field = ...` for own primitive field mutation
+- `set self.field = ...` for own field mutation; class relationship variants are exercised in the copy/ref catalog
 - field/parameter/local/nested-local uniqueness constraints
 
 `self_receiver_variants_test.nim` covers current-instance field/method access,
@@ -47,7 +47,7 @@ same-name top-level function separation, and invalid receiver contexts.
 
 `class_copy_ref_variants_test.nim` covers explicit ref aliasing, detached copy,
 class parameters preserving identity, copy/ref construction fields, recursive
-detachment with internal sharing preservation, and detached class returns.
+detachment with internal sharing preservation, detached class returns, and
+class relationship replacement through `set` for locals and own class fields.
 
-Interfaces, contracts, and class-valued field mutation through `set` remain
-outside the current class slice.
+Interfaces and contracts remain outside the current class slice.

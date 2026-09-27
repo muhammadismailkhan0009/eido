@@ -1798,24 +1798,33 @@ detaches first, so the original Account is not mutated by the later call.
 
 ## Class-valued `set`
 
-`copy` and `ref` are not `set` operands. A class-valued local may currently
-be rebound from a fresh construction or a detached class-valued callable result:
+Class-valued mutation follows the same persistent-relationship rule as local
+binding and construction. Fresh construction and detached callable results flow
+directly:
 
 ```eido
 set account = Account { balance: 0; };
 set account = createAccount();
 ```
 
-Rebinding from an existing class object remains invalid:
+When the source is an existing class object, the relationship must be explicit:
 
 ```eido
-set account = otherAccount;       // invalid
-set account = copy otherAccount;  // invalid in set
-set account = ref otherAccount;   // invalid in set
+set account = ref otherAccount;   // preserve existing identity
+set account = copy otherAccount;  // detached replacement
 ```
 
-Class-valued field mutation through `set self.field = ...` remains outside the
-current implemented slice.
+Bare `set account = otherAccount;` is invalid. The same rule applies to an own
+class-valued field inside its class:
+
+```eido
+set self.account = Account { balance: 0; };
+set self.account = createAccount();
+set self.account = ref otherAccount;
+set self.account = copy otherAccount;
+```
+
+External postfix field mutation remains invalid.
 
 ## Built-in String values
 
