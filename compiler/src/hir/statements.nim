@@ -14,6 +14,7 @@ type
     hskMethodCall,
     hskReturn,
     hskIf,
+    hskExists,
     hskWhile,
     hskFor,
     hskBreak,
@@ -45,6 +46,9 @@ type
       condition*: HirExpr
       thenBranch*: seq[HirStmt]
       elseBranch*: seq[HirStmt]
+    of hskExists:
+      existsValue*: HirExpr
+      existsBody*: seq[HirStmt]
     of hskWhile:
       whileCondition*: HirExpr
       body*: seq[HirStmt]

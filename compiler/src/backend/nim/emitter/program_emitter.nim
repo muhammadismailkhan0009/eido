@@ -11,6 +11,7 @@ import function_emitter
 
 ## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
+  result.add "import std/options\n"
   var hasNativeDeclarations = false
   for fn in program.functions:
     if fn.isNative:
@@ -27,8 +28,9 @@ proc emitNim*(program: hirProgram.HirProgram): string =
         break
 
   if hasNativeDeclarations:
-    result.add "import eido_native\n\n"
+    result.add "import eido_native\n"
 
+  result.add "\n"
   result.add renderClasses(program.classes)
   result.add renderClassCopiers(program.classes)
 

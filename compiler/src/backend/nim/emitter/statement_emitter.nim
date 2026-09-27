@@ -21,6 +21,7 @@ proc renderStmtAt*(
 ): string
 
 include statement/conditional_statements
+include statement/optional_exists
 include statement/while_statements
 include statement/for_statements
 include statement/loop_control_statements
@@ -68,6 +69,9 @@ proc renderStmtAt*(
 
   of hirStatements.hskIf:
     renderConditional(stmt, indent)
+
+  of hirStatements.hskExists:
+    renderExists(stmt, indent)
 
   of hirStatements.hskWhile:
     renderWhile(stmt, indent)

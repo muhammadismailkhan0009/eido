@@ -10,6 +10,7 @@ type
     skCall,
     skReturn,
     skIf,
+    skExists,
     skWhile,
     skFor,
     skBreak,
@@ -32,6 +33,9 @@ type
       condition*: Expr
       thenBranch*: seq[Stmt]
       elseBranch*: seq[Stmt]
+    of skExists:
+      existsTarget*: Expr
+      existsBody*: seq[Stmt]
     of skWhile:
       whileCondition*: Expr
       body*: seq[Stmt]

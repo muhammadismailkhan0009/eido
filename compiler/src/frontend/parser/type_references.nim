@@ -41,8 +41,15 @@ proc parseDeclaredTypeRef*(parser: var Parser): TypeRef =
       endSpan = close.span
       break
 
+  var isOptional = false
+  if parser.check(tkQuestion):
+    let question = parser.advance()
+    endSpan = question.span
+    isOptional = true
+
   TypeRef(
     span: coverSpan(typeToken.span, endSpan),
     name: typeToken.lexeme,
-    arguments: arguments
+    arguments: arguments,
+    isOptional: isOptional
   )

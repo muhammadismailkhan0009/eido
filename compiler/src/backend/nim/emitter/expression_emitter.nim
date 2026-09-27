@@ -5,6 +5,7 @@ import ../../../hir/expressions as hirExpressions
 import ../../../types/model
 import ../../../types/method_kind
 import names
+import type_emitter
 
 ## Renders one resolved HIR expression as Nim source.
 ## Example: local Int `x + 5` renders as `(eido_local_0_x + int64(5))`.
@@ -72,6 +73,12 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     result = "uint16(" & $expr.charValue & ")"
   of hirExpressions.hekString:
     result = renderStringLiteral(expr)
+  of hirExpressions.hekNone:
+    result = "none(" & renderType(requiredType(expr.typ)) & ")"
+  of hirExpressions.hekOptionalSome:
+    result = "some(" & renderExpr(expr.optionalValue) & ")"
+  of hirExpressions.hekOptionalGet:
+    result = "get(" & renderExpr(expr.optionalValue) & ")"
   of hirExpressions.hekLocal:
     result = localName(expr.localId, expr.sourceName)
   of hirExpressions.hekCall:

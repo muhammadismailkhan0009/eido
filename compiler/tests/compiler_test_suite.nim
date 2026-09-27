@@ -34,6 +34,7 @@ import frontend/parser/class_declaration_parser_test
 import frontend/parser/generic_class_parser_test
 import frontend/parser/class_method_declaration_parser_test
 import frontend/parser/statement/conditional_statement_parser_test
+import frontend/parser/optional_parser_test
 import frontend/parser/statement/while_statement_parser_test
 import frontend/parser/statement/for_statement_parser_test
 import frontend/parser/statement/loop_control_statement_parser_test
@@ -42,6 +43,7 @@ import semantic/analysis/local_binding_analysis_test
 import semantic/analysis/function_analysis_test
 import semantic/analysis/native_function_analysis_test
 import semantic/analysis/class_declaration_analysis_test
+import semantic/analysis/optional_analysis_test
 import semantic/analysis/generic_class_analysis_test
 import semantic/analysis/class_method_analysis_test
 import semantic/analysis/class_static_method_analysis_test
@@ -109,3 +111,4 @@ import features/primitive_variants_test
 import features/string_variants_test
 import features/variable_variants_test
 import features/set_variants_test
+import features/optional_variants_test

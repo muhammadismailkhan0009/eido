@@ -36,6 +36,9 @@ type
     hekBoolean,
     hekChar,
     hekString,
+    hekNone,
+    hekOptionalSome,
+    hekOptionalGet,
     hekLocal,
     hekCall,
     hekConstruct,
@@ -86,6 +89,10 @@ type
       charValue*: uint16
     of hekString:
       stringValue*: string
+    of hekNone:
+      discard
+    of hekOptionalSome, hekOptionalGet:
+      optionalValue*: HirExpr
     of hekLocal:
       localId*: LocalId
       sourceName*: string

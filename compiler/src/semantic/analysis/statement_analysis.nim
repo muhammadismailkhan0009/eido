@@ -12,6 +12,7 @@ import ../symbols/functions
 import ../symbols/classes
 import ../symbols/scope
 import expression_analysis
+import optional_paths
 
 ## Checks one AST statement and lowers it to HIR.
 ## Example: conditional branches recursively reuse the same statement-analysis entry point.
@@ -268,6 +269,7 @@ proc analyzeStmt*(
       )
 
       if functionResult.typ.kind == etkClass and
+          stmt.value.kind != astExpressions.ekNone and
           classValueProvenance(stmt.value, returnValue, locals) != cvpDetached:
         failAt(
           stmt.value.span,
@@ -282,6 +284,16 @@ proc analyzeStmt*(
 
   of astStatements.skIf:
     analyzeConditional(
+      stmt,
+      locals,
+      functions,
+      classes,
+      functionResult,
+      loopDepth
+    )
+
+  of astStatements.skExists:
+    analyzeExists(
       stmt,
       locals,
       functions,

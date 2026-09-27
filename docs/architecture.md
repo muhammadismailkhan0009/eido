@@ -114,6 +114,7 @@ tests/integration/
 - Each SourceUnit is parsed independently, but semantic analysis consumes the merged project declaration universe so source order does not define visibility.
 - Semantic analysis may consume AST and produce HIR.
 - Generic class applications are statically specialized from AST templates into concrete nominal AST classes before ordinary semantic declaration/body analysis. HIR carries no unresolved generic class parameters in this first slice.
+- Optionality is semantic state, not a source-level wrapper API. `T?` remains explicit through semantic types/HIR; `if path exists` introduces an exact lexical presence proof, and HIR inserts backend unwrap nodes only at proven reads. The Nim backend currently represents optionals with `Option[T]`, but Eido semantics do not depend on Nim's representation.
 - HIR must contain resolved symbol identity and semantic types needed by backends. Class-owned functions also carry resolved `mkStatic`/`mkInstance` kind: only instance-method HIR variants may contain a receiver ID/value, so backends/tooling cannot accidentally invent receivers for inferred static methods.
 - Backends consume HIR, not raw AST.
 - The Nim emitter must not perform Eido name resolution, type checking, or static/instance inference. Semantic analysis classifies Eido-bodied class functions from explicit `self` dependency before HIR; bodyless class-owned native functions are explicitly resolved as `mkStatic`. The emitter only obeys resolved method kind/native-ness.

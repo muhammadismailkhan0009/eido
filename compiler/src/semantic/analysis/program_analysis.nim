@@ -29,6 +29,13 @@ proc validateNativeSignature(
   functionResult: FunctionResult
 ) =
   for index, parameterType in parameterTypes:
+    if parameterType.isOptional:
+      failAt(
+        sourceFunction.parameters[index].typeRef.span,
+        "native function parameters cannot use optional type '" &
+          parameterType.displayName & "' in v0"
+      )
+
     if parameterType.kind == etkClass:
       failAt(
         sourceFunction.parameters[index].typeRef.span,
@@ -36,12 +43,20 @@ proc validateNativeSignature(
           parameterType.className & "'"
       )
 
-  if functionResult.kind == frSingle and functionResult.typ.kind == etkClass:
-    failAt(
-      sourceFunction.result.typeRef.span,
-      "native function results cannot use class type '" &
-        functionResult.typ.className & "'"
-    )
+  if functionResult.kind == frSingle:
+    if functionResult.typ.isOptional:
+      failAt(
+        sourceFunction.result.typeRef.span,
+        "native function results cannot use optional type '" &
+          functionResult.typ.displayName & "' in v0"
+      )
+
+    if functionResult.typ.kind == etkClass:
+      failAt(
+        sourceFunction.result.typeRef.span,
+        "native function results cannot use class type '" &
+          functionResult.typ.className & "'"
+      )
 
 ## Collects declarations in dependency-safe passes, then analyzes method/function bodies for the selected target.
 ## Example: executable targets require a zero-parameter main while library targets do not.

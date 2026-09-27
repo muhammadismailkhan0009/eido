@@ -12,6 +12,8 @@ type
     tkBoolean,
     tkChar,
     tkStringLiteral,
+    tkNone,
+    tkExists,
     tkFunction,
     tkNative,
     tkClass,
@@ -53,7 +55,8 @@ type
     tkPlus,
     tkMinus,
     tkStar,
-    tkSlash
+    tkSlash,
+    tkQuestion
 
   Token* = object
     kind*: TokenKind

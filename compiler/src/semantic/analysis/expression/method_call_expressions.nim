@@ -89,6 +89,13 @@ proc analyzeMethodCall*(
     )
 
   let receiver = analyzeExpr(expr.receiver, locals, functions, classes)
+  if receiver.typ.isOptional:
+    failAt(
+      expr.receiver.span,
+      "optional value '" & optionalPathKey(expr.receiver) &
+        "' requires an exists block before method access"
+    )
+
   if receiver.typ.kind != etkClass:
     failAt(
       expr.span,

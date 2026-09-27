@@ -8,6 +8,7 @@ type
     span*: SourceSpan
     name*: string
     arguments*: seq[TypeRef]
+    isOptional*: bool
 
   TypeParameterDecl* = object
     span*: SourceSpan

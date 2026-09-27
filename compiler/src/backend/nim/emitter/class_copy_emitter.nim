@@ -50,9 +50,18 @@ proc renderInternalCopier(classDecl: hirDeclarations.HirClass): string =
     let target = "result." & fieldName(field.sourceName)
     let source = "source." & fieldName(field.sourceName)
     if field.typ.kind == etkClass:
-      result.add "  " & target & " = " &
-        classCopyInternalName(field.typ.className) &
-        "(" & source & ", context)\n"
+      if field.typ.isOptional:
+        result.add "  if isSome(" & source & "):\n"
+        result.add "    " & target & " = some(" &
+          classCopyInternalName(field.typ.className) &
+          "(get(" & source & "), context))\n"
+        result.add "  else:\n"
+        result.add "    " & target & " = none(" &
+          className(field.typ.className) & ")\n"
+      else:
+        result.add "  " & target & " = " &
+          classCopyInternalName(field.typ.className) &
+          "(" & source & ", context)\n"
     else:
       result.add "  " & target & " = " & source & "\n"
   result.add "\n"

@@ -20,6 +20,13 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
       relatedValue: value
     )
 
+  if parser.check(tkNone):
+    let token = parser.advance()
+    return Expr(
+      kind: ekNone,
+      span: token.span
+    )
+
   if parser.check(tkSelf):
     let token = parser.advance()
     return Expr(
@@ -54,7 +61,8 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
         astTypeRefs.TypeRef(
           span: token.span,
           name: token.lexeme,
-          arguments: @[]
+          arguments: @[],
+          isOptional: false
         )
       )
     return Expr(

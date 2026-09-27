@@ -276,6 +276,7 @@ proc nextToken*(lexer: var Lexer): Token =
     of '-': tkMinus
     of '*': tkStar
     of '/': tkSlash
+    of '?': tkQuestion
     else:
       failLexerAt(lexer, startLine, startColumn, "unexpected character '" & $c & "'")
 

@@ -47,13 +47,22 @@ proc analyzeConstruction(
           functions,
           classes
         )
-        if relationValue.typ != expectedType:
+        if expectedType.isOptional and
+            relationValue.typ == requiredType(expectedType):
+          HirExpr(
+            kind: hekOptionalSome,
+            span: relationValue.span,
+            typ: expectedType,
+            optionalValue: relationValue
+          )
+        elif relationValue.typ != expectedType:
           failAt(
             sourceField.value.span,
             "type mismatch: expected " & expectedType.displayName &
               " but got " & relationValue.typ.displayName
           )
-        relationValue
+        else:
+          relationValue
       else:
         let value = analyzeExprExpected(
           sourceField.value,
@@ -66,7 +75,8 @@ proc analyzeConstruction(
             sourceField.value.kind notin {
               astExpressions.ekConstruct,
               astExpressions.ekCall,
-              astExpressions.ekMethodCall
+              astExpressions.ekMethodCall,
+              astExpressions.ekNone
             }:
           failAt(
             sourceField.value.span,

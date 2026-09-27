@@ -4,8 +4,9 @@
 import ../../../types/model
 import names
 
-## Converts one Eido semantic type to Nim source syntax.
-proc renderType*(typ: EidoType): string =
+## Converts one definitely-present Eido semantic type to Nim source syntax.
+## Example: Int becomes int64 and Account becomes its generated nominal class name.
+proc renderRequiredType(typ: EidoType): string =
   case typ.kind
   of etkClass:
     className(typ.className)
@@ -19,3 +20,11 @@ proc renderType*(typ: EidoType): string =
     of ptInt: "int64"
     of ptFloat: "float64"
     of ptChar: "uint16"
+
+## Converts one Eido semantic type to Nim source syntax.
+## Example: Int? becomes Option[int64] without exposing Option in Eido source.
+proc renderType*(typ: EidoType): string =
+  if typ.isOptional:
+    return "Option[" & renderRequiredType(requiredType(typ)) & "]"
+
+  renderRequiredType(typ)

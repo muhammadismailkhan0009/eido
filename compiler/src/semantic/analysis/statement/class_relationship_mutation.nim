@@ -1,8 +1,8 @@
 ## Validates class-valued relationship replacement for set targets.
-## Example: `set current = ref other;` preserves identity while `copy other` detaches it.
+## Optional absence is not an identity choice; present class values retain copy/ref rules.
 
 ## Analyzes a value used to replace a persistent class relationship.
-## Fresh/detached values flow directly; existing values require explicit copy/ref.
+## Fresh/detached values and none flow directly; existing values require explicit copy/ref.
 proc analyzeClassRelationshipMutationValue(
   source: astExpressions.Expr,
   expected: EidoType,
@@ -16,8 +16,26 @@ proc analyzeClassRelationshipMutationValue(
       "semantic invariant: class relationship mutation requires class target"
     )
 
+  if source.kind == astExpressions.ekNone:
+    return analyzeExprExpected(
+      source,
+      expected,
+      locals,
+      functions,
+      classes
+    )
+
   if source.kind == astExpressions.ekClassRelation:
     result = analyzeClassValueRelation(source, locals, functions, classes)
+
+    if expected.isOptional and result.typ == requiredType(expected):
+      return HirExpr(
+        kind: hekOptionalSome,
+        span: result.span,
+        typ: expected,
+        optionalValue: result
+      )
+
     if result.typ != expected:
       failAt(
         source.span,

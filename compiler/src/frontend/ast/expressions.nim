@@ -34,6 +34,7 @@ type
     ekBoolean,
     ekChar,
     ekString,
+    ekNone,
     ekIdentifier,
     ekTypeReference,
     ekCall,
@@ -62,6 +63,8 @@ type
       charValue*: uint16
     of ekString:
       stringValue*: string
+    of ekNone:
+      discard
     of ekIdentifier:
       name*: string
     of ekTypeReference:

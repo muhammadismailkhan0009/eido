@@ -11,6 +11,7 @@ import ../symbols/model
 import ../symbols/functions
 import ../symbols/classes
 import ../symbols/scope
+import optional_paths
 
 ## Resolves names and types in an AST expression and produces HIR.
 ## Example: source `a + 5` becomes a typed binary HIR node referencing `a` by LocalId.
@@ -59,6 +60,9 @@ proc analyzeExpr*(
       astExpressions.ekChar,
       astExpressions.ekString:
     analyzeLiteral(expr)
+
+  of astExpressions.ekNone:
+    failAt(expr.span, "none requires an optional expected type")
 
   of astExpressions.ekIdentifier:
     analyzeIdentifier(expr, locals)

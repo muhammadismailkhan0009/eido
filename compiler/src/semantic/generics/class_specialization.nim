@@ -23,8 +23,17 @@ proc isBuiltInType(name: string): bool =
 
 ## Creates the concrete post-specialization form of a type reference.
 ## Example: Box<Int> is retained as one flat nominal name after its arguments are specialized.
-proc flatTypeRef(source: TypeRef, name: string): TypeRef =
-  TypeRef(span: source.span, name: name, arguments: @[])
+proc flatTypeRef(
+  source: TypeRef,
+  name: string,
+  isOptional: bool = false
+): TypeRef =
+  TypeRef(
+    span: source.span,
+    name: name,
+    arguments: @[],
+    isOptional: isOptional
+  )
 
 ## Builds the canonical source-facing name of one concrete generic specialization.
 ## Example: Pair with String and Int becomes Pair<String,Int>.
@@ -34,6 +43,8 @@ proc concreteName(baseName: string, arguments: seq[TypeRef]): string =
     if index > 0:
       result.add ","
     result.add argument.name
+    if argument.isOptional:
+      result.add "?"
   result.add ">"
 
 ## Queues one concrete generic class exactly once.
@@ -64,18 +75,23 @@ proc specializeTypeRef(
     if source.arguments.len != 0:
       failAt(source.span, "generic type parameter '" & source.name &
         "' cannot receive type arguments")
-    return flatTypeRef(source, bindings[source.name].name)
+    let bound = bindings[source.name]
+    return flatTypeRef(
+      source,
+      bound.name,
+      source.isOptional or bound.isOptional
+    )
 
   if isBuiltInType(source.name):
     if source.arguments.len != 0:
       failAt(source.span, "built-in type '" & source.name &
         "' cannot receive type arguments")
-    return flatTypeRef(source, source.name)
+    return flatTypeRef(source, source.name, source.isOptional)
 
   if source.name notin context.templates:
     if source.arguments.len != 0:
       failAt(source.span, "unknown generic class '" & source.name & "'")
-    return flatTypeRef(source, source.name)
+    return flatTypeRef(source, source.name, source.isOptional)
 
   let classTemplate = context.templates[source.name]
   if source.arguments.len != classTemplate.typeParameters.len:
@@ -87,7 +103,7 @@ proc specializeTypeRef(
     )
 
   if classTemplate.typeParameters.len == 0:
-    return flatTypeRef(source, source.name)
+    return flatTypeRef(source, source.name, source.isOptional)
 
   var arguments: seq[TypeRef]
   for argument in source.arguments:
@@ -95,7 +111,7 @@ proc specializeTypeRef(
 
   let name = concreteName(source.name, arguments)
   context.queueInstantiation(source.name, name, arguments)
-  flatTypeRef(source, name)
+  flatTypeRef(source, name, source.isOptional)
 
 ## Declares recursive expression specialization used while cloning generic method bodies.
 ## Example: Box<T> construction is rewritten after T is bound.
@@ -124,7 +140,7 @@ proc specializeExpr(
     return nil
 
   case source.kind
-  of ekInteger, ekFloat, ekBoolean, ekChar, ekString, ekIdentifier:
+  of ekInteger, ekFloat, ekBoolean, ekChar, ekString, ekNone, ekIdentifier:
     return source
 
   of ekTypeReference:
@@ -239,6 +255,16 @@ proc specializeStmt(
       kind: skReturn,
       span: source.span,
       value: specializeExpr(context, source.value, bindings)
+    )
+  of skExists:
+    var body: seq[Stmt]
+    for statement in source.existsBody:
+      body.add specializeStmt(context, statement, bindings)
+    Stmt(
+      kind: skExists,
+      span: source.span,
+      existsTarget: specializeExpr(context, source.existsTarget, bindings),
+      existsBody: body
     )
   of skIf:
     var thenBranch: seq[Stmt]
@@ -425,7 +451,7 @@ proc validateExprTypeRefs(
     return
 
   case source.kind
-  of ekInteger, ekFloat, ekBoolean, ekChar, ekString, ekIdentifier:
+  of ekInteger, ekFloat, ekBoolean, ekChar, ekString, ekNone, ekIdentifier:
     discard
   of ekTypeReference:
     validateTypeRef(context, source.referencedTypeRef, typeParameters)
@@ -467,6 +493,10 @@ proc validateStmtTypeRefs(
     validateExprTypeRefs(context, source.call, typeParameters)
   of skReturn:
     validateExprTypeRefs(context, source.value, typeParameters)
+  of skExists:
+    validateExprTypeRefs(context, source.existsTarget, typeParameters)
+    for statement in source.existsBody:
+      validateStmtTypeRefs(context, statement, typeParameters)
   of skIf:
     validateExprTypeRefs(context, source.condition, typeParameters)
     for statement in source.thenBranch:

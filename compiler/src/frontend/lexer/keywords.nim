@@ -50,6 +50,8 @@ proc keywordKind*(text: string): TokenKind =
   of "self": tkSelf
   of "copy": tkCopy
   of "ref": tkRef
+  of "none": tkNone
+  of "exists": tkExists
   of "Bool", "Byte", "Short", "Int", "Float", "Char":
     tkPrimitiveType
   of "String":

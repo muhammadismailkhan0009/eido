@@ -3205,3 +3205,100 @@ The first slice does not include:
 
 These may be added requirement-first without changing the core
 `Class<T>` / `Class<Type>` syntax.
+
+
+
+---
+
+# 48. Optional values use lexical exists proofs
+
+> Status: approved and implemented for v0.
+
+Eido types are definitely present by default. Optionality is explicit with a
+single `?` suffix:
+
+```eido
+Int?
+String?
+User?
+Box<User?>?
+```
+
+Absence is written as:
+
+```eido
+none
+```
+
+`none` is semantic absence, not a source-visible pointer/null representation.
+It requires an optional expected type. Eido source does not expose wrapper
+operations such as `.value`, `.get()`, or `.unwrap()`.
+
+A value of type `T?` may be consumed as `T` only inside the dedicated lexical
+proof block:
+
+```eido
+if user exists {
+    user.print();
+}
+```
+
+Ordinary Boolean `if` syntax remains parenthesized:
+
+```eido
+if (ready) {
+    ...
+}
+```
+
+The `exists` target is an exact stable local/field path, not an arbitrary
+expression or call result. Proofs are lexical and never escape their block.
+
+Nested optional relationships require nested proofs:
+
+```eido
+if employee.address exists {
+    if employee.address.city exists {
+        Console.writeLine(employee.address.city.name);
+    }
+}
+```
+
+An optional ancestor cannot be skipped. Outside the exact matching proof block,
+the path retains type `T?`.
+
+Present values may flow into optional positions implicitly:
+
+```eido
+function maybe() returns Int? {
+    return 42;
+}
+```
+
+and `none` may flow into any optional position. Optional primitives, String,
+and class values use the same language model.
+
+For optional class relationships, existing Eido identity semantics still apply
+when a present existing object establishes or replaces persistent storage.
+`ref`/`copy` remain required where they were required for the corresponding
+non-optional class relationship. `none` itself carries no identity choice.
+
+The initial proof model is intentionally mutation-insensitive. Mutation, aliases,
+and method calls do not invalidate an active lexical proof. Even:
+
+```eido
+if user exists {
+    set user = none;
+    user.print();
+}
+```
+
+is not rejected by the current semantic model. Executing such code may fail at
+runtime, and that is a deliberate consequence of the initial rule rather than
+implicit nullable behavior. A later local semantic refinement may reject
+subsequent use after an obvious direct `set X = none` while deliberately
+avoiding general alias/effect analysis.
+
+The Nim backend currently represents `T?` with `Option[T]` and inserts
+presence tests/unwraps in generated code. This representation is not part of
+Eido's semantic contract.

@@ -40,7 +40,7 @@ proc expressionUsesSelf(expr: Expr): bool =
     expressionUsesSelf(expr.operand)
   of ekBinary:
     expressionUsesSelf(expr.left) or expressionUsesSelf(expr.right)
-  of ekInteger, ekFloat, ekBoolean, ekChar, ekString:
+  of ekInteger, ekFloat, ekBoolean, ekChar, ekString, ekNone:
     false
 
 ## Reports whether a statement or any nested statement depends on self.
@@ -71,6 +71,9 @@ proc statementUsesSelf(stmt: Stmt): bool =
     expressionUsesSelf(stmt.condition) or
       blockUsesSelf(stmt.thenBranch) or
       blockUsesSelf(stmt.elseBranch)
+  of skExists:
+    expressionUsesSelf(stmt.existsTarget) or
+      blockUsesSelf(stmt.existsBody)
   of skWhile:
     expressionUsesSelf(stmt.whileCondition) or blockUsesSelf(stmt.body)
   of skFor:
