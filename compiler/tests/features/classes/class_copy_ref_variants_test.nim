@@ -201,7 +201,7 @@ suite "Class relation boundary execution":
 
     check runFeatureSource(source, "field_copy_ref_binding") == "909080"
 
-  test "class-valued method parameter preserves caller identity":
+  test "class-valued static method parameter preserves caller identity":
     let source = """
       class Account {
         Int balance;
@@ -216,8 +216,7 @@ suite "Class relation boundary execution":
 
       function main() returns Int {
         var account = Account { balance: 100; };
-        var charger = Charger {};
-        charger.charge(account, 25);
+        Charger.charge(account, 25);
         return account.value();
       }
     """

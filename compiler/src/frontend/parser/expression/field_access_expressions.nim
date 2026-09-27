@@ -1,5 +1,5 @@
-## Parses postfix member access and instance method-call chains.
-## Example: `employee.address.zip` and `account.remaining(20)` are left-associated postfix expressions.
+## Parses postfix member access and class-member call chains.
+## Semantic analysis later distinguishes Type.method(...) from value.method(...).
 
 ## Extends one primary expression with zero or more `.field` or `.method(...)` operations.
 proc parseFieldAccessChain(

@@ -1,6 +1,7 @@
-## Renders resolved instance method calls as generated Nim procedure calls.
+## Renders resolved inferred-static and instance method calls as Nim procedure calls.
 
-## Renders one method call with the receiver as the first generated argument.
+## Renders one class method call with a receiver only for instance methods.
+## Example: Calculator.add(1,2) omits a receiver while account.value() passes account first.
 proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
   result = methodName(
     call.methodId,
@@ -8,8 +9,15 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
     call.methodName
   ) & "("
 
-  result.add renderExpr(call.receiver)
+  var hasPreviousArgument = false
+  if call.kind == mkInstance:
+    result.add renderExpr(call.receiver)
+    hasPreviousArgument = true
+
   for argument in call.arguments:
-    result.add ", " & renderExpr(argument)
+    if hasPreviousArgument:
+      result.add ", "
+    result.add renderExpr(argument)
+    hasPreviousArgument = true
 
   result.add ")"

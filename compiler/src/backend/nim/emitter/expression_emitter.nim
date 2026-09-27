@@ -3,6 +3,7 @@
 
 import ../../../hir/expressions as hirExpressions
 import ../../../types/model
+import ../../../types/method_kind
 import names
 
 ## Renders one resolved HIR expression as Nim source.
@@ -18,7 +19,13 @@ include expression/method_call_expressions
 ## Renders a resolved function call without deciding whether its result is used.
 ## Example: resolved `add(1, 2)` becomes `eido_fn_1_add(int64(1), int64(2))`.
 proc renderCall*(call: hirExpressions.HirCall): string =
-  result = functionName(call.functionId, call.functionName) & "("
+  let renderedName =
+    if call.isNative:
+      nativeFunctionName(call.functionName)
+    else:
+      functionName(call.functionId, call.functionName)
+
+  result = renderedName & "("
   for index, argument in call.arguments:
     if index > 0:
       result.add ", "

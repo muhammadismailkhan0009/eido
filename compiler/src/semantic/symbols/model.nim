@@ -3,6 +3,7 @@
 import ../../source/span
 import ../../types/model
 import ../../types/function_result
+import ../../types/method_kind
 import ids
 
 type
@@ -32,6 +33,7 @@ type
   FunctionSymbol* = object
     id*: FunctionId
     name*: string
+    isNative*: bool
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
     span*: SourceSpan
@@ -39,6 +41,7 @@ type
   MethodSymbol* = object
     id*: MethodId
     name*: string
+    kind*: MethodKind
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
     span*: SourceSpan

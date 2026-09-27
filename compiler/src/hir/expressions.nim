@@ -4,6 +4,7 @@
 import ../source/span
 import ../types/model
 import ../types/function_result
+import ../types/method_kind
 import ../semantic/symbols/ids
 
 type
@@ -53,6 +54,7 @@ type
     span*: SourceSpan
     functionId*: FunctionId
     functionName*: string
+    isNative*: bool
     arguments*: seq[HirExpr]
     result*: FunctionResult
 
@@ -61,9 +63,13 @@ type
     methodId*: MethodId
     methodName*: string
     ownerType*: EidoType
-    receiver*: HirExpr
     arguments*: seq[HirExpr]
     result*: FunctionResult
+    case kind*: MethodKind
+    of mkInstance:
+      receiver*: HirExpr
+    of mkStatic:
+      discard
 
   HirExpr* = ref object
     span*: SourceSpan

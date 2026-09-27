@@ -2,6 +2,7 @@
 
 import std/[os, osproc, strutils]
 import artifacts
+import native_support
 
 ## Writes generated Nim and invokes `nim c` to create a native executable. Example: Nim source for output `bin/app` is compiled into `bin/app`.
 proc compileWithNim*(nimSource, outputPath: string) =
@@ -9,7 +10,13 @@ proc compileWithNim*(nimSource, outputPath: string) =
   let nimCompiler = getEnv("NIM", "nim")
   let process = startProcess(
     nimCompiler,
-    args = ["c", "-d:release", "-o:" & outputPath, nimPath],
+    args = [
+      "c",
+      "-d:release",
+      "--path:" & nativeSupportPath(),
+      "-o:" & outputPath,
+      nimPath
+    ],
     options = {poUsePath, poStdErrToStdOut}
   )
 

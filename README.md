@@ -7,7 +7,7 @@ Eido is an experimental compiled language focused on predictable enterprise soft
 - `compiler/` — Eido compiler implementation and compiler/language conformance tests.
 - `stdlib/` — foundational APIs shipped with the Eido SDK.
 - `packages/` — higher-level ordinary Eido libraries.
-- `tools/cli/` — the human-facing `eido` command adapter.
+- `tools/cli/` — the human-facing `eido` command; Nim bootstrap adapter plus the permanent CLI implementation being written in Eido itself.
 - `tools/mcp/` — planned MCP adapter over the protocol-neutral compiler tooling API.
 - `tools/lsp/` — planned language-server adapter over the same compiler tooling/project API.
 - `installer/` — SDK installation/assembly ownership.
@@ -27,3 +27,7 @@ eido check src/main.eido src/account.eido src/service.eido
 `eido check` performs project parsing + semantic analysis only; it does not invoke the Nim emitter/toolchain. Compiler errors are emitted as structured diagnostics rendered like `path:line:column error EIDO1000: message`.
 
 All supplied files currently form one project declaration universe; module/import/package boundaries are intentionally not implemented yet.
+
+## Requirement-driven dogfooding
+
+Eido's ecosystem is now grown through permanent product requirements rather than throwaway examples. The first Eido-written product is `tools/cli/eido/main.eido`; it already implements help/version/error/exit behavior using inferred-static Eido stdlib APIs such as `Console.writeLine(...)` and `Process.argument(...)`. The Nim compiler remains the bootstrap compiler/core, while ordinary tooling migrates to Eido as the language gains the required capabilities.

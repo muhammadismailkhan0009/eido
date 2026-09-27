@@ -2629,3 +2629,302 @@ ProjectCheckResult
 
 No adapter owns independent Eido diagnostic semantics. File identity, source
 spans, codes, severity, and messages originate in the compiler/tooling layer.
+
+
+---
+
+# 43. Requirement-driven ecosystem development and initial native boundary
+
+> Status: approved and implemented foundation. This section supersedes the
+> earlier assumption that substantial CLI/LSP/MCP implementations should be
+> developed independently in Nim alongside the language.
+
+## Requirement-driven development rule
+
+Eido ecosystem development proceeds from permanent product requirements:
+
+```text
+real Eido tool capability
+        ↓
+identify the missing prerequisite
+        ↓
+classify it
+  language / stdlib / package / compiler tooling / native support
+        ↓
+implement and test at the owning layer
+        ↓
+consume it immediately in the permanent Eido-written tool
+```
+
+Throwaway dogfood applications are not the default strategy. The tool used to
+pressure the language should be software we intend to ship.
+
+The reference compiler/core remains Nim bootstrap infrastructure. Ordinary
+software above that boundary—stdlib APIs, CLI, formatter, MCP, LSP, package
+manager, documentation tooling, official packages, and similar components—
+should be written in Eido once the language can express them cleanly.
+
+Temporary Nim adapters are permitted when required to bootstrap missing
+capabilities, but they must remain thin and contain no duplicated Eido semantic
+logic. Once the corresponding Eido implementation reaches parity, the temporary
+adapter responsibility should be removed rather than maintained indefinitely.
+
+The first permanent Eido-written product is the CLI under:
+
+```text
+tools/cli/eido/
+```
+
+The existing Nim CLI under `tools/cli/src/` remains the bootstrap front door
+for build/check while migration proceeds.
+
+## Native function declaration
+
+The first requirement discovered by the permanent CLI is host process/I/O
+access. Eido therefore introduces the explicit top-level native declaration:
+
+```eido
+native function platformArgumentCount() returns Int;
+native function platformArgument(Int index) returns String;
+native function platformWriteLine(String value);
+```
+
+Current grammar is conceptually:
+
+```text
+native function <name>(<typed parameters>) [returns <type>];
+```
+
+Rules:
+
+- `native` is reserved.
+- Native functions are top-level declarations in the same function namespace as ordinary functions.
+- A native declaration has no Eido body.
+- It is terminated by a semicolon.
+- Parameters and results use the existing ordinary function type grammar.
+- Calls are resolved, arity-checked, and type-checked exactly like calls to ordinary Eido functions.
+- A native function cannot be the executable `main` entrypoint.
+
+## Initial native ABI restriction
+
+The initial native boundary accepts only Eido primitive types and `String`.
+Nominal class values are rejected as native parameters/results.
+
+This is deliberate. Passing classes across a native boundary would require
+locking representation, identity, lifetime, mutation, and copy/ref behavior
+that Eido has intentionally kept abstract. Those semantics must be designed
+explicitly before class-native interoperability is added.
+
+The current feature is also **not** a complete arbitrary-library FFI. It is the
+SDK/backend support boundary required to implement foundational libraries and
+Eido's own tooling. A broader external-library FFI/provider syntax remains open
+and must not be inferred from the v0 backend mapping.
+
+## Nim backend mapping
+
+For the current Nim backend, a native source declaration named:
+
+```text
+platformWriteLine
+```
+
+maps to backend support symbol:
+
+```text
+eido_native_platformWriteLine
+```
+
+Generated Nim imports the bundled support module `eido_native` when a program
+contains native declarations. Native declarations themselves emit no generated
+Eido/Nim function body.
+
+The provider currently lives at:
+
+```text
+stdlib/native/nim/eido_native.nim
+```
+
+This mapping is a backend ABI implementation detail. The Eido AST/type system
+records only that a function is native; it does not encode Nim module paths or
+Nim types.
+
+Backend support-path discovery may be overridden during SDK/development use with
+`EIDO_NATIVE_NIM_PATH`. Final installed-SDK resolution will be integrated with
+the EIDO_HOME/versioned-support layout rather than requiring application source
+to know physical native-support paths.
+
+## First stdlib capabilities
+
+The first ordinary Eido-facing stdlib files are:
+
+```text
+stdlib/src/process.eido
+stdlib/src/console.eido
+```
+
+They currently provide foundational operations required by the CLI:
+
+```text
+processArgumentCount()
+processArgument(index)
+processExit(code)
+consoleWriteLine(value)
+consoleErrorLine(value)
+```
+
+These are ordinary Eido functions implemented over private/low-level native
+declarations. Their names may later be organized through the module system once
+module/import grammar is implemented; the platform capability itself is now a
+real SDK requirement.
+
+## First permanent Eido CLI slice
+
+`tools/cli/eido/main.eido` is now compiled by the Eido compiler and retained as
+product source. Its first completed behaviors are:
+
+```text
+eido help
+eido version
+unknown-command diagnostic
+non-zero process exit for invalid command
+```
+
+This is intentionally small but non-throwaway. Future CLI behavior extends this
+same implementation.
+
+The next migration target is `eido check`. If that requires collections,
+filesystem access, compiler-service access, error values, modules, or another
+capability not yet present, development should implement the missing capability
+at its proper layer and then continue the Eido CLI rather than implementing a
+parallel permanent Nim version.
+
+
+---
+
+# 44. Inferred static class methods
+
+> Status: approved and implemented. This section is authoritative over earlier
+> text that described every class-owned function as an instance method.
+
+Eido has one class-function declaration syntax:
+
+```eido
+function name(...) { ... }
+```
+
+There is no `static` keyword. The compiler classifies each class-owned function
+from its semantic dependency on the explicit current receiver `self`.
+
+## Classification rule
+
+A class-owned function is an **instance method** when any expression or nested
+statement in its body reaches explicit `self`.
+
+A class-owned function is an **inferred static/type-associated method** when its
+entire body is self-free.
+
+The analysis is recursive across conditions, loops, local initializers,
+assignments, returns, call arguments, construction fields, unary/binary
+expressions, field access, and method-call receivers/arguments.
+
+Because Eido already requires instance state and own-method access to be
+spelled through `self`, this classification does not depend on guessing whether
+an unqualified name secretly refers to instance state.
+
+Example:
+
+```eido
+class Money {
+    Int cents;
+
+    function fromCents(Int value) returns Money {
+        return Money { cents: value; };
+    }
+
+    function add(Int amount) {
+        set self.cents = self.cents + amount;
+    }
+}
+```
+
+The first function is inferred static; the second is instance-bound.
+
+```eido
+var money = Money.fromCents(500);
+money.add(100);
+```
+
+## Call-form enforcement
+
+Inferred static methods must be called through the owning class:
+
+```eido
+Money.fromCents(500);
+Console.writeLine("hello");
+Process.exit(1);
+```
+
+Calling a self-free method through an instance is invalid. Conversely, an
+instance method must be called through a class value:
+
+```eido
+money.add(100);
+account.withdraw(50);
+```
+
+Calling a self-dependent instance method as `Type.method(...)` is invalid.
+The compiler does not provide a compatibility form that silently discards or
+invents a receiver.
+
+## Receiver semantics and HIR
+
+Inferred static methods have no source-level `self`, no hidden receiver
+parameter, and no receiver in resolved method-call HIR. Instance methods bind
+`self` and carry the resolved receiver identity/value through HIR to the
+backend.
+
+The distinction is represented explicitly as semantic `mkStatic` versus
+`mkInstance`; the backend does not re-infer it.
+
+Fields remain instance state. Merely declaring fields on a class does not make
+a self-free method instance-bound, and this feature does not introduce static
+fields, mutable class state, or class initialization semantics.
+
+## API evolution consequence
+
+Adding a `self` dependency to a previously self-free method intentionally
+changes it from:
+
+```text
+Type.method(...)
+```
+
+to:
+
+```text
+value.method(...)
+```
+
+Removing the last `self` dependency changes it in the opposite direction.
+This is treated as an ordinary source/API change and existing callers must be
+updated; Eido does not preserve the previous call category implicitly.
+
+## Type-associated grouping instead of static utility syntax
+
+The model gives Eido Java-like type-associated operations without adding the
+`static` modifier and without requiring utility instances. It also supplies
+the namespace-like grouping needed by ordinary APIs such as:
+
+```eido
+Console.writeLine("hello");
+Process.argument(0);
+Money.fromCents(500);
+```
+
+For this purpose Eido does not need a separate namespace declaration. This does
+**not** replace Eido's module architecture: modules remain logical source,
+visibility, dependency, and architectural boundaries rather than runtime/type
+containers.
+
+The first permanent dogfood users are the standard-library `Console` and
+`Process` classes consumed by the Eido-written CLI.

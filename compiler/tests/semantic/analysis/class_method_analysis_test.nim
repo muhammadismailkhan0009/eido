@@ -3,7 +3,7 @@ import frontend/lexer/scanner
 import frontend/parser/program_parser
 import hir/[declarations, expressions, statements]
 import semantic/analysis/program_analysis
-import types/[function_result, model]
+import types/[function_result, method_kind, model]
 
 ## Runs source through lexer, parser, and semantic analysis without backend dependencies.
 proc analyzeSource(source: string): auto =
@@ -30,6 +30,7 @@ suite "Class method semantics":
 
     # Then
     check analyzedMethod.sourceName == "remaining"
+    check analyzedMethod.kind == mkInstance
     check analyzedMethod.ownerType == classType("Account")
     check analyzedMethod.parameters.len == 1
     check analyzedMethod.parameters[0].sourceName == "amount"

@@ -47,6 +47,7 @@ compiler/
       expression/
       classes/
       control_flow/
+      native/
       function_variants_test.nim
       primitive_variants_test.nim
       string_variants_test.nim
@@ -91,6 +92,8 @@ These tests answer questions such as:
 - which primitive types have been exercised through real Eido programs?
 - which variable initialization/`set` mutation variants work?
 - which expression forms work?
+- are self-free class functions inferred static and callable only as `Type.method(...)`?
+- do self-dependent class functions remain receiver-bound instance methods?
 
 Some behavior is intentionally covered by multiple layers because the boundary risk is different: compiler tests prove the owning implementation contract, feature tests prove the language surface as complete Eido programs, and root integration tests prove adapters/tooling compose those compiler capabilities correctly.
 
@@ -122,7 +125,7 @@ Names describe visible behavior rather than implementation details.
 - Pipeline tests exercise the complete real path through native Nim compilation.
 - Feature tests exercise complete user-facing Eido variants through generated Nim executed by `nim e`; this preserves end-to-end language behavior without paying native compilation cost per scenario.
 - Architecture tests prove dependency/readability/test-organization constraints.
-- Root integration tests prove cross-component flows such as CLI multi-source project builds and semantic-only `eido check` behavior.
+- Root integration tests prove cross-component flows such as CLI multi-source project builds, semantic-only `eido check`, and compilation/execution of permanent Eido-written tooling.
 - Test through public phase entry points; do not test private procedures directly.
 
 ## Test support
@@ -150,7 +153,7 @@ The canonical test task is parallel and CPU-adaptive:
 5. Language-facing feature tests run one process per individual test, because those cases are comparatively expensive and often execute generated Nim through `nim e`.
 6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
 7. Successful child output is suppressed; failed child output is replayed with its selector.
-8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios; currently this includes multi-source CLI parsing/build/native execution plus semantic-only check/diagnostic behavior.
+8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios: bootstrap CLI behavior plus compilation/execution of the permanent Eido-written CLI dogfood target.
 
 Worker count defaults to `max(1, countProcessors() - 2)` so two logical cores remain free for the OS and other work. Override it when needed:
 

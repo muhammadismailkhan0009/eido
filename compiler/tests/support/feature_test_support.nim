@@ -3,6 +3,7 @@
 
 import std/[os, osproc, strutils]
 import pipeline/compiler
+import backend/nim/toolchain/native_support
 
 ## Runs a complete Eido program through all pure compiler phases, then executes
 ## the emitted Nim with `nim e`. Example: a main returning 30 produces "30".
@@ -19,7 +20,13 @@ proc runFeatureSource*(source: string, caseName: string): string =
   let nimCompiler = getEnv("NIM", "nim")
   let process = startProcess(
     nimCompiler,
-    args = ["e", "--hints:off", "--warnings:off", generatedPath],
+    args = [
+      "e",
+      "--hints:off",
+      "--warnings:off",
+      "--path:" & nativeSupportPath(),
+      generatedPath
+    ],
     options = {poUsePath, poStdErrToStdOut}
   )
   let (lines, exitCode) = process.readLines()

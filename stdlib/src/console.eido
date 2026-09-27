@@ -1,0 +1,12 @@
+native function platformWriteLine(String value);
+native function platformErrorLine(String value);
+
+class Console {
+    function writeLine(String value) {
+        platformWriteLine(value);
+    }
+
+    function errorLine(String value) {
+        platformErrorLine(value);
+    }
+}

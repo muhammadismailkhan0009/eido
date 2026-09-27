@@ -6,6 +6,7 @@ import ../../frontend/ast/expressions as astExpressions
 import ../../hir/expressions as hirExpressions
 import ../../types/model
 import ../../types/function_result
+import ../../types/method_kind
 import ../symbols/model
 import ../symbols/functions
 import ../symbols/classes

@@ -52,11 +52,14 @@ suite "Class method emission":
     # Given
     let source = """
       class Marker {
-        function inspect() {}
+        Bool active;
+        function inspect() {
+          var current = self.active;
+        }
       }
 
       function main() {
-        var marker = Marker {};
+        var marker = Marker { active: true; };
         marker.inspect();
       }
     """

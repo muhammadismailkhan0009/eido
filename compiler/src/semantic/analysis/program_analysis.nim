@@ -2,19 +2,44 @@
 ## Class names/fields/method signatures and top-level function signatures are collected before any callable body is analyzed.
 
 import ../../diagnostics/[codes, errors]
+import ../../frontend/ast/declarations as astDeclarations
 import ../../frontend/ast/program as astProgram
 import ../../hir/declarations
 import ../../hir/program as hirProgram
 import ../../project/model
 import ../../types/model
+import ../../types/function_result
 import ../symbols/ids
 import type_resolution
 import ../symbols/model
 import ../symbols/classes
 import ../symbols/functions
 import class_analysis
+import method_classification
 import method_analysis
 import function_analysis
+
+## Rejects class-identity values at the initial native ABI boundary.
+## Example: Int/String parameters are allowed while Account parameters/results remain unsupported until native class ABI semantics are designed.
+proc validateNativeSignature(
+  sourceFunction: astDeclarations.FunctionDecl,
+  parameterTypes: seq[EidoType],
+  functionResult: FunctionResult
+) =
+  for index, parameterType in parameterTypes:
+    if parameterType.kind == etkClass:
+      failAt(
+        sourceFunction.parameters[index].typeRef.span,
+        "native function parameters cannot use class type '" &
+          parameterType.className & "'"
+      )
+
+  if functionResult.kind == frSingle and functionResult.typ.kind == etkClass:
+    failAt(
+      sourceFunction.result.typeRef.span,
+      "native function results cannot use class type '" &
+        functionResult.typ.className & "'"
+    )
 
 ## Collects declarations in dependency-safe passes, then analyzes method/function bodies for the selected target.
 ## Example: executable targets require a zero-parameter main while library targets do not.
@@ -72,6 +97,7 @@ proc analyzeProgram*(
       classSymbol.methods.add MethodSymbol(
         id: MethodId(nextMethodId),
         name: sourceMethod.name,
+        kind: inferMethodKind(sourceMethod),
         parameterTypes: parameterTypes,
         result: resolveFunctionResult(sourceMethod.result, classes),
         span: sourceMethod.span
@@ -94,9 +120,13 @@ proc analyzeProgram*(
       parameterTypes.add resolveDeclaredType(parameter.typeRef, classes)
 
     let functionResult = resolveFunctionResult(fn.result, classes)
+    if fn.isNative:
+      validateNativeSignature(fn, parameterTypes, functionResult)
+
     let symbol = FunctionSymbol(
       id: FunctionId(index),
       name: fn.name,
+      isNative: fn.isNative,
       parameterTypes: parameterTypes,
       result: functionResult,
       span: fn.span
@@ -104,6 +134,8 @@ proc analyzeProgram*(
     functions.add symbol
 
     if target == ptExecutable and fn.name == "main":
+      if fn.isNative:
+        failAt(fn.span, "main function cannot be native")
       mainFound = true
       mainId = symbol.id
       if fn.parameters.len != 0:

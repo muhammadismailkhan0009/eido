@@ -53,15 +53,19 @@ suite "Class method execution":
     # Then
     check output == "0"
 
-  test "zero-result method can be called as a statement":
+  test "zero-result instance method can be called as a statement":
     # Given
     let source = """
       class Marker {
-        function inspect() {}
+        Bool active;
+
+        function inspect() {
+          var current = self.active;
+        }
       }
 
       function main() {
-        var marker = Marker {};
+        var marker = Marker { active: true; };
         marker.inspect();
       }
     """
@@ -99,7 +103,7 @@ suite "Class method execution":
     # Then
     check output == "42"
 
-  test "different classes may use the same method name":
+  test "different classes may use the same inferred static method name":
     # Given
     let source = """
       class Left {
@@ -111,9 +115,7 @@ suite "Class method execution":
       }
 
       function main() returns Int {
-        var left = Left {};
-        var right = Right {};
-        return left.value() + right.value();
+        return Left.value() + Right.value();
       }
     """
 

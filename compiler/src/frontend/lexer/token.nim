@@ -13,6 +13,7 @@ type
     tkChar,
     tkStringLiteral,
     tkFunction,
+    tkNative,
     tkClass,
     tkReturns,
     tkReturn,

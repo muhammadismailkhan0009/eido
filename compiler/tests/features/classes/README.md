@@ -31,7 +31,7 @@
 - primitive-receiver rejection
 - rejection of implicit alias/copy bindings from class-valued fields
 
-`class_method_variants_test.nim` covers:
+`class_method_variants_test.nim` covers true instance behavior:
 
 - explicit `self.field` reads inside methods
 - method parameters/results and explicit-instance calls
@@ -41,6 +41,15 @@
 - method calls through class-valued fields
 - `set self.field = ...` for own field mutation; class relationship variants are exercised in the copy/ref catalog
 - field/parameter/local/nested-local uniqueness constraints
+
+`class_static_method_variants_test.nim` covers inferred type-associated behavior:
+
+- self-free class functions inferred as static with no keyword
+- required `Type.method(...)` call syntax and rejection of instance-call syntax
+- rejection of class-call syntax for self-dependent instance methods
+- static-to-static calls, static factories, and zero-result static calls
+- fields do not make a method instance-bound unless the body explicitly reaches `self`
+- `static function` syntax is rejected because method kind is compiler-inferred
 
 `self_receiver_variants_test.nim` covers current-instance field/method access,
 same-name top-level function separation, and invalid receiver contexts.

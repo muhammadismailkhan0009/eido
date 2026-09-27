@@ -33,6 +33,7 @@ type
   FunctionDecl* = object
     span*: SourceSpan
     name*: string
+    isNative*: bool
     parameters*: seq[Parameter]
     result*: FunctionResultRef
     body*: seq[Stmt]

@@ -13,12 +13,14 @@ proc parseProgram*(tokens: seq[Token]): Program =
   while not parser.check(tkEof):
     if parser.check(tkClass):
       result.classes.add parser.parseClass()
+    elif parser.check(tkNative):
+      result.functions.add parser.parseNativeFunction()
     elif parser.check(tkFunction):
       result.functions.add parser.parseFunction()
     else:
       failAt(
         parser.peek.span,
-        "expected top-level class or function declaration"
+        "expected top-level class, function, or native function declaration"
       )
 
   if result.classes.len == 0 and result.functions.len == 0:

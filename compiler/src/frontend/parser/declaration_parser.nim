@@ -75,9 +75,11 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
   FunctionDecl(
     span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
+    isNative: false,
     parameters: parameters,
     result: functionResult,
     body: body
   )
 
+include declaration/native_function_declarations
 include declaration/class_declarations

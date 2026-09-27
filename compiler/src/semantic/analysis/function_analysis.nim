@@ -56,7 +56,7 @@ proc analyzeFunction*(
       symbol.result
     )
 
-  if symbol.result.kind == frSingle:
+  if not fn.isNative and symbol.result.kind == frSingle:
     if not blockAlwaysReturns(body):
       failAt(
         fn.span,
@@ -67,6 +67,7 @@ proc analyzeFunction*(
     span: fn.span,
     functionId: symbol.id,
     sourceName: fn.name,
+    isNative: fn.isNative,
     parameters: parameters,
     result: symbol.result,
     body: body

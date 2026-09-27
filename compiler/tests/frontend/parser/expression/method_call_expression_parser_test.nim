@@ -3,7 +3,7 @@ import frontend/ast/[expressions, statements]
 import frontend/lexer/scanner
 import frontend/parser/program_parser
 
-suite "Instance method call parsing":
+suite "Class member call parsing":
   test "parses a method call as a value expression":
     # Given
     let source = """

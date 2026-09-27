@@ -1,5 +1,5 @@
-## Analyzes one class-owned instance method with explicit source-level self bound to a hidden receiver.
-## Class fields occupy the same effective name namespace as method parameters and locals.
+## Analyzes one class-owned function after static/instance classification.
+## Instance methods bind explicit self to a hidden receiver; inferred static methods receive no receiver.
 
 import ../../diagnostics/errors
 import ../../frontend/ast/declarations
@@ -7,10 +7,11 @@ import ../../hir/declarations as hirDeclarations
 import ../../hir/statements
 import ../../types/function_result
 import ../../types/model
-import ../symbols/[classes, functions, model, scope]
+import ../../types/method_kind
+import ../symbols/[classes, functions, ids, model, scope]
 import statement_analysis
 
-## Creates field/parameter scope and lowers one checked instance method body.
+## Creates the classified method scope and lowers one checked class function body.
 proc analyzeMethod*(
   sourceMethod: FunctionDecl,
   owner: ClassSymbol,
@@ -19,18 +20,21 @@ proc analyzeMethod*(
   classes: ClassSymbols
 ): hirDeclarations.HirMethod =
   var locals = initLocalScope()
-  let receiverLocalId = locals.nextLocalId()
-  locals.add(
-    "self",
-    LocalSymbol(
-      name: "self",
-      typ: owner.typ,
-      span: sourceMethod.span,
-      kind: bkReceiver,
-      id: receiverLocalId,
-      classValueProvenance: cvpExisting
+  var receiverLocalId = LocalId(-1)
+
+  if symbol.kind == mkInstance:
+    receiverLocalId = locals.nextLocalId()
+    locals.add(
+      "self",
+      LocalSymbol(
+        name: "self",
+        typ: owner.typ,
+        span: sourceMethod.span,
+        kind: bkReceiver,
+        id: receiverLocalId,
+        classValueProvenance: cvpExisting
+      )
     )
-  )
 
   for field in owner.fields:
     locals.add(
@@ -95,13 +99,16 @@ proc analyzeMethod*(
         symbol.result.typ.displayName
     )
 
-  hirDeclarations.HirMethod(
+  result = hirDeclarations.HirMethod(
     span: sourceMethod.span,
     methodId: symbol.id,
     sourceName: sourceMethod.name,
     ownerType: owner.typ,
-    receiverLocalId: receiverLocalId,
     parameters: parameters,
     result: symbol.result,
-    body: body
+    body: body,
+    kind: symbol.kind
   )
+
+  if symbol.kind == mkInstance:
+    result.receiverLocalId = receiverLocalId

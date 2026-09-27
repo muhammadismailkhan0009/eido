@@ -1,0 +1,17 @@
+native function platformArgumentCount() returns Int;
+native function platformArgument(Int index) returns String;
+native function platformExit(Int code);
+
+class Process {
+    function argumentCount() returns Int {
+        return platformArgumentCount();
+    }
+
+    function argument(Int index) returns String {
+        return platformArgument(index);
+    }
+
+    function exit(Int code) {
+        platformExit(code);
+    }
+}

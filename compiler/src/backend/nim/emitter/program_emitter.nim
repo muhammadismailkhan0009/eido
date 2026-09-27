@@ -11,6 +11,15 @@ import function_emitter
 
 ## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
+  var hasNativeFunctions = false
+  for fn in program.functions:
+    if fn.isNative:
+      hasNativeFunctions = true
+      break
+
+  if hasNativeFunctions:
+    result.add "import eido_native\n\n"
+
   result.add renderClasses(program.classes)
   result.add renderClassCopiers(program.classes)
 
@@ -20,7 +29,8 @@ proc emitNim*(program: hirProgram.HirProgram): string =
       result.add renderMethodSignature(methodDecl) & "\n"
 
   for fn in program.functions:
-    result.add renderSignature(fn) & "\n"
+    if not fn.isNative:
+      result.add renderSignature(fn) & "\n"
 
   result.add "\n"
 
@@ -30,8 +40,9 @@ proc emitNim*(program: hirProgram.HirProgram): string =
       result.add "\n"
 
   for fn in program.functions:
-    result.add renderFunction(fn)
-    result.add "\n"
+    if not fn.isNative:
+      result.add renderFunction(fn)
+      result.add "\n"
 
   if program.hasMain:
     var mainIndex = -1

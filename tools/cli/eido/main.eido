@@ -1,0 +1,28 @@
+function printUsage() {
+    Console.writeLine("Usage: eido <command>");
+    Console.writeLine("Commands: help, version");
+}
+
+function main() {
+    var count = Process.argumentCount();
+
+    if (count == 0) {
+        printUsage();
+        return;
+    }
+
+    var command = Process.argument(0);
+
+    if (command == "help") {
+        printUsage();
+        return;
+    }
+
+    if (command == "version") {
+        Console.writeLine("Eido 0.0.1");
+        return;
+    }
+
+    Console.errorLine("error: unknown command '" + command + "'");
+    Process.exit(1);
+}

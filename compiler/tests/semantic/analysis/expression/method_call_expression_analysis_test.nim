@@ -3,7 +3,7 @@ import frontend/lexer/scanner
 import frontend/parser/program_parser
 import hir/[expressions, statements]
 import semantic/analysis/program_analysis
-import types/[function_result, model]
+import types/[function_result, method_kind, model]
 
 ## Runs source through lexer, parser, and semantic analysis without backend dependencies.
 proc analyzeSource(source: string): auto =
@@ -35,20 +35,24 @@ suite "Instance method call semantics":
     check call.kind == hekMethodCall
     check call.typ == etInt
     check call.methodCall.methodName == "remaining"
+    check call.methodCall.kind == mkInstance
     check call.methodCall.receiver.typ == classType("Account")
     check call.methodCall.arguments.len == 1
     check call.methodCall.arguments[0].typ == etInt
     check call.methodCall.result.kind == frSingle
 
-  test "accepts a zero-result method call as a statement":
+  test "accepts a zero-result instance method call as a statement":
     # Given
     let source = """
       class Marker {
-        function inspect() {}
+        Bool active;
+        function inspect() {
+          var current = self.active;
+        }
       }
 
       function main() {
-        var marker = Marker {};
+        var marker = Marker { active: true; };
         marker.inspect();
       }
     """
@@ -61,15 +65,18 @@ suite "Instance method call semantics":
     check statement.methodCall.methodName == "inspect"
     check statement.methodCall.result.kind == frNone
 
-  test "rejects a zero-result method call used as a value":
+  test "rejects a zero-result instance method call used as a value":
     # Given
     let source = """
       class Marker {
-        function inspect() {}
+        Bool active;
+        function inspect() {
+          var current = self.active;
+        }
       }
 
       function main() {
-        var marker = Marker {};
+        var marker = Marker { active: true; };
         var value = marker.inspect();
       }
     """
@@ -104,21 +111,27 @@ suite "Instance method call semantics":
     # Given
     let wrongArity = """
       class Account {
-        function remaining(Int amount) returns Int { return amount; }
+        Int balance;
+        function remaining(Int amount) returns Int {
+          return self.balance - amount;
+        }
       }
 
       function main() {
-        var account = Account {};
+        var account = Account { balance: 100; };
         var value = account.remaining();
       }
     """
     let wrongType = """
       class Account {
-        function remaining(Int amount) returns Int { return amount; }
+        Int balance;
+        function remaining(Int amount) returns Int {
+          return self.balance - amount;
+        }
       }
 
       function main() {
-        var account = Account {};
+        var account = Account { balance: 100; };
         var value = account.remaining(true);
       }
     """

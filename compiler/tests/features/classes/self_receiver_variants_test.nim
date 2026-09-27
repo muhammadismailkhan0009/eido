@@ -49,7 +49,8 @@ suite "Self receiver execution":
   test "self method remains distinct from same named top level function":
     let source = """
       class Account {
-        function value() returns Int { return 1; }
+        Int code;
+        function value() returns Int { return self.code; }
 
         function inspect() returns Int {
           return self.value();
@@ -59,7 +60,7 @@ suite "Self receiver execution":
       function value() returns Int { return 99; }
 
       function main() returns Int {
-        var account = Account {};
+        var account = Account { code: 1; };
         return account.inspect();
       }
     """
@@ -99,17 +100,18 @@ suite "Self receiver call separation":
   test "bare same named call remains a top level function call":
     let source = """
       class Account {
+        Int marker;
         function value() returns Int { return 1; }
 
         function inspect() returns Int {
-          return value();
+          return value() + (self.marker - self.marker);
         }
       }
 
       function value() returns Int { return 99; }
 
       function main() returns Int {
-        var account = Account {};
+        var account = Account { marker: 1; };
         return account.inspect();
       }
     """

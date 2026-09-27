@@ -1,5 +1,5 @@
-## Parses class declarations containing fields and instance methods.
-## Example: `class Account { Int balance; function remaining(Int amount) returns Int { ... } }`.
+## Parses class declarations containing fields and class-owned functions.
+## Static versus instance behavior is inferred later from explicit self dependency.
 
 ## Parses one semicolon-terminated field declaration.
 proc parseFieldDecl(parser: var Parser): FieldDecl =

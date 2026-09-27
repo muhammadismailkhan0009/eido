@@ -25,7 +25,8 @@ suite "Self expression semantics":
   test "resolves self method on current receiver":
     let source = """
       class Account {
-        function valid() returns Bool { return true; }
+        Bool enabled;
+        function valid() returns Bool { return self.enabled; }
         function inspect() returns Bool {
           return self.valid();
         }
@@ -43,7 +44,8 @@ suite "Self expression semantics":
   test "self method stays distinct from same named top level function":
     let source = """
       class Account {
-        function valid() returns Int { return 1; }
+        Int code;
+        function valid() returns Int { return self.code; }
         function inspect() returns Int {
           return self.valid();
         }

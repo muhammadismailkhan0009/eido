@@ -38,6 +38,7 @@ proc analyzeCall*(
     span: expr.span,
     functionId: target.id,
     functionName: target.name,
+    isNative: target.isNative,
     arguments: arguments,
     result: target.result
   )

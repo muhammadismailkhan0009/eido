@@ -6,6 +6,11 @@ import ../../../semantic/symbols/ids
 proc functionName*(id: FunctionId, sourceName: string): string =
   "eido_fn_" & $id.value & "_" & sourceName
 
+## Builds the backend ABI symbol used by a top-level native Eido function.
+## Example: platformWriteLine maps to eido_native_platformWriteLine in the native support module.
+proc nativeFunctionName*(sourceName: string): string =
+  "eido_native_" & sourceName
+
 ## Builds a collision-safe Nim method name from semantic identity and owner.
 proc methodName*(
   id: MethodId,

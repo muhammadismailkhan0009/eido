@@ -65,7 +65,7 @@ compiler/src/backend/nim/emitter/
     pure HIR → Nim source translation
 
 compiler/src/backend/nim/toolchain/
-    generated artifacts and Nim process invocation
+    generated artifacts, Nim process invocation, and backend native-support path resolution
 
 compiler/src/pipeline/
     single-source compatibility plus project parse/analyze/emit orchestration
@@ -77,7 +77,10 @@ compiler/tests/
     compiler-internal and language-facing conformance tests
 
 tools/cli/src/
-    human command parsing and build orchestration over compiler tooling
+    temporary Nim bootstrap command parsing and build/check orchestration
+
+tools/cli/eido/
+    permanent CLI implementation written in Eido and compiled by the bootstrap compiler
 
 tools/mcp/
     MCP protocol adapter over compiler tooling; semantic logic does not live here
@@ -85,8 +88,11 @@ tools/mcp/
 tools/lsp/
     language-server adapter over compiler tooling; editor semantics do not live here
 
-stdlib/
-    foundational APIs guaranteed with the installed SDK
+stdlib/src/
+    ordinary Eido-facing foundational APIs
+
+stdlib/native/
+    backend-specific implementation support used by explicit Eido native declarations
 
 packages/
     higher-level ordinary Eido libraries built above stdlib
@@ -105,16 +111,38 @@ tests/integration/
 - Project/source identity models are lower-level compiler data and may be consumed by frontend, semantic, pipeline, and tooling layers.
 - Each SourceUnit is parsed independently, but semantic analysis consumes the merged project declaration universe so source order does not define visibility.
 - Semantic analysis may consume AST and produce HIR.
-- HIR must contain resolved symbol identity and semantic types needed by backends.
+- HIR must contain resolved symbol identity and semantic types needed by backends. Class-owned functions also carry resolved `mkStatic`/`mkInstance` kind: only instance-method HIR variants may contain a receiver ID/value, so backends/tooling cannot accidentally invent receivers for inferred static methods.
 - Backends consume HIR, not raw AST.
-- The Nim emitter must not perform Eido name resolution or type checking.
-- Nim-specific types, names, process execution, and artifact paths must not leak into Eido semantic types or AST.
+- The Nim emitter must not perform Eido name resolution, type checking, or static/instance inference. Semantic analysis classifies class-owned functions from explicit `self` dependency before HIR; the emitter only obeys the resolved method kind.
+- Nim-specific types, names, process execution, artifact paths, and native-support module layout must not leak into Eido semantic types or AST.
+- `native function` is an explicit language boundary: semantic analysis validates only its Eido-visible signature, while backend symbol/provider mechanics remain backend support concerns.
+- The initial native ABI accepts primitives/String only. Class values remain forbidden until a deliberate cross-native identity/representation model exists.
 - `compiler/src/tooling/` may coordinate stable compiler capabilities, but it must not depend on MCP, LSP, editor, or vendor-specific protocol code.
 - Protocol adapters under `tools/` consume compiler tooling services; compiler semantic phases must not depend on those adapters.
 - Expected user compiler failures are represented as structured `CompilerDiagnostic` values and may cross phase boundaries through `CompilerError`; adapters must not recover semantic facts by parsing human exception strings.
 - `checkProject` performs parser + semantic work only and does not invoke HIR emission/backend compilation; unexpected compiler invariant failures remain exceptional rather than being mislabeled as user diagnostics.
 - Filesystem and process execution stay in the outer backend-toolchain/tool-adapter boundary.
 - Dependencies must remain acyclic.
+
+## Requirement-driven ecosystem growth
+
+Ordinary ecosystem software should be written in Eido once the language can express it cleanly. Development proceeds vertically from permanent product needs:
+
+```text
+real tool requirement
+        ↓
+classify missing capability
+        ↓
+language / stdlib / package / compiler tooling / native support
+        ↓
+implement + test at owning layer
+        ↓
+consume immediately in the permanent Eido-written tool
+```
+
+The reference compiler/core may remain Nim. Temporary Nim adapters are bootstrap infrastructure, not the desired permanent home for CLI/LSP/MCP/formatter/package-manager logic.
+
+The first permanent dogfood target is `tools/cli/eido/main.eido`; the bootstrap Nim CLI remains until the Eido CLI reaches feature parity.
 
 ## Growth rule
 

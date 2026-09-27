@@ -3,6 +3,7 @@
 import ../source/span
 import ../types/model
 import ../types/function_result
+import ../types/method_kind
 import ../semantic/symbols/ids
 import statements
 
@@ -23,10 +24,14 @@ type
     methodId*: MethodId
     sourceName*: string
     ownerType*: EidoType
-    receiverLocalId*: LocalId
     parameters*: seq[HirParameter]
     result*: FunctionResult
     body*: seq[HirStmt]
+    case kind*: MethodKind
+    of mkInstance:
+      receiverLocalId*: LocalId
+    of mkStatic:
+      discard
 
   HirClass* = object
     span*: SourceSpan
@@ -39,6 +44,7 @@ type
     span*: SourceSpan
     functionId*: FunctionId
     sourceName*: string
+    isNative*: bool
     parameters*: seq[HirParameter]
     result*: FunctionResult
     body*: seq[HirStmt]
