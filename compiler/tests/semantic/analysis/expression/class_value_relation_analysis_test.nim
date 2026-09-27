@@ -7,7 +7,7 @@ suite "Class copy/ref semantics":
     let source = """
       class Account { Int balance; }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var detached = copy account;
         var alias = ref account;
       }
@@ -24,7 +24,7 @@ suite "Class copy/ref semantics":
     let source = """
       class Account { Int balance; }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var other = account;
       }
     """
@@ -55,7 +55,7 @@ suite "Class copy/ref semantics":
     let source = """
       class Account { Int balance; }
       function create() returns Account {
-        return Account { balance: 100; };
+        return Account { balance = 100; };
       }
       function main() {
         var account = copy create();
@@ -70,18 +70,18 @@ suite "Class copy/ref semantics":
       class Account { Int balance; }
       class Order { Account account; }
       function main() {
-        var account = Account { balance: 100; };
-        var order = Order { account: account; };
+        var account = Account { balance = 100; };
+        var order = Order { account = account; };
       }
     """
     let explicit = """
       class Account { Int balance; }
       class Pair { Account shared; Account detached; }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var pair = Pair {
-          shared: ref account;
-          detached: copy account;
+          shared = ref account;
+          detached = copy account;
         };
       }
     """
@@ -95,7 +95,7 @@ suite "Class copy/ref semantics":
       class Account { Int balance; }
       function consume(Account account) {}
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         consume(copy account);
       }
     """
@@ -103,7 +103,7 @@ suite "Class copy/ref semantics":
       class Account { Int balance; }
       class Consumer { function consume(Account account) {} }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var consumer = Consumer {};
         consumer.consume(ref account);
       }

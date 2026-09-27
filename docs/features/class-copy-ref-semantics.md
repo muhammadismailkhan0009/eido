@@ -10,7 +10,7 @@ backend memory model.
 A bare existing class value cannot initialize another persistent local:
 
 ```eido
-var account = Account { balance: 100; };
+var account = Account { balance = 100; };
 var other = account; // invalid
 ```
 
@@ -33,8 +33,8 @@ require an explicit decision:
 
 ```eido
 var order = Order {
-    account: ref account;
-    snapshot: copy account;
+    account = ref account;
+    snapshot = copy account;
 };
 ```
 
@@ -96,7 +96,7 @@ Class-valued `set` uses the same explicit relationship rule as initialization.
 Fresh construction and detached callable results flow directly:
 
 ```eido
-set current = Account { balance: 0; };
+set current = Account { balance = 0; };
 set current = createAccount();
 ```
 

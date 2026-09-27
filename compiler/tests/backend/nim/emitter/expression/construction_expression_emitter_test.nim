@@ -12,8 +12,8 @@ suite "Construction expression emission":
 
       function main() {
         var point = Point {
-          visible: true;
-          x: 10;
+          visible = true;
+          x = 10;
         };
       }
     """
@@ -37,7 +37,7 @@ suite "Construction expression emission":
 
       function main() {
         var box = Box {
-          marker: Marker {};
+          marker = Marker {};
         };
       }
     """

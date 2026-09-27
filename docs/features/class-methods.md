@@ -42,7 +42,7 @@ Instance methods are called through a class-valued receiver:
 
 ```eido
 var account = Account {
-    balance: 100;
+    balance = 100;
 };
 
 var remaining = account.remaining(20);

@@ -42,7 +42,7 @@ suite "CLI project integration":
 
     writeFile(mainPath, """
       function main() {
-        var account = Account { balance: 42; };
+        var account = Account { balance = 42; };
         read(account);
       }
     """)
@@ -94,7 +94,7 @@ suite "CLI project integration":
 
     writeFile(mainPath, """
       function main() returns Int {
-        var account = Account { balance: 42; };
+        var account = Account { balance = 42; };
         return read(account);
       }
     """)

@@ -64,7 +64,7 @@ suite "Field access expression parsing":
     let source = """
       class Point { Int x; }
       function main() {
-        var value = Point { x: 10; }.x;
+        var value = Point { x = 10; }.x;
       }
     """
 

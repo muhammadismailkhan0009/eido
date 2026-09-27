@@ -20,8 +20,8 @@ suite "Construction expression semantics":
 
       function main() {
         var point = Point {
-          visible: true;
-          x: 10;
+          visible = true;
+          x = 10;
         };
       }
     """
@@ -50,7 +50,7 @@ suite "Construction expression semantics":
 
       function main() {
         var box = Box {
-          marker: Marker {};
+          marker = Marker {};
         };
       }
     """
@@ -69,19 +69,19 @@ suite "Construction expression semantics":
     let missing = """
       class Point { Int x; Int y; }
       function main() {
-        var point = Point { x: 10; };
+        var point = Point { x = 10; };
       }
     """
     let unknown = """
       class Point { Int x; }
       function main() {
-        var point = Point { x: 10; y: 20; };
+        var point = Point { x = 10; y = 20; };
       }
     """
     let duplicate = """
       class Point { Int x; }
       function main() {
-        var point = Point { x: 10; x: 20; };
+        var point = Point { x = 10; x = 20; };
       }
     """
 
@@ -98,7 +98,7 @@ suite "Construction expression semantics":
     let source = """
       class Point { Int x; }
       function main() {
-        var point = Point { x: true; };
+        var point = Point { x = true; };
       }
     """
 
@@ -116,8 +116,8 @@ suite "Construction expression semantics":
 
       function main() {
         var pair = Pair {
-          first: 10;
-          second: first + 1;
+          first = 10;
+          second = first + 1;
         };
       }
     """

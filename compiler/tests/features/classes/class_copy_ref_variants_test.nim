@@ -13,7 +13,7 @@ suite "Class copy/ref execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var alias = ref account;
         alias.withdraw(30);
         return account.value();
@@ -33,7 +33,7 @@ suite "Class copy/ref execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var detached = copy account;
         detached.withdraw(30);
         return account.value() * 1000 + detached.value();
@@ -57,7 +57,7 @@ suite "Class copy/ref execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         charge(account, 20);
         return account.value();
       }
@@ -81,10 +81,10 @@ suite "Class copy/ref execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var pair = Pair {
-          shared: ref account;
-          detached: copy account;
+          shared = ref account;
+          detached = copy account;
         };
         pair.shared.withdraw(10);
         pair.detached.withdraw(20);
@@ -111,8 +111,8 @@ suite "Class copy/ref execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
-        var customer = Customer { account: ref account; };
+        var account = Account { balance = 100; };
+        var customer = Customer { account = ref account; };
         var detached = copy customer;
         detached.account.withdraw(20);
         return account.value() * 1000 + detached.account.value();
@@ -137,10 +137,10 @@ suite "Class copy/ref execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var pair = Pair {
-          first: ref account;
-          second: ref account;
+          first = ref account;
+          second = ref account;
         };
         var detached = copy pair;
         detached.first.withdraw(20);
@@ -168,7 +168,7 @@ suite "Class return detachment execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var result = modify(account);
         result.withdraw(20);
         return account.value() * 1000 + result.value();
@@ -188,8 +188,8 @@ suite "Class relation boundary execution":
       class Order { Account account; }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
-        var order = Order { account: ref account; };
+        var account = Account { balance = 100; };
+        var order = Order { account = ref account; };
         var alias = ref order.account;
         var detached = copy order.account;
         alias.withdraw(10);
@@ -215,7 +215,7 @@ suite "Class relation boundary execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         Charger.charge(account, 25);
         return account.value();
       }
@@ -232,12 +232,12 @@ suite "Class relation boundary execution":
       class Holder { Account account; }
 
       function create(Int balance) returns Account {
-        return Account { balance: balance; };
+        return Account { balance = balance; };
       }
 
       function main() returns Int {
-        var holder = Holder { account: create(40); };
-        var account = Account { balance: 10; };
+        var holder = Holder { account = create(40); };
+        var account = Account { balance = 10; };
         set account = create(70);
         return holder.account.value() * 100 + account.value();
       }
@@ -254,8 +254,8 @@ suite "Class relationship mutation execution":
         function value() returns Int { return self.balance; }
       }
       function main() returns Int {
-        var first = Account { balance: 100; };
-        var current = Account { balance: 5; };
+        var first = Account { balance = 100; };
+        var current = Account { balance = 5; };
         set current = ref first;
         current.withdraw(20);
         return first.value();
@@ -272,8 +272,8 @@ suite "Class relationship mutation execution":
         function value() returns Int { return self.balance; }
       }
       function main() returns Int {
-        var first = Account { balance: 100; };
-        var current = Account { balance: 5; };
+        var first = Account { balance = 100; };
+        var current = Account { balance = 5; };
         set current = copy first;
         current.withdraw(20);
         return first.value() * 1000 + current.value();
@@ -293,9 +293,9 @@ suite "Class relationship mutation execution":
         function replace(Account other) { set self.account = ref other; }
       }
       function main() returns Int {
-        var first = Account { balance: 10; };
-        var second = Account { balance: 100; };
-        var holder = Holder { account: ref first; };
+        var first = Account { balance = 10; };
+        var second = Account { balance = 100; };
+        var holder = Holder { account = ref first; };
         holder.replace(second);
         holder.account.withdraw(20);
         return second.value();
@@ -316,9 +316,9 @@ suite "Class relationship mutation execution":
         function replace(Account other) { set self.account = copy other; }
       }
       function main() returns Int {
-        var first = Account { balance: 10; };
-        var second = Account { balance: 100; };
-        var holder = Holder { account: ref first; };
+        var first = Account { balance = 10; };
+        var second = Account { balance = 100; };
+        var holder = Holder { account = ref first; };
         holder.replace(second);
         holder.account.withdraw(20);
         return second.value() * 1000 + holder.account.value();
@@ -335,17 +335,17 @@ suite "Class relationship mutation execution":
       class Holder {
         Account account;
         function replaceFresh(Int balance) {
-          set self.account = Account { balance: balance; };
+          set self.account = Account { balance = balance; };
         }
         function replaceCall(Int balance) {
           set self.account = create(balance);
         }
       }
       function create(Int balance) returns Account {
-        return Account { balance: balance; };
+        return Account { balance = balance; };
       }
       function main() returns Int {
-        var holder = Holder { account: Account { balance: 1; }; };
+        var holder = Holder { account = Account { balance = 1; }; };
         holder.replaceFresh(40);
         var first = holder.account.value();
         holder.replaceCall(70);

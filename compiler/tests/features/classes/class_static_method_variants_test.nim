@@ -54,7 +54,7 @@ suite "Inferred static method execution":
         Int y;
 
         function origin() returns Point {
-          return Point { x: 0; y: 0; };
+          return Point { x = 0; y = 0; };
         }
       }
 

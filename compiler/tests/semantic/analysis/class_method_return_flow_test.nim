@@ -14,7 +14,7 @@ suite "Class-valued method return flow":
       }
 
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var snapshot = account.snapshot();
       }
     """
@@ -31,7 +31,7 @@ suite "Class-valued method return flow":
         }
       }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var snapshot = copy account.snapshot();
       }
     """
@@ -44,7 +44,7 @@ suite "Class-valued method return flow":
         }
       }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var snapshot = ref account.snapshot();
       }
     """

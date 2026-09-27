@@ -1,5 +1,5 @@
 ## Parses named class construction expressions.
-## Example: `Point { x: 10; y: 20; }` becomes one construction AST node.
+## Example: `Point { x = 10; y = 20; }` becomes one construction AST node.
 
 ## Parses a construction expression after the type-name identifier was consumed.
 proc parseConstruction(
@@ -18,8 +18,8 @@ proc parseConstruction(
       "expected field name in construction"
     )
     discard parser.consume(
-      tkColon,
-      "expected ':' after construction field name"
+      tkEqual,
+      "expected '=' after construction field name"
     )
     let value = parser.parseExpression()
     let semicolon = parser.consume(

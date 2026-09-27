@@ -17,7 +17,7 @@ return point.x + 2;
 It may also read directly from a fresh construction:
 
 ```eido
-return Point { x: 10; }.x;
+return Point { x = 10; }.x;
 ```
 
 ## Resolution

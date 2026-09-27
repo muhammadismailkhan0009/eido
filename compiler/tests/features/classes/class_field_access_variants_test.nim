@@ -8,7 +8,7 @@ suite "Class field access execution":
       class Point { Int x; }
 
       function main() returns Int {
-        var point = Point { x: 10; };
+        var point = Point { x = 10; };
         return point.x;
       }
     """
@@ -27,7 +27,7 @@ suite "Class field access execution":
 
       function main() returns Int {
         var employee = Employee {
-          address: Address { zip: 54000; };
+          address = Address { zip = 54000; };
         };
         return employee.address.zip;
       }
@@ -45,7 +45,7 @@ suite "Class field access execution":
       class Point { Int x; }
 
       function main() returns Int {
-        var point = Point { x: 10; };
+        var point = Point { x = 10; };
         return point.x + 2;
       }
     """
@@ -62,7 +62,7 @@ suite "Class field access execution":
       class Point { Int x; }
 
       function main() returns Int {
-        return Point { x: 10; }.x;
+        return Point { x = 10; }.x;
       }
     """
 
@@ -78,7 +78,7 @@ suite "Class field access validation":
     let unknown = """
       class Point { Int x; }
       function main() {
-        var point = Point { x: 10; };
+        var point = Point { x = 10; };
         var value = point.y;
       }
     """
@@ -104,7 +104,7 @@ suite "Class field access representation boundaries":
 
       function main() {
         var employee = Employee {
-          address: Address { zip: 54000; };
+          address = Address { zip = 54000; };
         };
         var address = employee.address;
       }
@@ -121,7 +121,7 @@ suite "Class field access representation boundaries":
       class Box { Marker marker; }
 
       function main() {
-        var first = Box { marker: Marker {}; };
+        var first = Box { marker = Marker {}; };
         var second = Marker {};
         set second = first.marker;
       }

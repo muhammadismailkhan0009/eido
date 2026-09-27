@@ -14,8 +14,8 @@ suite "Construction expression parsing":
 
       function main() {
         var point = Point {
-          x: 10;
-          y: 20;
+          x = 10;
+          y = 20;
         };
       }
     """
@@ -40,8 +40,8 @@ suite "Construction expression parsing":
 
       function main() {
         var employee = Employee {
-          address: Address {
-            zip: 54000;
+          address = Address {
+            zip = 54000;
           };
         };
       }
@@ -80,8 +80,21 @@ suite "Construction expression parsing":
       class Point { Int x; }
       function main() {
         var point = Point {
-          x: 10
+          x = 10
         };
+      }
+    """
+
+    # When / Then
+    expect ValueError:
+      discard parseProgram(lexAll(source))
+
+  test "rejects colon construction assignment syntax":
+    # Given
+    let source = """
+      class Point { Int x; }
+      function main() {
+        var point = Point { x: 10; };
       }
     """
 

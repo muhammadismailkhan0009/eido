@@ -83,7 +83,7 @@ values may flow directly while an existing class object requires explicit
 `ref` or `copy`:
 
 ```eido
-set self.account = Account { balance: 0; };
+set self.account = Account { balance = 0; };
 set self.account = createAccount();
 set self.account = ref otherAccount;
 set self.account = copy otherAccount;

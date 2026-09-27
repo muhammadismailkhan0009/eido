@@ -28,8 +28,8 @@ suite "Set statement semantics":
       }
 
       function main() returns Int {
-        var marker = Marker { value: 1; };
-        set marker = Marker { value: 2; };
+        var marker = Marker { value = 1; };
+        set marker = Marker { value = 2; };
         return marker.value;
       }
     """
@@ -46,8 +46,8 @@ suite "Set statement semantics":
     let source = """
       class Marker { Int value; }
       function main() returns Int {
-        var first = Marker { value: 1; };
-        var second = Marker { value: 2; };
+        var first = Marker { value = 1; };
+        var second = Marker { value = 2; };
         set second = ref first;
         return second.value;
       }
@@ -65,8 +65,8 @@ suite "Set statement semantics":
     let source = """
       class Marker { Int value; }
       function main() returns Marker {
-        var first = Marker { value: 1; };
-        var second = Marker { value: 2; };
+        var first = Marker { value = 1; };
+        var second = Marker { value = 2; };
         set second = copy first;
         return second;
       }
@@ -80,7 +80,7 @@ suite "Set statement semantics":
     let source = """
       class Marker { Int value; }
       function choose(Marker source) returns Marker {
-        var current = Marker { value: 0; };
+        var current = Marker { value = 0; };
         set current = ref source;
         return current;
       }
@@ -95,8 +95,8 @@ suite "Set statement semantics":
       class First { Int value; }
       class Second { Int value; }
       function main() returns Int {
-        var first = First { value: 1; };
-        var second = Second { value: 2; };
+        var first = First { value = 1; };
+        var second = Second { value = 2; };
         set second = ref first;
         return second.value;
       }
@@ -113,8 +113,8 @@ suite "Set statement semantics":
       }
 
       function main() returns Int {
-        var first = Marker { value: 1; };
-        var second = Marker { value: 2; };
+        var first = Marker { value = 1; };
+        var second = Marker { value = 2; };
         set second = first;
         return second.value;
       }
@@ -182,7 +182,7 @@ suite "Set statement semantics":
       class Employee {
         Address address;
         function replace() {
-          set self.address = Address { zip: 33100; };
+          set self.address = Address { zip = 33100; };
         }
       }
       function main() {}

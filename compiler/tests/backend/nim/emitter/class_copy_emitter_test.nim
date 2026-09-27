@@ -7,7 +7,7 @@ suite "Class copy emission":
       class Account { Int balance; }
 
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var detached = copy account;
       }
     """
@@ -23,8 +23,8 @@ suite "Class copy emission":
       class Order { Account account; }
 
       function main() {
-        var account = Account { balance: 100; };
-        var order = Order { account: ref account; };
+        var account = Account { balance = 100; };
+        var order = Order { account = ref account; };
         var detached = copy order;
       }
     """

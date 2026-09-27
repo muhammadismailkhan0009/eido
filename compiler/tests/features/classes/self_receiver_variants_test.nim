@@ -14,7 +14,7 @@ suite "Self receiver execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return account.withdraw(30);
       }
     """
@@ -37,7 +37,7 @@ suite "Self receiver execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 42; };
+        var account = Account { balance = 42; };
         return account.inspect();
       }
     """
@@ -60,7 +60,7 @@ suite "Self receiver execution":
       function value() returns Int { return 99; }
 
       function main() returns Int {
-        var account = Account { code: 1; };
+        var account = Account { code = 1; };
         return account.inspect();
       }
     """
@@ -88,7 +88,7 @@ suite "Self receiver rejection":
       class Account { Int balance; }
 
       function main() returns Int {
-        var account = Account { balance: 1; };
+        var account = Account { balance = 1; };
         return self.balance;
       }
     """
@@ -111,7 +111,7 @@ suite "Self receiver call separation":
       function value() returns Int { return 99; }
 
       function main() returns Int {
-        var account = Account { marker: 1; };
+        var account = Account { marker = 1; };
         return account.inspect();
       }
     """

@@ -56,7 +56,7 @@ suite "String storage in language constructs":
       class User { String name; }
       function main() returns String {
         var name = "Alice";
-        var user = User { name: name; };
+        var user = User { name = name; };
         return user.name;
       }
     """
@@ -81,7 +81,7 @@ suite "String storage in language constructs":
         function rename(String value) { set self.name = value; }
       }
       function main() returns String {
-        var user = User { name: "Alice"; };
+        var user = User { name = "Alice"; };
         user.rename("Bob");
         return user.name;
       }
@@ -96,7 +96,7 @@ suite "String storage in language constructs":
         function rename(String value) { set self.name = value; }
       }
       function main() returns String {
-        var user = User { name: "Alice"; };
+        var user = User { name = "Alice"; };
         var detached = copy user;
         detached.rename("Bob");
         return user.name + ":" + detached.name;

@@ -22,7 +22,7 @@ suite "Instance method call semantics":
       }
 
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var value = account.remaining(20);
       }
     """
@@ -52,7 +52,7 @@ suite "Instance method call semantics":
       }
 
       function main() {
-        var marker = Marker { active: true; };
+        var marker = Marker { active = true; };
         marker.inspect();
       }
     """
@@ -76,7 +76,7 @@ suite "Instance method call semantics":
       }
 
       function main() {
-        var marker = Marker { active: true; };
+        var marker = Marker { active = true; };
         var value = marker.inspect();
       }
     """
@@ -118,7 +118,7 @@ suite "Instance method call semantics":
       }
 
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var value = account.remaining();
       }
     """
@@ -131,7 +131,7 @@ suite "Instance method call semantics":
       }
 
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var value = account.remaining(true);
       }
     """

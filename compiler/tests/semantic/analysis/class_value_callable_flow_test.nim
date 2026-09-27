@@ -7,7 +7,7 @@ suite "Class-valued callable flow":
       class Account { Int balance; }
 
       function create() returns Account {
-        return Account { balance: 100; };
+        return Account { balance = 100; };
       }
 
       function inspect(Account account) returns Int {

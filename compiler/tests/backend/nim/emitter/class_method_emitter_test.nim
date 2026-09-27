@@ -37,7 +37,7 @@ suite "Class method emission":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return account.remaining(20);
       }
     """
@@ -59,7 +59,7 @@ suite "Class method emission":
       }
 
       function main() {
-        var marker = Marker { active: true; };
+        var marker = Marker { active = true; };
         marker.inspect();
       }
     """

@@ -4,14 +4,15 @@ Eido constructs nominal class values with a named brace expression:
 
 ```eido
 var point = Point {
-    x: 10;
-    y: 20;
+    x = 10;
+    y = 20;
 };
 ```
 
-Construction is an expression. The surrounding statement owns its final
-semicolon; each field initializer inside the construction also ends with a
-semicolon.
+Construction is an expression. Field initialization uses `=`, the same token
+used to establish a local's initial value; `:` is not valid construction syntax.
+The surrounding statement owns its final semicolon; each field initializer
+inside the construction also ends with a semicolon.
 
 ## Field rules
 
@@ -28,8 +29,8 @@ Valid:
 
 ```eido
 Point {
-    y: 20;
-    x: 10;
+    y = 20;
+    x = 10;
 }
 ```
 
@@ -48,8 +49,8 @@ Construction composes recursively:
 
 ```eido
 Employee {
-    address: Address {
-        zip: 54000;
+    address = Address {
+        zip = 54000;
     };
 }
 ```
@@ -68,8 +69,8 @@ This is invalid unless an outer local named `first` already exists:
 
 ```eido
 Pair {
-    first: 10;
-    second: first + 1;
+    first = 10;
+    second = first + 1;
 }
 ```
 
@@ -83,8 +84,8 @@ must be explicit:
 
 ```eido
 Order {
-    account: ref account;
-    snapshot: copy account;
+    account = ref account;
+    snapshot = copy account;
 }
 ```
 

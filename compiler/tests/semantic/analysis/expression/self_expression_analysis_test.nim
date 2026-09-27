@@ -60,7 +60,7 @@ suite "Self expression semantics":
     let source = """
       class Account { Int balance; }
       function main() {
-        var account = Account { balance: 1; };
+        var account = Account { balance = 1; };
         var value = self.balance;
       }
     """

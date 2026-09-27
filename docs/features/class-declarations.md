@@ -77,7 +77,7 @@ and memory-management decisions.
 
 ## Construction
 
-Named construction is now supported with `Type { field: expression; }`.
+Named construction is now supported with `Type { field = expression; }`.
 See `class-construction.md` for exact-field, nesting, scope, and representation rules.
 
 ## Current boundary

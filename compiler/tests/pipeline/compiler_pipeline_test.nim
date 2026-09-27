@@ -84,7 +84,7 @@ suite "Compiler pipeline":
     let project = initProject(ptExecutable, @[
       initSourceUnit(0, "src/main.eido", """
         function main() returns Int {
-          var account = Account { balance: 42; };
+          var account = Account { balance = 42; };
           return read(account);
         }
       """),

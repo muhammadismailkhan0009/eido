@@ -14,7 +14,7 @@ suite "Class method execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return account.remaining(20);
       }
     """
@@ -42,7 +42,7 @@ suite "Class method execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return account.boundedRemaining(120);
       }
     """
@@ -65,7 +65,7 @@ suite "Class method execution":
       }
 
       function main() {
-        var marker = Marker { active: true; };
+        var marker = Marker { active = true; };
         marker.inspect();
       }
     """
@@ -92,7 +92,7 @@ suite "Class method execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 21; };
+        var account = Account { balance = 21; };
         return account.doubled();
       }
     """
@@ -146,7 +146,7 @@ suite "Class method execution":
 
       function main() returns Int {
         var holder = Holder {
-          account: Account { balance: 55; };
+          account = Account { balance = 55; };
         };
         return holder.read();
       }
@@ -229,7 +229,7 @@ suite "Class method mutation":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return account.withdraw(25);
       }
     """

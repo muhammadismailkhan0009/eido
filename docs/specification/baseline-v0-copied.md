@@ -3028,3 +3028,52 @@ symbol and imports the bundled native support module.
 This remains the Eido SDK/backend support ABI. It is still **not** the general
 arbitrary shared-library FFI/foreign-memory API; that broader design remains
 open and should be driven by an actual ecosystem requirement.
+
+
+---
+
+# 46. Construction field initialization uses `=`
+
+> Status: approved and implemented. This section is authoritative over older
+> construction examples that used `:` between a field name and its initializer.
+
+Named class construction now uses:
+
+```eido
+var account = Account {
+    balance = 100;
+};
+```
+
+The rule is intentionally aligned with Eido's existing initialization/mutation
+model:
+
+```text
+=       establish an initial value
+set     mutate existing state
+```
+
+A construction field is being initialized, so it uses `=` rather than a
+separate `:` token.
+
+Nested construction follows the same rule:
+
+```eido
+var employee = Employee {
+    address = Address {
+        zip = 54000;
+    };
+};
+```
+
+Construction with `:` is invalid:
+
+```eido
+Point { x: 10; } // invalid
+```
+
+This syntax change does not alter construction semantics: every declared field
+is still required exactly once, field order remains irrelevant, initializer
+expressions use surrounding lexical scope, and existing class values still
+require explicit `ref` or `copy` when establishing a persistent class
+relationship.

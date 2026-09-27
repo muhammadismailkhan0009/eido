@@ -8,7 +8,7 @@ suite "Project compilation":
     # Given
     let mainSource = initSourceUnit(0, "src/main.eido", """
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return readBalance(account);
       }
     """)

@@ -10,7 +10,7 @@
 
 `class_construction_variants_test.nim` covers:
 
-- complete named construction with `Type { field: expression; }`
+- complete named construction with `Type { field = expression; }`
 - order-independent field initialization
 - nested construction
 - zero-field construction

@@ -7,7 +7,7 @@ suite "Field access expression emission":
     let source = """
       class Point { Int x; }
       function main() returns Int {
-        var point = Point { x: 10; };
+        var point = Point { x = 10; };
         return point.x;
       }
     """
@@ -26,7 +26,7 @@ suite "Field access expression emission":
 
       function main() returns Int {
         var employee = Employee {
-          address: Address { zip: 54000; };
+          address = Address { zip = 54000; };
         };
         return employee.address.zip;
       }
@@ -43,7 +43,7 @@ suite "Field access expression emission":
     let source = """
       class Point { Int x; }
       function main() returns Int {
-        return Point { x: 10; }.x;
+        return Point { x = 10; }.x;
       }
     """
 

@@ -31,7 +31,7 @@ suite "Set execution":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         return account.withdraw(30);
       }
     """
@@ -70,8 +70,8 @@ suite "Set execution":
       }
 
       function main() returns Int {
-        var marker = Marker { value: 1; };
-        set marker = Marker { value: 9; };
+        var marker = Marker { value = 1; };
+        set marker = Marker { value = 9; };
         return marker.value;
       }
     """
@@ -122,7 +122,7 @@ suite "Set rejection boundaries":
       }
 
       function main() returns Int {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         set account.balance = 0;
         return account.balance;
       }

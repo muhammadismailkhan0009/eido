@@ -20,8 +20,8 @@ suite "Field access expression semantics":
 
       function main() {
         var point = Point {
-          x: 10;
-          visible: true;
+          x = 10;
+          visible = true;
         };
         var value = point.x;
       }
@@ -46,8 +46,8 @@ suite "Field access expression semantics":
 
       function main() {
         var employee = Employee {
-          address: Address {
-            zip: 54000;
+          address = Address {
+            zip = 54000;
           };
         };
         var zip = employee.address.zip;
@@ -71,7 +71,7 @@ suite "Field access expression semantics":
     let source = """
       class Point { Int x; }
       function main() {
-        var value = Point { x: 10; }.x;
+        var value = Point { x = 10; }.x;
       }
     """
 
@@ -89,7 +89,7 @@ suite "Field access expression semantics":
     let source = """
       class Point { Int x; }
       function main() {
-        var point = Point { x: 10; };
+        var point = Point { x = 10; };
         var value = point.y;
       }
     """

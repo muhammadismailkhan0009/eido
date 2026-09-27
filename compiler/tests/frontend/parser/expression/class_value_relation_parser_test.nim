@@ -8,7 +8,7 @@ suite "Class copy/ref parsing":
     let source = """
       class Account { Int balance; }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var detached = copy account;
         var alias = ref account;
       }
@@ -27,10 +27,10 @@ suite "Class copy/ref parsing":
       class Account { Int balance; }
       class Pair { Account first; Account second; }
       function main() {
-        var account = Account { balance: 100; };
+        var account = Account { balance = 100; };
         var pair = Pair {
-          first: ref account;
-          second: copy account;
+          first = ref account;
+          second = copy account;
         };
       }
     """
