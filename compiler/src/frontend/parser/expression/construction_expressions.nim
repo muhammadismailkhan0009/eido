@@ -4,7 +4,7 @@
 ## Parses a construction expression after the type-name identifier was consumed.
 proc parseConstruction(
   parser: var Parser,
-  typeToken: Token
+  typeRef: astTypeRefs.TypeRef
 ): Expr =
   discard parser.consume(tkLBrace, "expected '{' after class name")
 
@@ -38,7 +38,7 @@ proc parseConstruction(
 
   Expr(
     kind: ekConstruct,
-    span: coverSpan(typeToken.span, closeBrace.span),
-    typeName: typeToken.lexeme,
+    span: coverSpan(typeRef.span, closeBrace.span),
+    constructionTypeRef: typeRef,
     fields: fields
   )

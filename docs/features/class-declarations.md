@@ -75,6 +75,12 @@ A semantic class type therefore does not imply:
 The semantic type model records nominal identity independently of those backend
 and memory-management decisions.
 
+## Generic classes
+
+Class declarations may declare type parameters with `class Name<T, ...>` and
+are instantiated explicitly as `Name<Type, ...>`. See `class-generics.md` for
+specialization and current generic boundaries.
+
 ## Construction
 
 Named construction is now supported with `Type { field = expression; }`.

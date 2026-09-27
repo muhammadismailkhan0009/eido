@@ -8,10 +8,10 @@ proc analyzeConstruction(
   functions: FunctionSymbols,
   classes: ClassSymbols
 ): hirExpressions.HirExpr =
-  if not classes.contains(expr.typeName):
-    failAt(expr.span, "unknown class '" & expr.typeName & "'")
+  if not classes.contains(expr.constructionTypeRef.name):
+    failAt(expr.span, "unknown class '" & expr.constructionTypeRef.name & "'")
 
-  let target = classes.get(expr.typeName)
+  let target = classes.get(expr.constructionTypeRef.name)
   var suppliedNames: seq[string]
   var fields: seq[hirExpressions.HirConstructionField]
 

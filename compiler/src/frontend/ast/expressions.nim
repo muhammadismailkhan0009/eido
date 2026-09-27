@@ -2,6 +2,8 @@
 ## Example: `-value` becomes a unary negation expression, while `a + 5` becomes a binary expression.
 
 import ../../source/span
+import type_references
+export type_references
 
 type
   UnaryOp* = enum
@@ -33,6 +35,7 @@ type
     ekChar,
     ekString,
     ekIdentifier,
+    ekTypeReference,
     ekCall,
     ekConstruct,
     ekClassRelation,
@@ -61,11 +64,13 @@ type
       stringValue*: string
     of ekIdentifier:
       name*: string
+    of ekTypeReference:
+      referencedTypeRef*: TypeRef
     of ekCall:
       callee*: string
       arguments*: seq[Expr]
     of ekConstruct:
-      typeName*: string
+      constructionTypeRef*: TypeRef
       fields*: seq[ConstructionField]
     of ekClassRelation:
       relationKind*: ClassValueRelationKind

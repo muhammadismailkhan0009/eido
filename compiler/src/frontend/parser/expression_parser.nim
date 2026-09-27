@@ -6,7 +6,9 @@ import ../../source/span
 import ../../diagnostics/errors
 import ../lexer/token
 import ../ast/expressions
+import ../ast/type_references as astTypeRefs
 import core
+import type_references as typeRefParser
 
 ## Parses a complete currently-supported expression.
 ## Example: `salary + bonus * 2 >= limit` returns one precedence-aware AST expression.

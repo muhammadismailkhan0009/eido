@@ -18,6 +18,33 @@ proc parseFieldDecl(parser: var Parser): FieldDecl =
 proc parseClass*(parser: var Parser): ClassDecl =
   let start = parser.consume(tkClass, "expected 'class'")
   let name = parser.consume(tkIdentifier, "expected class name")
+
+  var typeParameters: seq[astTypeRefs.TypeParameterDecl]
+  if parser.check(tkLess):
+    discard parser.advance()
+    if parser.check(tkGreater):
+      failAt(parser.peek.span, "generic class type parameters cannot be empty")
+
+    while true:
+      let parameter = parser.consume(
+        tkIdentifier,
+        "expected generic type parameter name"
+      )
+      typeParameters.add astTypeRefs.TypeParameterDecl(
+        span: parameter.span,
+        name: parameter.lexeme
+      )
+
+      if parser.check(tkComma):
+        discard parser.advance()
+        continue
+
+      discard parser.consume(
+        tkGreater,
+        "expected '>' after generic type parameters"
+      )
+      break
+
   discard parser.consume(tkLBrace, "expected '{' before class body")
 
   var fields: seq[FieldDecl]
@@ -38,6 +65,7 @@ proc parseClass*(parser: var Parser): ClassDecl =
   ClassDecl(
     span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
+    typeParameters: typeParameters,
     fields: fields,
     methods: methods
   )

@@ -8,6 +8,15 @@
 - forward nominal field references
 - rejection of unknown field types
 
+`generic_class_variants_test.nim` covers:
+
+- N class type parameters and explicit concrete applications
+- nested and transitive generic specialization
+- instance methods and class-qualified static methods on specializations
+- distinct nominal types per specialization
+- class-valued generic fields preserving copy/ref semantics
+- rejection of generic top-level functions in the first slice
+
 `class_construction_variants_test.nim` covers:
 
 - complete named construction with `Type { field = expression; }`

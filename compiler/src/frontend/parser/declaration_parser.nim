@@ -4,24 +4,15 @@ import ../../source/span
 import ../../diagnostics/errors
 import ../lexer/token
 import ../ast/declarations
+import ../ast/type_references as astTypeRefs
 import ../ast/statements
 import core
+import type_references as typeRefParser
 import statement_parser
 
-## Parses a declared built-in or nominal class type.
-proc parseDeclaredTypeRef(parser: var Parser): TypeRef =
-  if parser.check(tkPrimitiveType) or parser.check(tkStringType) or
-      parser.check(tkIdentifier):
-    let typeToken = parser.advance()
-    if typeToken.lexeme in ["Long", "Double"]:
-      failAt(typeToken.span, "removed numeric type '" & typeToken.lexeme & "'")
-    return TypeRef(span: typeToken.span, name: typeToken.lexeme)
-
-  failAt(parser.peek.span, "expected declared type")
-
 ## Parses a field type using the shared declared-type grammar.
-proc parseFieldTypeRef(parser: var Parser): TypeRef =
-  parser.parseDeclaredTypeRef()
+proc parseFieldTypeRef(parser: var Parser): astTypeRefs.TypeRef =
+  typeRefParser.parseDeclaredTypeRef(parser)
 
 ## Parses comma-separated Java-style typed parameters with no fixed count. Example: `Int a, Bool b, Float c` becomes three parameter AST nodes.
 proc parseParameters(parser: var Parser): seq[Parameter] =
@@ -29,7 +20,7 @@ proc parseParameters(parser: var Parser): seq[Parameter] =
     return
 
   while true:
-    let typeRef = parser.parseDeclaredTypeRef()
+    let typeRef = typeRefParser.parseDeclaredTypeRef(parser)
     let nameToken = parser.consume(tkIdentifier, "expected parameter name")
     result.add Parameter(
       span: coverSpan(typeRef.span, nameToken.span),
@@ -49,7 +40,7 @@ proc parseFunctionResult(parser: var Parser): FunctionResultRef =
   discard parser.advance()
   FunctionResultRef(
     kind: frrSingle,
-    typeRef: parser.parseDeclaredTypeRef()
+    typeRef: typeRefParser.parseDeclaredTypeRef(parser)
   )
 
 ## Parses one complete function declaration. Example: `function add(Int a, Int b) returns Int { return a + b; }` becomes a `FunctionDecl`.

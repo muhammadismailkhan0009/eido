@@ -3077,3 +3077,131 @@ is still required exactly once, field order remains irrelevant, initializer
 expressions use surrounding lexical scope, and existing class values still
 require explicit `ref` or `copy` when establishing a persistent class
 relationship.
+
+
+---
+
+# 47. Generic classes use explicit compile-time specialization
+
+> Status: approved and implemented. This section is authoritative for the first
+> v0 generic slice.
+
+Eido class declarations may declare one or more type parameters with Java-style
+angle brackets:
+
+```eido
+class Box<T> {
+    T value;
+}
+
+class Pair<K, V> {
+    K key;
+    V value;
+}
+```
+
+There is no fixed small arity. A class may declare N type parameters.
+
+Every use of a generic class supplies the complete argument list explicitly:
+
+```eido
+Box<Int>
+Pair<String, User>
+Triple<String, Bool, Int>
+```
+
+Raw uses such as `Box` are invalid when the class declares type parameters.
+Generic type inference is not part of this slice.
+
+Generic applications compose recursively without a nesting limit imposed by the
+language grammar:
+
+```eido
+Result<List<User>, Error>
+ResponseBody<ApiResponse<List<User>>>
+```
+
+Deep nesting remains legal, but public APIs should prefer meaningful named
+domain classes when that improves readability. This is guidance rather than a
+semantic restriction.
+
+## Construction and methods
+
+Construction names the concrete specialization:
+
+```eido
+var box = Box<Int> {
+    value = 42;
+};
+```
+
+Methods owned by a generic class may use the class's type parameters in fields,
+parameters, results, constructions, and other type positions:
+
+```eido
+class Box<T> {
+    T value;
+
+    function create(T item) returns Box<T> {
+        return Box<T> { value = item; };
+    }
+}
+
+var box = Box<Int>.create(42);
+```
+
+The method above is not a generic method in its own right; it uses the owning
+class parameter `T`. Method-local declarations such as
+`function identity<T>(...)` remain outside this slice.
+
+## Specialization semantics
+
+Eido v0 uses compile-time specialization rather than Java-style erasure.
+Generic class syntax is lowered before ordinary semantic analysis. Each required
+concrete application becomes an ordinary concrete nominal class, and the normal
+semantic/HIR/backend pipeline then analyzes that class.
+
+Conceptually:
+
+```text
+class Box<T>
+    + Box<Int>
+        ↓
+concrete nominal Box<Int>
+        ↓
+ordinary class semantic analysis
+        ↓
+HIR/backend
+```
+
+The same concrete application is specialized once per compilation universe.
+Different applications such as `Box<Int>` and `Box<String>` are different
+nominal types. Specialization is transitive through fields, callable signatures,
+constructions, and generic class method bodies.
+
+Because substitution occurs before ordinary class semantics, all existing rules
+continue to apply after substitution. In particular, when a parameter becomes a
+class type, Eido's explicit `copy`/`ref`, persistent relationship, mutation,
+and detached-return rules apply exactly as they would to a hand-written concrete
+class.
+
+Unused generic templates are still structurally validated for duplicate type
+parameters/members, referenced type existence, generic arity, and explicit type
+applications.
+
+## Deferred generic features
+
+The first slice does not include:
+
+- generic top-level functions;
+- method-local generic parameters;
+- generic interfaces;
+- bounds or constraints;
+- variance;
+- wildcards;
+- raw generic types;
+- generic argument inference;
+- class-owned native functions on generic classes.
+
+These may be added requirement-first without changing the core
+`Class<T>` / `Class<Type>` syntax.

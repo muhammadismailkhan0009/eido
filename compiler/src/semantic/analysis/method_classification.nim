@@ -13,6 +13,8 @@ proc expressionUsesSelf(expr: Expr): bool =
   case expr.kind
   of ekIdentifier:
     expr.name == "self"
+  of ekTypeReference:
+    false
   of ekCall:
     for argument in expr.arguments:
       if expressionUsesSelf(argument):

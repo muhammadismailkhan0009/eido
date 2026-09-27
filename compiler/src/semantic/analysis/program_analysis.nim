@@ -11,6 +11,7 @@ import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
 import ../symbols/ids
+import ../generics/class_specialization
 import type_resolution
 import ../symbols/model
 import ../symbols/classes
@@ -48,10 +49,11 @@ proc analyzeProgram*(
   program: astProgram.Program,
   target: ProjectTarget = ptExecutable
 ): hirProgram.HirProgram =
+  let specializedProgram = specializeGenericClasses(program)
   var classes = initClassSymbols()
 
   # Pass 1: establish nominal class identities.
-  for sourceClass in program.classes:
+  for sourceClass in specializedProgram.classes:
     if classes.contains(sourceClass.name):
       failAt(sourceClass.span, "duplicate class '" & sourceClass.name & "'")
 
@@ -65,7 +67,7 @@ proc analyzeProgram*(
 
   # Pass 2: resolve field schemas against the complete class registry.
   var analyzedClasses: seq[HirClass]
-  for sourceClass in program.classes:
+  for sourceClass in specializedProgram.classes:
     let analyzedClass = analyzeClass(sourceClass, classes)
     analyzedClasses.add analyzedClass
 
@@ -80,7 +82,7 @@ proc analyzeProgram*(
 
   # Pass 3: collect every class method signature before any method body.
   var nextMethodId = 0
-  for sourceClass in program.classes:
+  for sourceClass in specializedProgram.classes:
     var classSymbol = classes.get(sourceClass.name)
 
     for sourceMethod in sourceClass.methods:
@@ -119,7 +121,7 @@ proc analyzeProgram*(
   var mainFound = false
   var mainId = FunctionId(-1)
 
-  for index, fn in program.functions:
+  for index, fn in specializedProgram.functions:
     if functions.contains(fn.name):
       failAt(fn.span, "duplicate function '" & fn.name & "'")
 
@@ -156,7 +158,7 @@ proc analyzeProgram*(
     )
 
   # Pass 5: analyze class-owned method bodies with source-level self bound to hidden receivers.
-  for classIndex, sourceClass in program.classes:
+  for classIndex, sourceClass in specializedProgram.classes:
     let owner = classes.get(sourceClass.name)
     for sourceMethod in sourceClass.methods:
       analyzedClasses[classIndex].methods.add analyzeMethod(
@@ -169,7 +171,7 @@ proc analyzeProgram*(
 
   # Pass 6: analyze top-level function bodies.
   var analyzedFunctions: seq[HirFunction]
-  for fn in program.functions:
+  for fn in specializedProgram.functions:
     analyzedFunctions.add analyzeFunction(
       fn,
       functions.get(fn.name),

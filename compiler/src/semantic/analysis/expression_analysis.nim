@@ -63,6 +63,9 @@ proc analyzeExpr*(
   of astExpressions.ekIdentifier:
     analyzeIdentifier(expr, locals)
 
+  of astExpressions.ekTypeReference:
+    failAt(expr.span, "generic type reference must be specialized before semantic analysis")
+
   of astExpressions.ekCall:
     analyzeValueCall(expr, locals, functions, classes)
 

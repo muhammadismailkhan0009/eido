@@ -29,11 +29,34 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
     )
 
   if parser.check(tkIdentifier):
+    if parser.checkNext(tkLess):
+      var candidate = parser
+      try:
+        let genericType = typeRefParser.parseDeclaredTypeRef(candidate)
+        if candidate.check(tkLBrace):
+          parser = candidate
+          return parser.parseConstruction(genericType)
+        if candidate.check(tkDot):
+          parser = candidate
+          return Expr(
+            kind: ekTypeReference,
+            span: genericType.span,
+            referencedTypeRef: genericType
+          )
+      except ValueError:
+        discard
+
     let token = parser.advance()
     if parser.check(tkLParen):
       return parser.parseCall(token)
     if parser.check(tkLBrace):
-      return parser.parseConstruction(token)
+      return parser.parseConstruction(
+        astTypeRefs.TypeRef(
+          span: token.span,
+          name: token.lexeme,
+          arguments: @[]
+        )
+      )
     return Expr(
       kind: ekIdentifier,
       span: token.span,

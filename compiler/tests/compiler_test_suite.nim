@@ -31,6 +31,7 @@ import frontend/parser/function_parser_test
 import frontend/parser/native_function_parser_test
 import frontend/parser/class_value_signature_parser_test
 import frontend/parser/class_declaration_parser_test
+import frontend/parser/generic_class_parser_test
 import frontend/parser/class_method_declaration_parser_test
 import frontend/parser/statement/conditional_statement_parser_test
 import frontend/parser/statement/while_statement_parser_test
@@ -41,6 +42,7 @@ import semantic/analysis/local_binding_analysis_test
 import semantic/analysis/function_analysis_test
 import semantic/analysis/native_function_analysis_test
 import semantic/analysis/class_declaration_analysis_test
+import semantic/analysis/generic_class_analysis_test
 import semantic/analysis/class_method_analysis_test
 import semantic/analysis/class_static_method_analysis_test
 import semantic/analysis/class_value_callable_flow_test
@@ -69,6 +71,7 @@ import backend/nim/emitter/native_class_method_emitter_test
 import backend/nim/emitter/class_method_emitter_test
 import backend/nim/emitter/class_static_method_emitter_test
 import backend/nim/emitter/class_copy_emitter_test
+import backend/nim/emitter/generic_class_emitter_test
 import backend/nim/emitter/expression/boolean_operator_emitter_test
 import backend/nim/emitter/expression/construction_expression_emitter_test
 import backend/nim/emitter/expression/field_access_expression_emitter_test
@@ -90,6 +93,7 @@ import features/function_variants_test
 import features/native/native_function_variants_test
 import features/native/native_class_method_variants_test
 import features/classes/class_declaration_variants_test
+import features/classes/generic_class_variants_test
 import features/classes/class_construction_variants_test
 import features/classes/class_field_access_variants_test
 import features/classes/class_method_variants_test

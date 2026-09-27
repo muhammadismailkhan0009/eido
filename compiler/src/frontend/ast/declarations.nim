@@ -2,13 +2,11 @@
 ## Functions are reused as the source shape of class-owned methods.
 
 import ../../source/span
+import type_references
+export type_references
 import statements
 
 type
-  TypeRef* = object
-    span*: SourceSpan
-    name*: string
-
   Parameter* = object
     span*: SourceSpan
     name*: string
@@ -41,5 +39,6 @@ type
   ClassDecl* = object
     span*: SourceSpan
     name*: string
+    typeParameters*: seq[TypeParameterDecl]
     fields*: seq[FieldDecl]
     methods*: seq[FunctionDecl]

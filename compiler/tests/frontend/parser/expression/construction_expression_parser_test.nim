@@ -26,7 +26,7 @@ suite "Construction expression parsing":
 
     # Then
     check construction.kind == ekConstruct
-    check construction.typeName == "Point"
+    check construction.constructionTypeRef.name == "Point"
     check construction.fields.len == 2
     check construction.fields[0].name == "x"
     check construction.fields[0].value.kind == ekInteger
@@ -54,7 +54,7 @@ suite "Construction expression parsing":
     # Then
     check construction.kind == ekConstruct
     check construction.fields[0].value.kind == ekConstruct
-    check construction.fields[0].value.typeName == "Address"
+    check construction.fields[0].value.constructionTypeRef.name == "Address"
 
   test "parses zero-field construction":
     # Given
@@ -71,7 +71,7 @@ suite "Construction expression parsing":
 
     # Then
     check construction.kind == ekConstruct
-    check construction.typeName == "Marker"
+    check construction.constructionTypeRef.name == "Marker"
     check construction.fields.len == 0
 
   test "requires semicolon after every field initializer":
