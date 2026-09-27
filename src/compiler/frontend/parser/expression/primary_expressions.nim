@@ -59,7 +59,7 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
 
   failAt(
     parser.peek.span,
-    "expected primitive literal, identifier, call, construction, or grouped expression"
+    "expected literal, identifier, call, construction, or grouped expression"
   )
 
 ## Parses a complete primary expression including chained field access.

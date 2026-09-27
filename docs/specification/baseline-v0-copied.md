@@ -1817,10 +1817,38 @@ set account = ref otherAccount;   // invalid in set
 Class-valued field mutation through `set self.field = ...` remains outside the
 current implemented slice.
 
+## Built-in String values
+
+The implemented compiler now includes `String` as a built-in immutable text
+value. String is neither one of the fixed-size scalar primitives nor a nominal
+class, and it has no observable object identity.
+
+```eido
+var name = "Alice";
+set name = "Bob";
+```
+
+String values may cross function/method parameter and return boundaries and may
+be stored in class fields. `+` concatenates Strings; `==` and `!=` compare
+text content. Ordered String comparison is unsupported.
+
+The existing redundant-local-binding rule remains unchanged:
+
+```eido
+var first = "Eido";
+var second = first; // invalid
+```
+
+`copy` and `ref` remain class-identity operations and are invalid for String.
+The initial Nim backend lowers String to Nim `string`, but that storage model is
+an implementation detail; Eido does not expose String buffer identity or commit
+to Nim's allocation/reclamation strategy.
+
 ## Memory-model boundary remains open
 
 The language now specifies logical identity flow—same identity versus detached
-identity—but it still does **not** specify allocation, lifetime, or reclamation.
+identity—and immutable String value semantics, but it still does **not** specify
+allocation, lifetime, or reclamation.
 
 The earlier unresolved memory-model choices remain unresolved:
 

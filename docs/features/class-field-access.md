@@ -108,7 +108,7 @@ External field mutation is not legal syntax:
 set point.x = 20; // invalid
 ```
 
-Inside a class method, an own primitive field must be accessed and mutated
+Inside a class method, an own non-class field must be accessed and replaced
 through `self`:
 
 ```eido

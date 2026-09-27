@@ -109,6 +109,40 @@ proc scanNumber(
     kind, text, startOffset, lexer.current, startLine, startColumn
   )
 
+## Scans one immutable Eido String literal and validates its escapes.
+## Example: `"hello\\nworld"` becomes one `tkStringLiteral` token.
+proc scanString(
+  lexer: var Lexer,
+  startOffset, startLine, startColumn: int
+): Token =
+  while not lexer.atEnd:
+    let current = lexer.peek
+    if current == '"':
+      discard lexer.advance()
+      let text = lexer.source[startOffset ..< lexer.current]
+      return makeToken(
+        tkStringLiteral, text, startOffset, lexer.current, startLine, startColumn
+      )
+
+    if current == '\n' or current == '\r':
+      failAt(startLine, startColumn, "unterminated String literal")
+
+    if current == '\\':
+      discard lexer.advance()
+      if lexer.atEnd:
+        failAt(startLine, startColumn, "unterminated String escape")
+      let escape = lexer.advance()
+      if escape notin {'n', 'r', 't', '\\', '"'}:
+        failAt(
+          startLine,
+          startColumn,
+          "unsupported String escape '\\\\" & $escape & "'"
+        )
+    else:
+      discard lexer.advance()
+
+  failAt(startLine, startColumn, "unterminated String literal")
+
 ## Scans one 16-bit Eido Char literal. Example: `'A'`, `'\n'`, and `'\u0041'` each become one `tkChar` token.
 proc scanChar(
   lexer: var Lexer,
@@ -181,6 +215,9 @@ proc nextToken*(lexer: var Lexer): Token =
 
   if c == '\'':
     return lexer.scanChar(startOffset, startLine, startColumn)
+
+  if c == '"':
+    return lexer.scanString(startOffset, startLine, startColumn)
 
   let kind =
     case c

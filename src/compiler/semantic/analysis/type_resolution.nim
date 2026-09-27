@@ -7,8 +7,8 @@ import ../../types/model
 import ../../types/function_result
 import ../symbols/classes
 
-## Converts source primitive type syntax into a semantic Eido type.
-## Example: `TypeRef("Float")` resolves to `etFloat`; Long and Double are not language types.
+## Converts source built-in type syntax into a semantic Eido type.
+## Example: `TypeRef("Float")` resolves to `etFloat` and String resolves to `etString`.
 proc resolveType*(typeRef: TypeRef): EidoType =
   case typeRef.name
   of "Bool": etBool
@@ -17,10 +17,11 @@ proc resolveType*(typeRef: TypeRef): EidoType =
   of "Int": etInt
   of "Float": etFloat
   of "Char": etChar
+  of "String": etString
   else:
-    failAt(typeRef.span, "unknown primitive type '" & typeRef.name & "'")
+    failAt(typeRef.span, "unknown built-in type '" & typeRef.name & "'")
 
-## Resolves a field, parameter, or result type from primitives or registered nominal classes.
+## Resolves a field, parameter, or result type from built-ins or registered nominal classes.
 ## Example: Address resolves to classType("Address") after class-name collection.
 proc resolveDeclaredType*(
   typeRef: TypeRef,
@@ -33,6 +34,7 @@ proc resolveDeclaredType*(
   of "Int": etInt
   of "Float": etFloat
   of "Char": etChar
+  of "String": etString
   else:
     if classes.contains(typeRef.name):
       return classes.get(typeRef.name).typ

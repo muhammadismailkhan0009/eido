@@ -90,5 +90,6 @@ import features/control_flow/while_variants_test
 import features/control_flow/for_variants_test
 import features/control_flow/loop_control_variants_test
 import features/primitive_variants_test
+import features/string_variants_test
 import features/variable_variants_test
 import features/set_variants_test

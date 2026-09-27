@@ -31,3 +31,19 @@ suite "Arithmetic operator semantics":
     check floatProgram.functions[0].result.typ == etFloat
     expect ValueError:
       discard analyzeSource(mixedSource)
+
+  test "allows String concatenation only through plus":
+    let validSource = """
+      function join(String left, String right) returns String {
+        return left + right;
+      }
+      function main() returns String { return join("Ei", "do"); }
+    """
+    let invalidSource = """
+      function main() returns String { return "Eido" - "do"; }
+    """
+
+    let program = analyzeSource(validSource)
+    check program.functions[0].result.typ == etString
+    expect ValueError:
+      discard analyzeSource(invalidSource)

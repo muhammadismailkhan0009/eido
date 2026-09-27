@@ -12,10 +12,15 @@ proc analyzeArithmetic(
   let left = analyzeExpr(expr.left, locals, functions, classes)
   let right = analyzeExpr(expr.right, locals, functions, classes)
 
-  if left.typ != right.typ or not left.typ.isArithmetic:
+  if left.typ != right.typ:
+    failAt(expr.span, "binary operands must have matching types")
+
+  let isStringConcatenation =
+    expr.op == astExpressions.boAdd and left.typ == etString
+  if not left.typ.isNumericArithmetic and not isStringConcatenation:
     failAt(
       expr.span,
-      "arithmetic operands must have the same Int or Float type"
+      "arithmetic requires matching Int/Float operands; String supports only +"
     )
 
   let op =

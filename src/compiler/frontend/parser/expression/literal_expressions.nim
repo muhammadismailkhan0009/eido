@@ -1,5 +1,5 @@
-## Parses primitive literal primary expressions and decodes their token values.
-## Example: `5`, `2.5`, `true`, and `'A'` become typed literal-shaped AST nodes.
+## Parses built-in literal primary expressions and decodes their token values.
+## Example: `5`, `true`, `'A'`, and `"Eido"` become literal-shaped AST nodes.
 
 ## Converts one hexadecimal digit to its numeric value.
 ## Example: `F` becomes 15 while decoding a Unicode Char escape.
@@ -36,8 +36,30 @@ proc parseCharValue(token: Token): uint16 =
 
   failAt(token.span, "invalid Char literal")
 
-## Parses a primitive literal when the current token is literal-shaped.
-## Example: current token `2.5` returns an Float AST node; an identifier returns nil.
+## Decodes a validated String-token spelling into its immutable text value.
+## Example: `"hello\\nworld"` becomes a String containing one newline.
+proc parseStringValue(token: Token): string =
+  var index = 1
+  while index < token.lexeme.len - 1:
+    let current = token.lexeme[index]
+    if current != '\\':
+      result.add current
+      inc index
+      continue
+
+    inc index
+    case token.lexeme[index]
+    of 'n': result.add '\n'
+    of 'r': result.add '\r'
+    of 't': result.add '\t'
+    of '\\': result.add '\\'
+    of '"': result.add '"'
+    else:
+      failAt(token.span, "invalid String escape")
+    inc index
+
+## Parses a built-in literal when the current token is literal-shaped.
+## Example: current token `2.5` returns a Float AST node; an identifier returns nil.
 proc parseLiteral(parser: var Parser): Expr =
   if parser.check(tkInteger):
     let token = parser.advance()
@@ -69,6 +91,14 @@ proc parseLiteral(parser: var Parser): Expr =
       kind: ekChar,
       span: token.span,
       charValue: parseCharValue(token)
+    )
+
+  if parser.check(tkStringLiteral):
+    let token = parser.advance()
+    return Expr(
+      kind: ekString,
+      span: token.span,
+      stringValue: parseStringValue(token)
     )
 
   nil

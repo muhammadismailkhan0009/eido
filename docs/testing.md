@@ -65,6 +65,7 @@ tests/
       loop_control_variants_test.nim
     function_variants_test.nim
     primitive_variants_test.nim
+    string_variants_test.nim
     variable_variants_test.nim
     set_variants_test.nim
 

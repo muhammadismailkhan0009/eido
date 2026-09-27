@@ -22,6 +22,18 @@ suite "Equality comparison semantics":
     for index in 0 .. 5:
       check program.functions[index].result.typ == etBool
 
+  test "compares String operands by equality but does not order them":
+    let equalitySource = """
+      function same(String left, String right) returns Bool { return left == right; }
+      function main() returns Bool { return same("Eido", "Eido"); }
+    """
+    let orderingSource = "function main() returns Bool { return \"a\" < \"b\"; }"
+
+    let program = analyzeSource(equalitySource)
+    check program.functions[0].result.typ == etBool
+    expect ValueError:
+      discard analyzeSource(orderingSource)
+
   test "contextually types Byte and Short integer literals":
     # Given
     let source = """

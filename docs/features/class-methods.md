@@ -78,9 +78,9 @@ Method bodies reuse the existing function/statement semantics:
 - top-level function calls;
 - `self.method(...)` calls on the current instance;
 - `set` mutation of locals;
-- `set self.field = ...` mutation of own primitive fields.
+- `set self.field = ...` mutation of own non-class fields, including String.
 
-Method parameters/results may use primitive or declared nominal class types.
+Method parameters/results may use primitive, String, or declared nominal class types.
 Class parameters preserve caller identity for the call, while class-valued
 returns must be fresh/detached.
 
@@ -132,7 +132,7 @@ supported. Different classes may use the same method name.
 
 ## Mutation boundary
 
-A method may mutate an own primitive field only through `self`:
+A method may replace an own non-class field (primitive or String) only through `self`:
 
 ```eido
 function withdraw(Int amount) returns Int {

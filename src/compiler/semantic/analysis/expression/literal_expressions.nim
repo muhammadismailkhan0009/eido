@@ -1,5 +1,5 @@
-## Analyzes primitive literals and contextual integral literal typing.
-## Example: unsuffixed `7` is Int normally, but may become Byte in a Byte context.
+## Analyzes built-in literals and contextual integral literal typing.
+## Example: `"Eido"` is String while unsuffixed `7` may become Byte in a Byte context.
 
 ## Checks whether an integer literal fits the requested integral primitive.
 ## Example: 127 fits Byte; Int accepts the full parsed signed 64-bit range.
@@ -36,8 +36,8 @@ proc analyzeIntegerAs(
     intValue: expr.intValue
   )
 
-## Analyzes one primitive literal expression using its default Eido type.
-## Example: `2.5` becomes Float while `2147483648` remains Int.
+## Analyzes one built-in literal expression using its default Eido type.
+## Example: `2.5` becomes Float while `"Eido"` becomes String.
 proc analyzeLiteral(expr: astExpressions.Expr): hirExpressions.HirExpr =
   case expr.kind
   of astExpressions.ekInteger:
@@ -62,6 +62,13 @@ proc analyzeLiteral(expr: astExpressions.Expr): hirExpressions.HirExpr =
       span: expr.span,
       typ: etChar,
       charValue: expr.charValue
+    )
+  of astExpressions.ekString:
+    HirExpr(
+      kind: hekString,
+      span: expr.span,
+      typ: etString,
+      stringValue: expr.stringValue
     )
   else:
     raise newException(ValueError, "semantic invariant: expected literal expression")

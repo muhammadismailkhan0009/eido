@@ -41,11 +41,11 @@ proc analyzeComparison(
   let right = operands.right
 
   if left.typ != right.typ or
-      not left.typ.isPrimitive or
-      not right.typ.isPrimitive:
+      not left.typ.isEqualityComparable or
+      not right.typ.isEqualityComparable:
     failAt(
       expr.span,
-      "comparison operands must have the same primitive type"
+      "equality operands must have the same primitive or String type"
     )
 
   if expr.op in {

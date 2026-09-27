@@ -31,6 +31,7 @@ type
     ekFloat,
     ekBoolean,
     ekChar,
+    ekString,
     ekIdentifier,
     ekCall,
     ekConstruct,
@@ -56,6 +57,8 @@ type
       boolValue*: bool
     of ekChar:
       charValue*: uint16
+    of ekString:
+      stringValue*: string
     of ekIdentifier:
       name*: string
     of ekCall:

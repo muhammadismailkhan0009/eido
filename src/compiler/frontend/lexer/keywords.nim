@@ -1,4 +1,4 @@
-## Classifies identifier-shaped text as keywords, supported primitive type names, boolean literals, or ordinary identifiers.
+## Classifies identifier-shaped text as keywords, built-in type names, boolean literals, or ordinary identifiers.
 ## Example: `Float` becomes `tkPrimitiveType`, while removed `Double` stays an identifier.
 
 import token
@@ -47,6 +47,8 @@ proc keywordKind*(text: string): TokenKind =
   of "ref": tkRef
   of "Bool", "Byte", "Short", "Int", "Float", "Char":
     tkPrimitiveType
+  of "String":
+    tkStringType
   of "true", "false":
     tkBoolean
   else:

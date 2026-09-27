@@ -26,6 +26,21 @@ suite "Literal expression semantics":
     check program.functions[4].result.typ == etFloat
     check program.functions[5].result.typ == etChar
 
+  test "resolves String as its own built-in semantic type":
+    # Given
+    let source = """
+      function message(String value) returns String { return value; }
+      function main() returns String { return message("Eido"); }
+    """
+
+    # When
+    let program = analyzeSource(source)
+
+    # Then
+    check program.functions[0].parameters[0].typ == etString
+    check program.functions[0].result.typ == etString
+    check program.functions[1].result.typ == etString
+
   test "accepts Int values beyond the Java 32 bit int range":
     # Given
     let source = """

@@ -34,6 +34,7 @@ type
     hekFloating,
     hekBoolean,
     hekChar,
+    hekString,
     hekLocal,
     hekCall,
     hekConstruct,
@@ -76,6 +77,8 @@ type
       boolValue*: bool
     of hekChar:
       charValue*: uint16
+    of hekString:
+      stringValue*: string
     of hekLocal:
       localId*: LocalId
       sourceName*: string

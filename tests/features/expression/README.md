@@ -9,6 +9,7 @@ searching through one large expression test file.
 | Expression family | Feature coverage |
 | --- | --- |
 | Primitive literals | `../primitive_variants_test.nim` |
+| String literals/concatenation/equality | `../string_variants_test.nim` |
 | Function-call expressions | `../function_variants_test.nim` |
 | Identifier/local expressions | `../variable_variants_test.nim` and function parameter/result scenarios |
 | Grouping | `grouping_variants_test.nim` |
@@ -72,6 +73,7 @@ Equality acceptance currently has direct feature cases for:
 - Int `==`
 - Bool `!=`
 - Char `==`
+- String `==` (owned by `../string_variants_test.nim`)
 
 Ordered comparison currently has direct feature cases for:
 
@@ -114,6 +116,7 @@ Some expression forms are better owned by another user-facing feature catalog:
 - Function calls, arity, forward resolution, and returned call values:
   `../function_variants_test.nim`
 - Local identifier reads and computed expressions: `../variable_variants_test.nim`
+- String literals, String `+`, content equality, and String binding boundaries: `../string_variants_test.nim`
 
 When adding a new expression family, add a focused file here unless another
 feature catalog clearly owns its observable semantics. Update this coverage

@@ -6,7 +6,7 @@ behavior lives here.
 
 ## Modules
 
-- `literal_expressions.nim` — Int, Float, Bool, and Char literals
+- `literal_expressions.nim` — Int, Float, Bool, Char, and immutable String literals
 - `call_expressions.nim` — shared call-argument parsing and top-level function calls
 - `construction_expressions.nim` — named class construction expressions
 - `field_access_expressions.nim` — postfix `.field` access and `.method(...)` instance-call chains

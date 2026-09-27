@@ -27,6 +27,23 @@ suite "Nim emitter":
     check "): int32" notin generated
     check "): float32" notin generated
 
+  test "emits String as Nim string with escaped literals and concatenation":
+    # Given
+    let source = """
+      function join(String name) returns String {
+        return "Hello\n" + name;
+      }
+      function main() returns String { return join("Eido"); }
+    """
+
+    # When
+    let generated = emitSource(source)
+
+    # Then
+    check "): string" in generated
+    check "\"Hello\\x0A\"" in generated
+    check " & eido_local_0_name" in generated
+
   test "uses semantic IDs in generated local names":
     # Given
     let source = """

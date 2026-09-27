@@ -22,6 +22,20 @@ suite "Literal expression parsing":
     check program.functions[2].body[0].value.kind == ekFloat
     check program.functions[3].body[0].value.kind == ekChar
 
+  test "parses and decodes String literals":
+    # Given
+    let source = """
+      function message() returns String { return "hello\n\"Eido\"\\"; }
+      function main() returns Int { return 0; }
+    """
+
+    # When
+    let value = parseSource(source).functions[0].body[0].value
+
+    # Then
+    check value.kind == ekString
+    check value.stringValue == "hello\n\"Eido\"\\"
+
   test "decodes a Unicode Char escape to one 16 bit code unit":
     # Given
     let source = """

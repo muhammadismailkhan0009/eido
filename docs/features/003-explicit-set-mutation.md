@@ -53,8 +53,8 @@ legal `set` operands.
 
 ## Own-field mutation
 
-Inside a class method, an own primitive field may be mutated only through the
-explicit current receiver `self`:
+Inside a class method, an own non-class field (primitive or String) may be
+replaced only through the explicit current receiver `self`:
 
 ```eido
 class Account {

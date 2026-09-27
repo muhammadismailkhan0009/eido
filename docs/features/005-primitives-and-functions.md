@@ -18,7 +18,8 @@ Eido intentionally does not split ordinary integer work between `Int` and
 `Long`, or ordinary floating-point work between `Float` and `Double`.
 There are no `Long` or `Double` primitive types.
 
-`String` is not a primitive type. Eido does not use a `Void` type; a
+`String` is not a primitive type; it is a separate built-in immutable text
+value documented in `string-values.md`. Eido does not use a `Void` type; a
 function with no result simply omits the `returns` clause.
 
 ## Primitive literals

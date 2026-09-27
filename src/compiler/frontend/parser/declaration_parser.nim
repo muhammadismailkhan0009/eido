@@ -1,4 +1,4 @@
-## Parses primitive- or nominal-class-typed parameters and functions with zero or one result. Example: `function notify(Account account) {}` has one nominal class input and no result.
+## Parses built-in- or nominal-class-typed parameters and functions with zero or one result. Example: `function greet(String name) returns String { return name; }` uses the built-in String type.
 
 import ../../source/span
 import ../../diagnostics/errors
@@ -8,9 +8,10 @@ import ../ast/statements
 import core
 import statement_parser
 
-## Parses a declared primitive or nominal class type.
+## Parses a declared built-in or nominal class type.
 proc parseDeclaredTypeRef(parser: var Parser): TypeRef =
-  if parser.check(tkPrimitiveType) or parser.check(tkIdentifier):
+  if parser.check(tkPrimitiveType) or parser.check(tkStringType) or
+      parser.check(tkIdentifier):
     let typeToken = parser.advance()
     if typeToken.lexeme in ["Long", "Double"]:
       failAt(typeToken.span, "removed numeric type '" & typeToken.lexeme & "'")

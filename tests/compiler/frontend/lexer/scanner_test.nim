@@ -26,6 +26,25 @@ suite "Lexer scanner":
     check tokens[0].kind == tkIdentifier
     check tokens[1].kind == tkIdentifier
 
+  test "classifies String as a built-in type and tokenizes String literals":
+    # Given
+    let source = "String \"hello\\nworld\" \"\""
+
+    # When
+    let tokens = lexAll(source)
+
+    # Then
+    check tokens[0].kind == tkStringType
+    check tokens[1].kind == tkStringLiteral
+    check tokens[2].kind == tkStringLiteral
+    check tokens[3].kind == tkEof
+
+  test "rejects unterminated and unsupported String escapes":
+    expect ValueError:
+      discard lexAll("\"unterminated")
+    expect ValueError:
+      discard lexAll("\"bad\\q\"")
+
   test "tokenizes unsuffixed Int and Float literals":
     # Given
     let source = "42 2147483648 1.5 2.5"

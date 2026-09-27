@@ -1,8 +1,8 @@
 ## Applies expected-type checking and contextual integral literal typing.
 ## Example: literal `7` becomes Byte for a Byte parameter, while `128` is rejected.
 
-## Analyzes an expression against an expected primitive type.
-## Example: unsuffixed `1` may become Byte or Short in parameter positions.
+## Analyzes an expression against an expected semantic type.
+## Example: unsuffixed `1` may become Byte while a String argument must remain String.
 proc analyzeExprExpected*(
   expr: astExpressions.Expr,
   expected: EidoType,

@@ -6,7 +6,7 @@ to focused modules in this directory.
 
 ## Modules
 
-- `literal_expressions.nim` — primitive literal typing and integral range checks
+- `literal_expressions.nim` — primitive/String literal typing and integral range checks
 - `expected_types.nim` — expected-type validation and contextual Byte/Short/Int literal typing
 - `identifier_expressions.nim` — local/parameter identifier resolution
 - `call_expressions.nim` — function resolution, arity, argument typing, and value-call rules
@@ -15,8 +15,8 @@ to focused modules in this directory.
 - `field_access_expressions.nim` — nominal receiver/field resolution and result typing
 - `method_call_expressions.nim` — nominal receiver/method resolution, arity, argument, and result typing
 - `unary_negation.nim` — Int/Float unary negation semantics
-- `arithmetic_operators.nim` — matching Int/Float arithmetic semantics
-- `comparison_operators.nim` — equality, ordering, and comparison literal contextual typing
+- `arithmetic_operators.nim` — matching Int/Float arithmetic plus String `+` concatenation
+- `comparison_operators.nim` — primitive/String equality, numeric ordering, and comparison literal contextual typing
 - `boolean_operators.nim` — Bool-only `not`, `and`, and `or` semantics
 
 The coordinator should contain dispatch and public API declarations, not

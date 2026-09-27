@@ -20,8 +20,8 @@ proc analyzeExpr*(
   classes: ClassSymbols
 ): hirExpressions.HirExpr
 
-## Analyzes an expression against an expected primitive type.
-## Example: literal `7` becomes Byte when passed to a Byte parameter, but `128` is rejected.
+## Analyzes an expression against an expected semantic type.
+## Example: literal `7` becomes Byte for a Byte parameter while a String argument remains String.
 proc analyzeExprExpected*(
   expr: astExpressions.Expr,
   expected: EidoType,
@@ -55,7 +55,8 @@ proc analyzeExpr*(
   of astExpressions.ekInteger,
       astExpressions.ekFloat,
       astExpressions.ekBoolean,
-      astExpressions.ekChar:
+      astExpressions.ekChar,
+      astExpressions.ekString:
     analyzeLiteral(expr)
 
   of astExpressions.ekIdentifier:

@@ -9,6 +9,7 @@ import names
 ## Example: local Int `x + 5` renders as `(eido_local_0_x + int64(5))`.
 proc renderExpr*(expr: hirExpressions.HirExpr): string
 
+include expression/string_values
 include expression/boolean_operators
 include expression/construction_expressions
 include expression/field_access_expressions
@@ -62,6 +63,8 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     result = if expr.boolValue: "true" else: "false"
   of hirExpressions.hekChar:
     result = "uint16(" & $expr.charValue & ")"
+  of hirExpressions.hekString:
+    result = renderStringLiteral(expr)
   of hirExpressions.hekLocal:
     result = localName(expr.localId, expr.sourceName)
   of hirExpressions.hekCall:
@@ -88,6 +91,8 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
   of hirExpressions.hekBinary:
     if expr.op in {hirExpressions.hboAnd, hirExpressions.hboOr}:
       return renderBooleanBinary(expr)
+    if expr.op == hirExpressions.hboAdd and expr.typ == etString:
+      return renderStringConcatenation(expr)
 
     let operator =
       case expr.op

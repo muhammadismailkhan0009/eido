@@ -9,6 +9,8 @@ proc renderType*(typ: EidoType): string =
   case typ.kind
   of etkClass:
     className(typ.className)
+  of etkString:
+    "string"
   of etkPrimitive:
     case typ.primitive
     of ptBool: "bool"
