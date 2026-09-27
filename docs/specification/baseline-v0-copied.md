@@ -1875,3 +1875,516 @@ The current Nim backend's generated `ref object` layouts, hidden receiver
 parameters, and memoized graph-copy procedures are implementation details.
 The semantic AST/HIR must continue to avoid treating "class" as synonymous with
 a particular heap/pointer/reclamation strategy.
+
+
+---
+
+# 39. Approved v0 repository, distribution, and installation layout
+
+> Status: approved architectural specification. This section defines how the
+> Eido implementation repository and installed SDK are organized. It does not
+> add source-language syntax.
+
+## One v0 monorepo, explicit component boundaries
+
+Eido v0 is developed in one repository. Compiler implementation, standard
+library, official packages, tool adapters, installer logic, tests, examples,
+and documentation remain colocated for iteration speed, but they must live in
+separate top-level areas according to ownership:
+
+```text
+eido/
+├── compiler/
+│   ├── src/
+│   │   ├── frontend/
+│   │   ├── semantic/
+│   │   ├── types/
+│   │   ├── hir/
+│   │   ├── backend/
+│   │   └── tooling/
+│   └── tests/
+│
+├── stdlib/
+│   ├── src/
+│   └── tests/
+│
+├── packages/
+│   └── ...
+│
+├── tools/
+│   ├── cli/
+│   ├── mcp/
+│   └── lsp/          # later
+│
+├── installer/
+│
+├── tests/
+│   └── integration/
+│
+├── examples/
+├── docs/
+├── eido.nimble
+└── README.md
+```
+
+The exact files inside an area may evolve, but the ownership boundaries are
+part of v0 architecture.
+
+## Compiler
+
+`compiler/` owns implementation of the Eido language and compiler pipeline:
+
+```text
+source
+  -> lexer/parser/AST
+  -> semantic analysis
+  -> typed/resolved HIR
+  -> backend
+  -> compiled artifact
+```
+
+The compiler must not absorb standard-library APIs, package implementations, or
+MCP protocol logic merely because those components use compiler information.
+
+## Standard library
+
+`stdlib/` contains foundational APIs guaranteed to ship with an Eido
+installation. The standard library is ordinary Eido-facing functionality, not
+additional language syntax.
+
+Expected categories may eventually include foundational collections, text/byte
+utilities, console/basic I/O, filesystem, process/environment, time, and basic
+network primitives. Their exact APIs are specified independently of the core
+language syntax.
+
+Every conforming Eido SDK installation ships the standard library. Users do not
+install it as a normal third-party dependency.
+
+## Packages
+
+`packages/` contains higher-level libraries developed in the same monorepo
+for v0 convenience. Packages are built on top of the Eido language and the
+standard library; they are not compiler extensions.
+
+Examples of package-level concerns include JSON, HTTP, database drivers,
+serialization, web frameworks, logging frameworks, or other higher-level
+application facilities.
+
+A package may depend only on the subset of stdlib and other packages it needs.
+A package can later move to an independent repository without changing the Eido
+language definition.
+
+Dependency direction is conceptually:
+
+```text
+language/compiler
+      ↓
+standard library
+      ↓
+packages
+      ↓
+applications
+```
+
+This is a layering model, not a requirement that every package use every stdlib
+module.
+
+## Runtime directory is not created speculatively
+
+Eido v0 does not create a top-level `runtime/` component merely because many
+compiled languages have one. The current compiler delegates execution support
+such as String storage and class allocation/reclamation to the current backend
+implementation.
+
+A dedicated `runtime/` area is introduced only if Eido later owns hidden
+support code required by language semantics themselves, for example a custom
+memory manager, String representation, panic machinery, or other support linked
+into compiled programs.
+
+Native compilation and a runtime are not mutually exclusive; if such runtime
+support is later required it may be statically linked into the native binary.
+
+## Tools
+
+`tools/` contains user/tool integrations over stable compiler capabilities.
+The intended front doors are:
+
+```text
+tools/cli/   human command-line adapter
+tools/mcp/   MCP adapter for LLM/agent clients
+tools/lsp/   editor/LSP adapter when implemented
+```
+
+Protocol-specific logic belongs here rather than in the compiler's semantic
+implementation.
+
+## Single user-facing command
+
+The intended installed UX uses one `eido` executable/command surface rather
+than unrelated binaries for each tool:
+
+```text
+eido build
+eido run
+eido check
+eido test
+eido fmt
+eido package ...
+eido mcp
+eido lsp        # later
+```
+
+Internally these operations may be separate components.
+
+## Installed SDK root
+
+Eido uses one logical installation root, referred to architecturally as
+`EIDO_HOME`. A user-local layout is conceptually:
+
+```text
+EIDO_HOME/
+├── bin/
+│   └── eido
+├── versions/
+│   └── <version>/
+│       ├── compiler/
+│       ├── stdlib/
+│       └── support/
+├── packages/
+├── cache/
+└── config/
+```
+
+Only the executable location needs to be exposed through the operating-system
+`PATH`. The exact platform-specific physical root may differ; the logical
+layout and resolver behavior remain stable.
+
+A versioned SDK layout is preferred even during v0 so upgrades and future
+rollback/version-selection do not require redesigning the installation format.
+
+## Package storage and project isolation
+
+Packages may be physically cached centrally under EIDO_HOME, but a project
+must see only dependencies selected for that project. Installing a package into
+the machine-wide/user-wide cache must not silently inject arbitrary versions
+into every project.
+
+The intended model is:
+
+```text
+central package store/cache
+          +
+project dependency declaration/lock
+          ↓
+deterministic dependency graph
+```
+
+The exact project manifest syntax is not yet locked.
+
+## Logical imports, not physical filesystem paths
+
+Eido source imports/modules must identify logical language/library/package
+entities rather than hard-coded installation paths. Source code must not need
+to know whether a library physically lives under EIDO_HOME, the project tree,
+or a package cache.
+
+The resolver will eventually distinguish at least:
+
+```text
+project source
+project-declared dependencies
+installed/cached package content
+bundled standard library
+```
+
+The exact source-level import/module syntax and final precedence rules are
+specified when multi-file/module resolution is implemented; this section locks
+the separation between logical identity and physical storage.
+
+## Installer responsibility
+
+The installer turns build outputs into a coherent Eido SDK. At minimum it must
+make the selected compiler/tooling version and matching standard library
+available together, configure the user-facing `eido` command, and establish
+the SDK/package/cache directories needed by resolution.
+
+Official packages may be distributed or cached by the same ecosystem tooling,
+but packages remain semantically separate from stdlib and are not implicitly
+part of the language.
+
+---
+
+# 40. Approved v0 LLM/MCP-native compiler tooling architecture
+
+> Status: approved architectural specification. Eido is intended to expose the
+> compiler's semantic knowledge programmatically to LLMs, agents, editors, CI,
+> and other tooling. MCP is an important transport, but not the compiler's
+> internal architecture.
+
+## Core principle
+
+The compiler is a semantic authority, not merely a source-to-binary command.
+Any semantic fact the compiler knows should be obtainable in structured form
+without forcing tooling to scrape human-readable diagnostics or reconstruct the
+fact by reparsing source independently.
+
+Examples include:
+
+```text
+resolved symbols and types
+call relationships
+class identity/provenance flow
+field reads and mutations
+module/dependency relationships
+contract obligations and results
+compiler diagnostics
+source spans
+compilation/verification status
+```
+
+## Compiler tooling API before protocol adapters
+
+MCP-specific behavior must not be embedded throughout lexer/parser/semantic
+code. The architecture is:
+
+```text
+                    compiler core
+                         │
+                         ▼
+               compiler tooling API
+              / semantic project service
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+         CLI            MCP            LSP
+```
+
+The compiler-side `compiler/src/tooling/` area exposes stable semantic
+operations. `tools/mcp/`, `tools/cli/`, and future integrations translate
+their respective protocols to that API.
+
+The compiler core must not depend on MCP, a specific LLM vendor, an editor, or
+JSON-RPC.
+
+## Semantic operations, not compiler internals
+
+The public tooling surface exposes user/tooling concepts rather than internal
+procedures such as parser helper functions.
+
+Good tooling capabilities include concepts such as:
+
+```text
+open/load project
+check project/module/symbol
+compile project/module
+inspect symbol
+find symbols
+find references
+inspect type
+inspect expression type
+callers/callees
+dependency graph
+semantic context around a symbol
+verification/contracts
+explain diagnostic
+change impact / affected dependency cone
+```
+
+Internal operations such as `parseAddExpression` or a backend-specific HIR
+helper are not stable public agent tools.
+
+## Structured diagnostics
+
+Diagnostics must evolve toward stable machine-readable records while remaining
+renderable for humans. A diagnostic should be able to expose information such
+as:
+
+```text
+stable diagnostic code
+severity
+source span
+human message
+related symbols/types
+expected/actual semantic facts
+machine-actionable suggestions where safe and deterministic
+```
+
+Human CLI output is a presentation of this structured diagnostic model. MCP,
+LSP, CI, and other tools consume the structured representation directly.
+
+## Stable semantic identities
+
+Long-lived tooling should be able to refer to resolved program entities without
+relying only on ambiguous display names. Compiler tooling may therefore expose
+stable session/project identifiers for symbols, types, modules, diagnostics, or
+other semantic entities as the project model matures.
+
+Display names remain available for humans, but agent/tool operations should not
+need to guess between same-named declarations.
+
+## Project/session model and selective analysis
+
+The tooling architecture should support a loaded project/session rather than
+requiring every operation to recompile all source from zero.
+
+Conceptually the compiler may retain reusable state such as:
+
+```text
+parsed source
+symbol tables
+typed/resolved HIR
+dependency graph
+verification state
+backend artifacts/cache metadata
+```
+
+When a file changes, the compiler should eventually invalidate and recompute the
+smallest sound affected dependency cone.
+
+The external tooling surface may request scopes such as:
+
+```text
+symbol
+file/module
+changed set
+dependency cone
+whole project
+```
+
+Selective checking/verification/compilation is an optimization and tooling
+capability; it must preserve the same semantics as whole-program analysis.
+
+## LLM-oriented semantic context
+
+Eido tooling should be able to produce a bounded, compiler-grounded context for
+a symbol/module/project rather than requiring an LLM to ingest the entire
+source tree.
+
+A context result may include, subject to a requested depth/budget:
+
+```text
+signature/type
+contracts
+fields read
+fields mutated
+class identity relationships
+callers/callees
+relevant types
+module/package dependencies
+invariants/obligations
+source locations
+```
+
+Context selection must derive from the compiler's resolved graph so an LLM can
+zoom into relevant semantic neighborhoods instead of performing repository-wide
+text search for every task.
+
+## Eido-specific identity and mutation facts are first-class tooling data
+
+Eido's class semantics contain information that ordinary source inspection can
+misinterpret. Tooling should expose these facts explicitly.
+
+For example, after:
+
+```eido
+set current = ref account;
+```
+
+tooling can report that `current` has existing/shared logical identity
+provenance. After:
+
+```eido
+set current = copy account;
+```
+
+tooling can report detached provenance.
+
+The same principle applies to construction relationships, return-boundary
+provenance, mutations, and later contract/invariant effects.
+
+## Verification tooling
+
+When contracts are implemented, tooling should permit focused verification and
+explanation at the relevant semantic scope. Results should distinguish facts
+such as:
+
+```text
+type/semantic check success
+precondition/postcondition status
+invariants affected
+obligations discharged
+obligations not discharged
+runtime-check-only obligations
+counterexample/path information when available
+```
+
+Formal proof is not required for the tooling architecture. v0 may begin with
+contract type-checking/runtime-check lowering and progressively expose stronger
+verification results later.
+
+## MCP adapter
+
+MCP is the first-class LLM/agent transport planned for v0 tooling. The intended
+local entry point is conceptually:
+
+```text
+eido mcp
+```
+
+The MCP server should normally use local stdio transport so an MCP-capable
+client can launch the installed Eido toolchain without a separately managed
+network service.
+
+The MCP surface should remain compact and semantic. A small initial surface may
+cover:
+
+```text
+project open/summary
+check
+compile
+inspect symbol
+find symbols
+find references
+dependency graph
+semantic context
+```
+
+Later additions may include verification, contract inspection, diagnostic
+explanation, architecture analysis, and change-impact queries.
+
+Exact MCP tool names and schemas are intentionally not frozen here; the stable
+contract is that MCP adapts the compiler tooling API rather than becoming the
+semantic implementation itself.
+
+## Language/tooling knowledge ships with Eido
+
+An installed Eido SDK should make the authoritative v0 language/tooling guide
+available to agents instead of assuming their pretrained knowledge is current.
+This may be exposed through MCP resources/tools, generated agent skill files,
+CLI output, or equivalent mechanisms.
+
+The source of truth remains the versioned Eido specification/compiler metadata,
+so the guide shipped with a particular compiler version describes that compiler
+version.
+
+## Other consumers share the same semantic service
+
+MCP is not exclusive. The same tooling API is intended to support:
+
+```text
+CLI human workflows
+MCP/LLM agents
+LSP/editors
+CI/build automation
+future IDEs or custom agent protocols
+```
+
+This prevents semantic divergence between what the compiler, editor, CI, and AI
+assistant believe about a program.
+
+## LLM-native does not mean LLM-dependent
+
+Eido programs and compilation must remain deterministic and usable without an
+LLM. AI-native tooling means the compiler exposes structured, selective,
+semantically grounded operations that make agents more reliable; it does not
+make model inference part of ordinary compilation semantics.
