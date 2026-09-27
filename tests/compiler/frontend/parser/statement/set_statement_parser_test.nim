@@ -1,5 +1,5 @@
 import std/unittest
-import compiler/frontend/ast/statements
+import compiler/frontend/ast/[expressions, statements]
 import compiler/frontend/lexer/scanner
 import compiler/frontend/parser/program_parser
 
@@ -19,7 +19,8 @@ suite "Set statement parsing":
 
     # Then
     check statement.kind == skAssign
-    check statement.target == "value"
+    check statement.target.kind == ekIdentifier
+    check statement.target.name == "value"
 
   test "rejects bare reassignment":
     # Given
@@ -53,7 +54,8 @@ suite "Set statement parsing":
     # Then
     check loop.kind == skFor
     check loop.forUpdate.kind == skAssign
-    check loop.forUpdate.target == "i"
+    check loop.forUpdate.target.kind == ekIdentifier
+    check loop.forUpdate.target.name == "i"
     check loop.forBody[0].kind == skAssign
 
   test "rejects a bare for update":

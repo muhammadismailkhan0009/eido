@@ -11,7 +11,7 @@ suite "Class method declaration parsing":
         Int balance;
 
         function remaining(Int amount) returns Int {
-          return balance - amount;
+          return self.balance - amount;
         }
       }
 
@@ -36,7 +36,7 @@ suite "Class method declaration parsing":
     let source = """
       class Account {
         function balanceValue() returns Int {
-          return balance;
+          return self.balance;
         }
 
         Int balance;

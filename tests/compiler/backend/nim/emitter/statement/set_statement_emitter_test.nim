@@ -25,8 +25,8 @@ suite "Set statement emission":
         Int balance;
 
         function withdraw(Int amount) returns Int {
-          set balance = balance - amount;
-          return balance;
+          set self.balance = self.balance - amount;
+          return self.balance;
         }
       }
 

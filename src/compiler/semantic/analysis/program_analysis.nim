@@ -107,7 +107,7 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
   if not mainFound:
     raise newException(ValueError, "program must declare function main()")
 
-  # Pass 5: analyze class-owned method bodies with implicit receivers.
+  # Pass 5: analyze class-owned method bodies with source-level self bound to hidden receivers.
   for classIndex, sourceClass in program.classes:
     let owner = classes.get(sourceClass.name)
     for sourceMethod in sourceClass.methods:

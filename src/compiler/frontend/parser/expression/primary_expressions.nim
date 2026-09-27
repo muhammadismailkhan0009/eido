@@ -7,6 +7,14 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
   if not literal.isNil:
     return literal
 
+  if parser.check(tkSelf):
+    let token = parser.advance()
+    return Expr(
+      kind: ekIdentifier,
+      span: token.span,
+      name: token.lexeme
+    )
+
   if parser.check(tkIdentifier):
     let token = parser.advance()
     if parser.check(tkLParen):

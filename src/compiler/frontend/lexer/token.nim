@@ -17,6 +17,7 @@ type
     tkReturn,
     tkVar,
     tkSet,
+    tkSelf,
     tkIf,
     tkElse,
     tkWhile,

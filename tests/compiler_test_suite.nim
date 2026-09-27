@@ -10,6 +10,7 @@ import compiler/frontend/lexer/keywords/conditional_keyword_test
 import compiler/frontend/lexer/keywords/while_keyword_test
 import compiler/frontend/lexer/keywords/for_keyword_test
 import compiler/frontend/lexer/keywords/set_keyword_test
+import compiler/frontend/lexer/keywords/self_keyword_test
 import compiler/frontend/lexer/keywords/loop_control_keyword_test
 import compiler/frontend/lexer/keywords/class_keyword_test
 import compiler/frontend/parser/expression/literal_expression_parser_test
@@ -17,6 +18,7 @@ import compiler/frontend/parser/expression/call_expression_parser_test
 import compiler/frontend/parser/expression/construction_expression_parser_test
 import compiler/frontend/parser/expression/field_access_expression_parser_test
 import compiler/frontend/parser/expression/method_call_expression_parser_test
+import compiler/frontend/parser/expression/self_expression_parser_test
 import compiler/frontend/parser/expression/grouping_expression_parser_test
 import compiler/frontend/parser/expression/unary_negation_parser_test
 import compiler/frontend/parser/expression/arithmetic_operator_parser_test
@@ -46,6 +48,7 @@ import compiler/semantic/analysis/expression/call_expression_analysis_test
 import compiler/semantic/analysis/expression/construction_expression_analysis_test
 import compiler/semantic/analysis/expression/field_access_expression_analysis_test
 import compiler/semantic/analysis/expression/method_call_expression_analysis_test
+import compiler/semantic/analysis/expression/self_expression_analysis_test
 import compiler/semantic/analysis/expression/unary_negation_analysis_test
 import compiler/semantic/analysis/expression/arithmetic_operator_analysis_test
 import compiler/semantic/analysis/expression/comparison_operator_analysis_test
@@ -72,6 +75,7 @@ import features/classes/class_declaration_variants_test
 import features/classes/class_construction_variants_test
 import features/classes/class_field_access_variants_test
 import features/classes/class_method_variants_test
+import features/classes/self_receiver_variants_test
 import features/control_flow/conditional_variants_test
 import features/control_flow/else_if_variants_test
 import features/control_flow/while_variants_test

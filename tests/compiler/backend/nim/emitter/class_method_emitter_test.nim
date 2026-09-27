@@ -9,7 +9,7 @@ suite "Class method emission":
         Int balance;
 
         function remaining(Int amount) returns Int {
-          return balance - amount;
+          return self.balance - amount;
         }
       }
 
@@ -32,7 +32,7 @@ suite "Class method emission":
         Int balance;
 
         function remaining(Int amount) returns Int {
-          return balance - amount;
+          return self.balance - amount;
         }
       }
 

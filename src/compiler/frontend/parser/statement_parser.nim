@@ -35,11 +35,45 @@ proc parseVarStmt*(parser: var Parser): Stmt =
     initializer: initializer
   )
 
+## Parses the restricted mutation target forms supported by `set`.
+## Example: `value` is a local target while `self.balance` is an own-field target.
+proc parseSetTarget(parser: var Parser): Expr =
+  if parser.check(tkIdentifier):
+    let target = parser.advance()
+    return Expr(
+      kind: ekIdentifier,
+      span: target.span,
+      name: target.lexeme
+    )
+
+  if parser.check(tkSelf):
+    let receiver = parser.advance()
+    discard parser.consume(tkDot, "expected '.' after 'self' in set target")
+    let field = parser.consume(tkIdentifier, "expected field name after 'self.'")
+    let selfExpr = Expr(
+      kind: ekIdentifier,
+      span: receiver.span,
+      name: receiver.lexeme
+    )
+    return Expr(
+      kind: ekFieldAccess,
+      span: SourceSpan(
+        startOffset: receiver.span.startOffset,
+        endOffset: field.span.endOffset,
+        line: receiver.span.line,
+        column: receiver.span.column
+      ),
+      target: selfExpr,
+      fieldName: field.lexeme
+    )
+
+  failAt(parser.peek.span, "expected local name or 'self.<field>' after 'set'")
+
 ## Parses explicit mutation of an existing binding or own-class field.
-## Example: `set salary = 6000;` becomes `skAssign`.
+## Example: `set salary = 6000;` and `set self.balance = 0;`.
 proc parseSetStmt*(parser: var Parser): Stmt =
   let start = parser.consume(tkSet, "expected 'set'")
-  let target = parser.consume(tkIdentifier, "expected set target")
+  let target = parser.parseSetTarget()
   discard parser.consume(tkEqual, "expected '=' after set target")
   let value = parser.parseExpression()
   let semicolon = parser.consume(
@@ -55,7 +89,7 @@ proc parseSetStmt*(parser: var Parser): Stmt =
       line: start.span.line,
       column: start.span.column
     ),
-    target: target.lexeme,
+    target: target,
     assignedValue: value
   )
 
@@ -136,6 +170,9 @@ proc parseStatement*(parser: var Parser): Stmt =
 
   if parser.check(tkSet):
     return parser.parseSetStmt()
+
+  if parser.check(tkSelf) and parser.checkNext(tkDot):
+    return parser.parseCallStmt()
 
   if parser.check(tkIdentifier) and
       (parser.checkNext(tkLParen) or parser.checkNext(tkDot)):

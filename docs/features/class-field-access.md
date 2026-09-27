@@ -105,12 +105,14 @@ External field mutation is not legal syntax:
 set point.x = 20; // invalid
 ```
 
-Inside a class method, an own primitive field may be mutated through its
-unqualified name:
+Inside a class method, an own primitive field must be accessed and mutated
+through `self`:
 
 ```eido
-set x = 20;
+set self.x = 20;
 ```
+
+Unqualified own-field reads or mutations are rejected.
 
 Class-valued field mutation remains deferred until explicit copy/reference
 semantics exist.

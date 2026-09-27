@@ -52,21 +52,23 @@ explicit copy/reference semantics are defined.
 
 ## Own-field mutation
 
-Inside a class method, an own primitive field may be mutated by its unqualified
-field name:
+Inside a class method, an own primitive field may be mutated only through the
+explicit current receiver `self`:
 
 ```eido
 class Account {
     Int balance;
 
     function withdraw(Int amount) returns Int {
-        set balance = balance - amount;
-        return balance;
+        set self.balance = self.balance - amount;
+        return self.balance;
     }
 }
 ```
 
-This works because the method owns the class receiver and its state transition.
+This works because `self` denotes the method's current class receiver and the
+method owns that receiver's state transition. Unqualified own-field mutation is
+rejected.
 
 Parameters remain immutable, and class-valued fields are not yet mutable.
 

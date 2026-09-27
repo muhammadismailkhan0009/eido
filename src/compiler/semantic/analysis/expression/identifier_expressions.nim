@@ -1,4 +1,4 @@
-## Resolves unqualified identifiers to locals, parameters, or own-class fields.
+## Resolves unqualified identifiers to locals, parameters, or the explicit self receiver.
 
 ## Resolves one identifier expression from the effective method/function scope.
 proc analyzeIdentifier(
@@ -6,24 +6,26 @@ proc analyzeIdentifier(
   locals: LocalScope
 ): hirExpressions.HirExpr =
   if not locals.contains(expr.name):
-    failAt(expr.span, "unknown local or field '" & expr.name & "'")
+    if expr.name == "self":
+      failAt(expr.span, "'self' is only available inside instance methods")
+    failAt(expr.span, "unknown local '" & expr.name & "'")
 
   let symbol = locals.get(expr.name)
   case symbol.kind
-  of bkField:
-    let receiver = HirExpr(
+  of bkReceiver:
+    HirExpr(
       kind: hekLocal,
       span: expr.span,
-      typ: symbol.ownerType,
-      localId: symbol.receiverId,
+      typ: symbol.typ,
+      localId: symbol.id,
       sourceName: "receiver"
     )
-    HirExpr(
-      kind: hekFieldAccess,
-      span: expr.span,
-      typ: symbol.typ,
-      target: receiver,
-      sourceFieldName: symbol.name
+
+  of bkField:
+    failAt(
+      expr.span,
+      "own field '" & symbol.name & "' must be accessed through self." &
+        symbol.name
     )
 
   of bkParameter, bkVariable:

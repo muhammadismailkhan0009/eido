@@ -1,4 +1,4 @@
-## Analyzes one class-owned instance method with an implicit receiver.
+## Analyzes one class-owned instance method with explicit source-level self bound to a hidden receiver.
 ## Class fields occupy the same effective name namespace as method parameters and locals.
 
 import ../../diagnostics/errors
@@ -20,6 +20,16 @@ proc analyzeMethod*(
 ): hirDeclarations.HirMethod =
   var locals = initLocalScope()
   let receiverLocalId = locals.nextLocalId()
+  locals.add(
+    "self",
+    LocalSymbol(
+      name: "self",
+      typ: owner.typ,
+      span: sourceMethod.span,
+      kind: bkReceiver,
+      id: receiverLocalId
+    )
+  )
 
   for field in owner.fields:
     locals.add(

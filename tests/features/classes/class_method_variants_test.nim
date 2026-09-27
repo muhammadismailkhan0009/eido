@@ -9,7 +9,7 @@ suite "Class method execution":
         Int balance;
 
         function remaining(Int amount) returns Int {
-          return balance - amount;
+          return self.balance - amount;
         }
       }
 
@@ -32,7 +32,7 @@ suite "Class method execution":
         Int balance;
 
         function boundedRemaining(Int amount) returns Int {
-          var remaining = balance - amount;
+          var remaining = self.balance - amount;
           if (remaining < 0) {
             return 0;
           } else {
@@ -79,7 +79,7 @@ suite "Class method execution":
         Int balance;
 
         function doubled() returns Int {
-          return twice(balance);
+          return twice(self.balance);
         }
       }
 
@@ -130,7 +130,7 @@ suite "Class method execution":
         Int balance;
 
         function value() returns Int {
-          return balance;
+          return self.balance;
         }
       }
 
@@ -138,7 +138,7 @@ suite "Class method execution":
         Account account;
 
         function read() returns Int {
-          return account.value();
+          return self.account.value();
         }
       }
 
@@ -171,7 +171,7 @@ suite "Class method uniqueness":
         Int balance;
         function inspect() returns Int {
           var balance = 1;
-          return balance;
+          return self.balance;
         }
       }
       function main() {}
@@ -221,8 +221,8 @@ suite "Class method mutation":
         Int balance;
 
         function withdraw(Int amount) returns Int {
-          set balance = balance - amount;
-          return balance;
+          set self.balance = self.balance - amount;
+          return self.balance;
         }
       }
 

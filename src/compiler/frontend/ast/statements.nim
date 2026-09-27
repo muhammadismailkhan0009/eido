@@ -22,7 +22,7 @@ type
       name*: string
       initializer*: Expr
     of skAssign:
-      target*: string
+      target*: Expr
       assignedValue*: Expr
     of skCall:
       call*: Expr

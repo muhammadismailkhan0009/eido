@@ -44,6 +44,8 @@ proc analyzeStmt*(
     if locals.contains(stmt.name):
       let existing = locals.get(stmt.name)
       case existing.kind
+      of bkReceiver:
+        failAt(stmt.span, "local name 'self' is reserved for the current receiver")
       of bkField:
         failAt(
           stmt.span,
@@ -92,15 +94,60 @@ proc analyzeStmt*(
     )
 
   of astStatements.skAssign:
-    if not locals.contains(stmt.target):
-      failAt(stmt.span, "unknown set target '" & stmt.target & "'")
+    case stmt.target.kind
+    of astExpressions.ekIdentifier:
+      let targetName = stmt.target.name
+      if not locals.contains(targetName):
+        failAt(stmt.span, "unknown set target '" & targetName & "'")
 
-    let target = locals.get(stmt.target)
-    case target.kind
-    of bkParameter:
-      failAt(stmt.span, "parameters cannot be mutated with set")
+      let target = locals.get(targetName)
+      case target.kind
+      of bkReceiver:
+        failAt(stmt.span, "'self' cannot be replaced with set")
+      of bkParameter:
+        failAt(stmt.span, "parameters cannot be mutated with set")
+      of bkField:
+        failAt(
+          stmt.span,
+          "own field '" & target.name & "' must be mutated through self." &
+            target.name
+        )
+      of bkVariable:
+        let value = analyzeExprExpected(
+          stmt.assignedValue,
+          target.typ,
+          locals,
+          functions,
+          classes
+        )
 
-    of bkField:
+        if target.typ.kind == etkClass and
+            stmt.assignedValue.kind != astExpressions.ekConstruct:
+          failAt(
+            stmt.assignedValue.span,
+            "class-valued set requires explicit copy or ref"
+          )
+
+        HirStmt(
+          kind: hskAssign,
+          span: stmt.span,
+          targetId: target.id,
+          targetName: target.name,
+          assignedValue: value
+        )
+
+    of astExpressions.ekFieldAccess:
+      if stmt.target.target.kind != astExpressions.ekIdentifier or
+          stmt.target.target.name != "self":
+        failAt(stmt.target.span, "field mutation requires a self.<field> target")
+
+      let target = analyzeExpr(stmt.target, locals, functions, classes)
+      if target.kind != hekFieldAccess or target.target.kind != hekLocal:
+        raise newException(
+          ValueError,
+          "semantic invariant: self field set did not resolve to field access"
+        )
+
       if target.typ.kind == etkClass:
         failAt(
           stmt.span,
@@ -118,33 +165,15 @@ proc analyzeStmt*(
       HirStmt(
         kind: hskFieldSet,
         span: stmt.span,
-        receiverId: target.receiverId,
-        fieldName: target.name,
+        receiverId: target.target.localId,
+        fieldName: target.sourceFieldName,
         fieldValue: value
       )
 
-    of bkVariable:
-      let value = analyzeExprExpected(
-        stmt.assignedValue,
-        target.typ,
-        locals,
-        functions,
-        classes
-      )
-
-      if target.typ.kind == etkClass and
-          stmt.assignedValue.kind != astExpressions.ekConstruct:
-        failAt(
-          stmt.assignedValue.span,
-          "class-valued set requires explicit copy or ref"
-        )
-
-      HirStmt(
-        kind: hskAssign,
-        span: stmt.span,
-        targetId: target.id,
-        targetName: target.name,
-        assignedValue: value
+    else:
+      failAt(
+        stmt.target.span,
+        "set target must be a mutable local or own field through self"
       )
 
   of astStatements.skCall:

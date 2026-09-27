@@ -17,7 +17,7 @@ suite "Instance method call semantics":
         Int balance;
 
         function remaining(Int amount) returns Int {
-          return balance - amount;
+          return self.balance - amount;
         }
       }
 
@@ -136,7 +136,7 @@ suite "Instance method call semantics":
         Account account;
 
         function read() returns Int {
-          return account.value();
+          return self.account.value();
         }
       }
 
@@ -144,7 +144,7 @@ suite "Instance method call semantics":
         Int balance;
 
         function value() returns Int {
-          return balance;
+          return self.balance;
         }
       }
 

@@ -26,7 +26,11 @@ proc parseForUpdate(parser: var Parser): Stmt =
       line: start.span.line,
       column: start.span.column
     ),
-    target: target.lexeme,
+    target: Expr(
+      kind: ekIdentifier,
+      span: target.span,
+      name: target.lexeme
+    ),
     assignedValue: value
   )
 

@@ -25,8 +25,8 @@ suite "Set execution":
         Int balance;
 
         function withdraw(Int amount) returns Int {
-          set balance = balance - amount;
-          return balance;
+          set self.balance = self.balance - amount;
+          return self.balance;
         }
       }
 
@@ -143,7 +143,7 @@ suite "Set rejection boundaries":
         Address address;
 
         function replace() {
-          set address = Address { zip: 33100; };
+          set self.address = Address { zip: 33100; };
         }
       }
 

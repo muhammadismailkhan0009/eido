@@ -7,25 +7,34 @@ class Account {
     Int balance;
 
     function remaining(Int amount) returns Int {
-        return balance - amount;
+        return self.balance - amount;
     }
 }
 ```
 
-Methods are class-owned behavior. Their receiver is implicit in Eido source.
+Methods are class-owned behavior. Inside an instance method, reserved `self`
+explicitly denotes the current instance.
 
-## Own-field access
+## Current-instance access
 
-A method may read fields of its own class directly:
+Own fields must be accessed through `self`:
 
 ```eido
-return balance - amount;
+return self.balance - amount;
 ```
 
-There is no `self.balance` or `this.balance` syntax in this version.
+Own methods are called the same way:
 
-The compiler represents the receiver internally, but it is not part of the
-source language.
+```eido
+return self.remaining(20);
+```
+
+Unqualified own-field access is rejected. An unqualified call such as
+`calculate(...)` remains a top-level function call rather than an implicit
+method lookup.
+
+The compiler lowers `self` to a hidden receiver parameter internally; that
+backend representation is not exposed as a separate Eido value declaration.
 
 ## Method calls
 
@@ -67,7 +76,9 @@ Method bodies reuse the existing function/statement semantics:
 - conditionals;
 - loops and loop control;
 - top-level function calls;
-- `set` mutation of locals and own primitive fields.
+- `self.method(...)` calls on the current instance;
+- `set` mutation of locals;
+- `set self.field = ...` mutation of own primitive fields.
 
 The current signature slice remains primitive-only for explicit method
 parameters and results, matching top-level function signatures.
@@ -120,17 +131,18 @@ supported. Different classes may use the same method name.
 
 ## Mutation boundary
 
-A method may read and mutate its own primitive fields by unqualified name:
+A method may mutate an own primitive field only through `self`:
 
 ```eido
 function withdraw(Int amount) returns Int {
-    set balance = balance - amount;
-    return balance;
+    set self.balance = self.balance - amount;
+    return self.balance;
 }
 ```
 
 Only class-owned behavior receives this field-mutation authority. External
-postfix field mutation such as `set account.balance = 0;` is invalid.
+postfix field mutation such as `set account.balance = 0;` is invalid, and
+unqualified `set balance = ...` is rejected.
 
 Class-valued fields remain non-mutable until explicit copy/reference semantics
 are defined.
@@ -138,8 +150,8 @@ are defined.
 ## Backend representation
 
 The Nim backend lowers each Eido method to a generated procedure whose first
-parameter is the hidden receiver. This is a backend implementation detail and
-does not add receiver syntax to Eido.
+parameter is the hidden receiver. Source-level `self` resolves to that
+receiver; the generated parameter remains a backend implementation detail.
 
 ## Current boundary
 

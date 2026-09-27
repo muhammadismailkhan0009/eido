@@ -7,6 +7,7 @@ import ids
 
 type
   BindingKind* = enum
+    bkReceiver,
     bkParameter,
     bkVariable,
     bkField
@@ -16,7 +17,7 @@ type
     typ*: EidoType
     span*: SourceSpan
     case kind*: BindingKind
-    of bkParameter, bkVariable:
+    of bkReceiver, bkParameter, bkVariable:
       id*: LocalId
     of bkField:
       receiverId*: LocalId

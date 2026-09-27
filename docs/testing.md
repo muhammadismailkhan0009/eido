@@ -54,6 +54,7 @@ tests/
       class_construction_variants_test.nim
       class_field_access_variants_test.nim
       class_method_variants_test.nim
+      self_receiver_variants_test.nim
     control_flow/
       README.md
       conditional_variants_test.nim

@@ -10,14 +10,14 @@ proc analyzeSource(source: string): auto =
   analyzeProgram(parseProgram(lexAll(source)))
 
 suite "Class method semantics":
-  test "analyzes a read-only method with an implicit class receiver":
+  test "analyzes a method with an explicit self source receiver":
     # Given
     let source = """
       class Account {
         Int balance;
 
         function remaining(Int amount) returns Int {
-          return balance - amount;
+          return self.balance - amount;
         }
       }
 
@@ -80,7 +80,7 @@ suite "Class method semantics":
 
         function inspect() returns Int {
           var balance = 1;
-          return balance;
+          return self.balance;
         }
       }
 

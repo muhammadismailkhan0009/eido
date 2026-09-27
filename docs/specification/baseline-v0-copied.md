@@ -649,7 +649,7 @@ class Account {
                 amount <= balance,
         },
 
-        set balance = balance - amount,
+        set self.balance = self.balance - amount,
 
         ensure {
             decreased:

@@ -33,14 +33,17 @@
 
 `class_method_variants_test.nim` covers:
 
-- read-only own-field access inside methods
-- method parameters/results and instance calls
+- explicit `self.field` reads inside methods
+- method parameters/results and explicit-instance calls
 - zero-result method call statements
 - existing locals/control flow inside method bodies
 - method calls to top-level functions
 - method calls through class-valued fields
+- `set self.field = ...` for own primitive field mutation
 - field/parameter/local/nested-local uniqueness constraints
-- rejection of field mutation before `set` semantics
 
-Field mutation, interfaces, contracts, and class-valued explicit function/method
-signatures remain outside the current class slice.
+`self_receiver_variants_test.nim` covers current-instance field/method access,
+same-name top-level function separation, and invalid receiver contexts.
+
+Interfaces, contracts, class-valued field mutation, and class-valued explicit
+function/method signatures remain outside the current class slice.
