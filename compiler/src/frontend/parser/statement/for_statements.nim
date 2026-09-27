@@ -20,12 +20,7 @@ proc parseForUpdate(parser: var Parser): Stmt =
 
   Stmt(
     kind: skAssign,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: value.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, value.span),
     target: Expr(
       kind: ekIdentifier,
       span: target.span,
@@ -60,12 +55,7 @@ proc parseForStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skFor,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: loopBody.closeBrace.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, loopBody.closeBrace.span),
     forInitializer: initializer,
     forCondition: condition,
     forUpdate: update,

@@ -32,12 +32,7 @@ proc parseParameters(parser: var Parser): seq[Parameter] =
     let typeRef = parser.parseDeclaredTypeRef()
     let nameToken = parser.consume(tkIdentifier, "expected parameter name")
     result.add Parameter(
-      span: SourceSpan(
-        startOffset: typeRef.span.startOffset,
-        endOffset: nameToken.span.endOffset,
-        line: typeRef.span.line,
-        column: typeRef.span.column
-      ),
+      span: coverSpan(typeRef.span, nameToken.span),
       name: nameToken.lexeme,
       typeRef: typeRef
     )
@@ -78,12 +73,7 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
   let closeBrace = parser.consume(tkRBrace, "expected '}' after function body")
 
   FunctionDecl(
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: closeBrace.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
     parameters: parameters,
     result: functionResult,

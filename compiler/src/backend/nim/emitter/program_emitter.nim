@@ -33,17 +33,19 @@ proc emitNim*(program: hirProgram.HirProgram): string =
     result.add renderFunction(fn)
     result.add "\n"
 
-  var mainIndex = -1
-  for index, fn in program.functions:
-    if fn.functionId.value == program.mainFunctionId.value:
-      mainIndex = index
-      break
+  if program.hasMain:
+    var mainIndex = -1
+    for index, fn in program.functions:
+      if fn.functionId.value == program.mainFunctionId.value:
+        mainIndex = index
+        break
 
-  let mainFn = program.functions[mainIndex]
-  let mainName = functionName(mainFn.functionId, mainFn.sourceName)
+    let mainFn = program.functions[mainIndex]
+    let mainName = functionName(mainFn.functionId, mainFn.sourceName)
 
-  result.add "when isMainModule:\n"
-  if mainFn.result.kind == frNone:
-    result.add "  " & mainName & "()\n"
-  else:
-    result.add "  echo " & mainName & "()\n"
+    result.add "when isMainModule:\n"
+    if mainFn.result.kind == frNone:
+      result.add "  " & mainName & "()\n"
+    else:
+      # Temporary v0 harness: result printing remains until process-exit/stdlib semantics replace it.
+      result.add "  echo " & mainName & "()\n"

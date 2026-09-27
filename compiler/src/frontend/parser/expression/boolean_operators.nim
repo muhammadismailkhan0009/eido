@@ -6,12 +6,7 @@ proc parseNot(parser: var Parser): Expr =
     let operand = parser.parseNot()
     return Expr(
       kind: ekUnary,
-      span: SourceSpan(
-        startOffset: operator.span.startOffset,
-        endOffset: operand.span.endOffset,
-        line: operator.span.line,
-        column: operator.span.column
-      ),
+      span: coverSpan(operator.span, operand.span),
       unaryOp: uoNot,
       operand: operand
     )

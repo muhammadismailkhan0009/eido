@@ -1,5 +1,7 @@
 import std/[os, osproc, strutils, unittest]
-import pipeline/compiler
+import pipeline/[compiler, project_compiler]
+import project/model
+import source/source_unit
 import backend/nim/toolchain/compiler as nimCompiler
 
 ## Compiles Eido source through the real Nim toolchain and returns program stdout.
@@ -16,6 +18,22 @@ proc runNative(source: string, caseName: string): string =
       removeFile(generatedPath)
 
   nimCompiler.compileWithNim(compileToNim(source), outputPath)
+  execProcess(outputPath).strip()
+
+## Compiles a multi-source Eido project through the real Nim toolchain and returns stdout.
+## Example: main.eido can call a function declared in service.eido and execute as one native binary.
+proc runNativeProject(project: EidoProject, caseName: string): string =
+  let outputPath =
+    getTempDir() / ("eido_" & caseName & "_" & $getCurrentProcessId())
+  let generatedPath = outputPath & "_generated.nim"
+
+  defer:
+    if fileExists(outputPath):
+      removeFile(outputPath)
+    if fileExists(generatedPath):
+      removeFile(generatedPath)
+
+  nimCompiler.compileWithNim(compileProjectToNim(project), outputPath)
   execProcess(outputPath).strip()
 
 suite "Compiler pipeline":
@@ -59,3 +77,25 @@ suite "Compiler pipeline":
 
     # Then
     check output == ""
+
+
+  test "compiles multiple source units into one native executable":
+    # Given
+    let project = initProject(ptExecutable, @[
+      initSourceUnit(0, "src/main.eido", """
+        function main() returns Int {
+          var account = Account { balance: 42; };
+          return read(account);
+        }
+      """),
+      initSourceUnit(1, "src/account.eido", """
+        class Account { Int balance; }
+        function read(Account account) returns Int { return account.balance; }
+      """)
+    ])
+
+    # When
+    let output = runNativeProject(project, "multi_source")
+
+    # Then
+    check output == "42"

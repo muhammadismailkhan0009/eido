@@ -12,12 +12,7 @@ proc parseWhileStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skWhile,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: loopBody.closeBrace.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, loopBody.closeBrace.span),
     whileCondition: condition,
     body: loopBody.body
   )

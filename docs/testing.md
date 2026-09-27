@@ -1,9 +1,10 @@
 # Eido testing strategy
 
-Eido uses behavior-driven development with two complementary test layers:
+Eido uses behavior-driven development with three complementary test layers:
 
 1. compiler-internal responsibility tests;
-2. language-facing feature acceptance tests.
+2. language-facing feature acceptance tests;
+3. cross-component toolchain integration tests.
 
 ## BDD lifecycle
 
@@ -39,6 +40,7 @@ compiler/
       expression/
       statement/
     pipeline/
+    project/
 
     features/
       expression/
@@ -69,6 +71,10 @@ These tests answer questions such as:
 - did semantic analysis resolve/type-check this program correctly?
 - did HIR lower to the expected Nim representation?
 
+### Project/compiler tests
+
+`compiler/tests/project/` proves project-source assembly, executable/library target rules, source-order independence, and source-aware diagnostics without involving editor/MCP transports.
+
 ### Language feature tests
 
 `compiler/tests/features/` is the executable catalog of user-visible Eido behavior.
@@ -81,8 +87,7 @@ These tests answer questions such as:
 - which variable initialization/`set` mutation variants work?
 - which expression forms work?
 
-Some behavior is intentionally covered by both layers because the boundary risk is different:
-the compiler test proves the owning implementation contract, while the feature test proves the language surface as a complete Eido program.
+Some behavior is intentionally covered by multiple layers because the boundary risk is different: compiler tests prove the owning implementation contract, feature tests prove the language surface as complete Eido programs, and root integration tests prove adapters/tooling compose those compiler capabilities correctly.
 
 Do not create historical milestone suites such as `test_feature06.nim`. Feature acceptance files are named for the language capability, not the chronological feature number.
 
@@ -112,6 +117,7 @@ Names describe visible behavior rather than implementation details.
 - Pipeline tests exercise the complete real path through native Nim compilation.
 - Feature tests exercise complete user-facing Eido variants through generated Nim executed by `nim e`; this preserves end-to-end language behavior without paying native compilation cost per scenario.
 - Architecture tests prove dependency/readability/test-organization constraints.
+- Root integration tests prove cross-component flows such as CLI multi-source project builds through the real native toolchain.
 - Test through public phase entry points; do not test private procedures directly.
 
 ## Test support
@@ -124,7 +130,7 @@ Test support must not duplicate compiler logic or become a generic utilities dir
 
 ## Running tests
 
-Run the complete internal + feature suite with:
+Run the complete compiler + feature + integration suite with:
 
 ```text
 nimble test
@@ -139,6 +145,7 @@ The canonical test task is parallel and CPU-adaptive:
 5. Language-facing feature tests run one process per individual test, because those cases are comparatively expensive and often execute generated Nim through `nim e`.
 6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
 7. Successful child output is suppressed; failed child output is replayed with its selector.
+8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios; currently this includes multi-source CLI parsing/build/native execution.
 
 Worker count defaults to `max(1, countProcessors() - 2)` so two logical cores remain free for the OS and other work. Override it when needed:
 

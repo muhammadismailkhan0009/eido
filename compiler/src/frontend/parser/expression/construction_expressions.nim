@@ -28,12 +28,7 @@ proc parseConstruction(
     )
 
     fields.add ConstructionField(
-      span: SourceSpan(
-        startOffset: name.span.startOffset,
-        endOffset: semicolon.span.endOffset,
-        line: name.span.line,
-        column: name.span.column
-      ),
+      span: coverSpan(name.span, semicolon.span),
       name: name.lexeme,
       value: value
     )
@@ -43,12 +38,7 @@ proc parseConstruction(
 
   Expr(
     kind: ekConstruct,
-    span: SourceSpan(
-      startOffset: typeToken.span.startOffset,
-      endOffset: closeBrace.span.endOffset,
-      line: typeToken.span.line,
-      column: typeToken.span.column
-    ),
+    span: coverSpan(typeToken.span, closeBrace.span),
     typeName: typeToken.lexeme,
     fields: fields
   )

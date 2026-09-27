@@ -15,12 +15,7 @@ proc parseExpression*(parser: var Parser): Expr
 ## Creates a source span covering both sides of a binary expression.
 ## Example: the span for `a + 5` starts at `a` and ends after `5`.
 proc binarySpan(left, right: Expr): SourceSpan =
-  SourceSpan(
-    startOffset: left.span.startOffset,
-    endOffset: right.span.endOffset,
-    line: left.span.line,
-    column: left.span.column
-  )
+  coverSpan(left.span, right.span)
 
 include expression/literal_expressions
 include expression/call_expressions

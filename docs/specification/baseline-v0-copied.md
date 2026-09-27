@@ -2388,3 +2388,126 @@ Eido programs and compilation must remain deterministic and usable without an
 LLM. AI-native tooling means the compiler exposes structured, selective,
 semantically grounded operations that make agents more reliable; it does not
 make model inference part of ordinary compilation semantics.
+
+
+---
+
+# 41. Current implemented v0 project and multi-source compilation model
+
+> Status: approved and implemented foundation. This section is authoritative
+> for project/source compilation behavior until the module/package grammar is
+> implemented.
+
+## Source identity
+
+Compilation operates on explicit `SourceUnit` values. Each source unit carries:
+
+```text
+project-local SourceId
+path
+text
+```
+
+Lexer tokens and all derived `SourceSpan` values retain source id/path plus
+source offsets, line, and column. Composite AST spans preserve the originating
+source identity. File-aware lexer/parser/semantic diagnostics therefore report
+locations such as `src/account.eido:3:9`.
+
+## Project target
+
+The compiler-level root is `EidoProject`:
+
+```text
+EidoProject
+├── target
+│   ├── executable
+│   └── library
+└── sources: SourceUnit[]
+```
+
+An executable project requires one top-level `function main()` entrypoint.
+`main` must have zero parameters. Multiple functions named `main` are rejected
+by the ordinary duplicate top-level function rule.
+
+A library project does not require `main`. Its HIR/backend output carries no
+executable main harness. This distinction is required for future stdlib,
+packages, reusable modules, and project targets.
+
+## Multi-source compilation
+
+Every source unit is lexed and parsed independently. The resulting top-level
+class/function declarations are then merged into one project AST declaration
+universe before semantic declaration collection and body analysis.
+
+Therefore, during this pre-module stage:
+
+```text
+file order does not define visibility
+classes may reference classes declared in another supplied file
+functions may call functions declared in another supplied file
+functions/methods may use class types declared in another supplied file
+duplicate top-level class/function names are project-wide errors
+```
+
+There is currently no source-level `import` grammar, module visibility rule,
+package boundary, or namespace derived from physical directories. Supplying a
+source unit to the project currently places its declarations in the same global
+project declaration universe.
+
+## Tooling and CLI boundary
+
+The protocol-neutral compiler tooling API now exposes project checking and
+project compilation. The old single-source compiler entry remains only as a
+compatibility/convenience wrapper that creates a one-source executable project.
+
+The CLI accepts multiple explicit source files:
+
+```text
+eido build main.eido account.eido service.eido -o app
+```
+
+It creates identified SourceUnits and one executable EidoProject, then delegates
+to the same compiler tooling/project pipeline intended for future LSP and MCP
+adapters. No project manifest or automatic directory crawl is defined yet.
+
+## Entrypoint output note
+
+The current Nim backend still prints the result of a value-returning `main`.
+That behavior is retained temporarily because existing language acceptance tests
+need an observable result before console/process stdlib semantics exist.
+
+It is not the final application contract. The durable entrypoint decision is:
+
+```text
+executable target -> top-level zero-parameter main required
+library target    -> no entrypoint required
+```
+
+Final process exit-code rules and explicit console output behavior will be
+specified with process/stdlib support rather than inferred from the temporary
+backend harness.
+
+## Parallel toolchain completion policy
+
+From this point, Eido v0 is developed as a language + development experience,
+not as syntax/semantics first and tooling later. When v0 language semantics are
+finished, the intended normal authoring experience should already include the
+core facilities expected from a Java-like development environment:
+
+```text
+project-aware build/check/run
+automatic syntax and semantic highlighting
+live diagnostics
+hover/type/signature information
+member completion after '.' and ordinary symbol completion
+signature help
+go-to-definition and find references
+safe rename when supported by compiler symbol identity
+canonical formatting
+MCP project/check/inspect/context access
+```
+
+LSP/editor and MCP implementations are adapters over the compiler tooling API.
+They must not implement independent parsing, name resolution, typing, or member
+lookup. Tooling capabilities are added incrementally alongside the compiler
+facts required to support them.

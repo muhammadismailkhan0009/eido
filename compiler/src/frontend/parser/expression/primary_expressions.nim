@@ -15,12 +15,7 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
     let value = parser.parsePrimary()
     return Expr(
       kind: ekClassRelation,
-      span: SourceSpan(
-        startOffset: relation.span.startOffset,
-        endOffset: value.span.endOffset,
-        line: relation.span.line,
-        column: relation.span.column
-      ),
+      span: coverSpan(relation.span, value.span),
       relationKind: if relation.kind == tkCopy: cvrCopy else: cvrRef,
       relatedValue: value
     )

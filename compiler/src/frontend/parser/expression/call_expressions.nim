@@ -23,12 +23,7 @@ proc parseCall(parser: var Parser, name: Token): Expr =
 
   Expr(
     kind: ekCall,
-    span: SourceSpan(
-      startOffset: name.span.startOffset,
-      endOffset: parsed.closeParen.span.endOffset,
-      line: name.span.line,
-      column: name.span.column
-    ),
+    span: coverSpan(name.span, parsed.closeParen.span),
     callee: name.lexeme,
     arguments: parsed.arguments
   )

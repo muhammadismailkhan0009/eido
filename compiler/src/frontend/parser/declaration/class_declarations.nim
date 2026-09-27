@@ -9,12 +9,7 @@ proc parseFieldDecl(parser: var Parser): FieldDecl =
     parser.consume(tkSemicolon, "expected ';' after field declaration")
 
   FieldDecl(
-    span: SourceSpan(
-      startOffset: typeRef.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: typeRef.span.line,
-      column: typeRef.span.column
-    ),
+    span: coverSpan(typeRef.span, semicolon.span),
     name: name.lexeme,
     typeRef: typeRef
   )
@@ -39,12 +34,7 @@ proc parseClass*(parser: var Parser): ClassDecl =
   let closeBrace = parser.consume(tkRBrace, "expected '}' after class body")
 
   ClassDecl(
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: closeBrace.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
     fields: fields,
     methods: methods

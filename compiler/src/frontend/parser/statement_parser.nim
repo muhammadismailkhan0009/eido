@@ -25,12 +25,7 @@ proc parseVarStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skVar,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, semicolon.span),
     name: name.lexeme,
     initializer: initializer
   )
@@ -57,12 +52,7 @@ proc parseSetTarget(parser: var Parser): Expr =
     )
     return Expr(
       kind: ekFieldAccess,
-      span: SourceSpan(
-        startOffset: receiver.span.startOffset,
-        endOffset: field.span.endOffset,
-        line: receiver.span.line,
-        column: receiver.span.column
-      ),
+      span: coverSpan(receiver.span, field.span),
       target: selfExpr,
       fieldName: field.lexeme
     )
@@ -83,12 +73,7 @@ proc parseSetStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skAssign,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, semicolon.span),
     target: target,
     assignedValue: value
   )
@@ -106,12 +91,7 @@ proc parseCallStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skCall,
-    span: SourceSpan(
-      startOffset: call.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: call.span.line,
-      column: call.span.column
-    ),
+    span: coverSpan(call.span, semicolon.span),
     call: call
   )
 
@@ -129,12 +109,7 @@ proc parseReturnStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skReturn,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, semicolon.span),
     value: value
   )
 

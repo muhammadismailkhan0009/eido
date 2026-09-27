@@ -29,12 +29,7 @@ proc parseIfStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skIf,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: endSpan.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    ),
+    span: coverSpan(start.span, endSpan),
     condition: condition,
     thenBranch: thenPart.body,
     elseBranch: elseBody

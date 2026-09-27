@@ -1,10 +1,22 @@
-## Owns the CLI build action. Example: reads `app.eido`, uses the compiler tooling API, then asks the Nim toolchain for a native binary.
+## Owns CLI executable-project builds through the protocol-neutral compiler tooling API.
+## Example: main.eido and account.eido are loaded as one project before native compilation.
 
+import ../../../../compiler/src/project/model
+import ../../../../compiler/src/source/source_unit
 import ../../../../compiler/src/tooling/compiler_service
 import ../../../../compiler/src/backend/nim/toolchain/compiler as nimCompiler
 
-## Builds one Eido source file into a native executable. Example: `buildFile("main.eido", "bin/main")` compiles that program via the Nim backend.
-proc buildFile*(sourcePath, outputPath: string) =
-  let source = readFile(sourcePath)
-  let nimSource = compileSourceToNim(source)
+## Builds multiple Eido source files as one executable project.
+## Example: `buildFiles(@["main.eido", "account.eido"], "app")` resolves declarations across both files.
+proc buildFiles*(sourcePaths: seq[string], outputPath: string) =
+  var sources: seq[SourceUnit]
+  for index, sourcePath in sourcePaths:
+    sources.add initSourceUnit(index, sourcePath, readFile(sourcePath))
+
+  let nimSource = compileProject(initProject(ptExecutable, sources))
   nimCompiler.compileWithNim(nimSource, outputPath)
+
+## Preserves the one-file build convenience API over project compilation.
+## Example: `buildFile("main.eido", "bin/main")` builds a one-source executable project.
+proc buildFile*(sourcePath, outputPath: string) =
+  buildFiles(@[sourcePath], outputPath)

@@ -1,6 +1,6 @@
 ## Scans raw Eido source into tokens while tracking line and column positions. Example: `return 1.5;` becomes return/Float-literal/semicolon tokens.
 
-import ../../source/span
+import ../../source/[source_unit, span]
 import ../../diagnostics/errors
 import token
 import keywords
@@ -8,13 +8,40 @@ import keywords
 type
   Lexer* = object
     source: string
+    sourceId: SourceId
+    sourcePath: string
     current: int
     line: int
     column: int
 
-## Creates a lexer positioned at the first source character. Example: `initLexer("var x = 5;")` starts at line 1, column 1.
+## Creates a lexer positioned at the first character of an anonymous in-memory source.
+## Example: `initLexer("var x = 5;")` starts at line 1, column 1 with no file path.
 proc initLexer*(source: string): Lexer =
-  Lexer(source: source, current: 0, line: 1, column: 1)
+  Lexer(
+    source: source,
+    sourceId: SourceId(-1),
+    sourcePath: "",
+    current: 0,
+    line: 1,
+    column: 1
+  )
+
+## Creates a lexer for one identified project source unit.
+## Example: tokens from `src/main.eido` retain that path in every produced span.
+proc initLexer*(sourceUnit: SourceUnit): Lexer =
+  Lexer(
+    source: sourceUnit.text,
+    sourceId: sourceUnit.id,
+    sourcePath: sourceUnit.path,
+    current: 0,
+    line: 1,
+    column: 1
+  )
+
+## Raises a lexer diagnostic while retaining the current source-file path.
+## Example: an invalid character in src/main.eido is reported with that path.
+proc failLexerAt(lexer: Lexer, line, column: int, message: string) {.noreturn.} =
+  failAt(lexer.sourcePath, line, column, message)
 
 ## Reports whether the lexer consumed all source characters. Example: after scanning the last `;`, the next check eventually becomes true.
 proc atEnd(lexer: Lexer): bool =
@@ -61,6 +88,7 @@ proc matchNext(lexer: var Lexer, expected: char): bool =
 
 ## Builds one token with its source span. Example: scanned text `123` becomes a `tkInteger` token pointing back to its exact location.
 proc makeToken(
+  lexer: Lexer,
   kind: TokenKind,
   lexeme: string,
   startOffset, endOffset, line, column: int
@@ -68,11 +96,13 @@ proc makeToken(
   Token(
     kind: kind,
     lexeme: lexeme,
-    span: SourceSpan(
-      startOffset: startOffset,
-      endOffset: endOffset,
-      line: line,
-      column: column
+    span: initSourceSpan(
+      lexer.sourceId,
+      lexer.sourcePath,
+      startOffset,
+      endOffset,
+      line,
+      column
     )
   )
 
@@ -98,14 +128,14 @@ proc scanNumber(
       discard lexer.advance()
 
   if lexer.peek in {'L', 'l', 'F', 'f', 'D', 'd'}:
-    failAt(
+    failLexerAt(lexer,
       startLine,
       startColumn,
       "numeric type suffixes are not supported; use Int or Float directly"
     )
 
   let text = lexer.source[startOffset ..< lexer.current]
-  makeToken(
+  lexer.makeToken(
     kind, text, startOffset, lexer.current, startLine, startColumn
   )
 
@@ -120,20 +150,20 @@ proc scanString(
     if current == '"':
       discard lexer.advance()
       let text = lexer.source[startOffset ..< lexer.current]
-      return makeToken(
+      return lexer.makeToken(
         tkStringLiteral, text, startOffset, lexer.current, startLine, startColumn
       )
 
     if current == '\n' or current == '\r':
-      failAt(startLine, startColumn, "unterminated String literal")
+      failLexerAt(lexer, startLine, startColumn, "unterminated String literal")
 
     if current == '\\':
       discard lexer.advance()
       if lexer.atEnd:
-        failAt(startLine, startColumn, "unterminated String escape")
+        failLexerAt(lexer, startLine, startColumn, "unterminated String escape")
       let escape = lexer.advance()
       if escape notin {'n', 'r', 't', '\\', '"'}:
-        failAt(
+        failLexerAt(lexer,
           startLine,
           startColumn,
           "unsupported String escape '\\\\" & $escape & "'"
@@ -141,7 +171,7 @@ proc scanString(
     else:
       discard lexer.advance()
 
-  failAt(startLine, startColumn, "unterminated String literal")
+  failLexerAt(lexer, startLine, startColumn, "unterminated String literal")
 
 ## Scans one 16-bit Eido Char literal. Example: `'A'`, `'\n'`, and `'\u0041'` each become one `tkChar` token.
 proc scanChar(
@@ -149,42 +179,42 @@ proc scanChar(
   startOffset, startLine, startColumn: int
 ): Token =
   if lexer.atEnd or lexer.peek == '\n' or lexer.peek == '\r':
-    failAt(startLine, startColumn, "unterminated Char literal")
+    failLexerAt(lexer, startLine, startColumn, "unterminated Char literal")
 
   if lexer.peek == '\'':
-    failAt(startLine, startColumn, "Char literal cannot be empty")
+    failLexerAt(lexer, startLine, startColumn, "Char literal cannot be empty")
 
   if lexer.peek == '\\':
     discard lexer.advance()
     if lexer.atEnd:
-      failAt(startLine, startColumn, "unterminated Char escape")
+      failLexerAt(lexer, startLine, startColumn, "unterminated Char escape")
 
     let escape = lexer.advance()
     case escape
     of 'u':
       for _ in 0 ..< 4:
         if lexer.atEnd or not isHexDigit(lexer.peek):
-          failAt(startLine, startColumn, "Char Unicode escape requires four hexadecimal digits")
+          failLexerAt(lexer, startLine, startColumn, "Char Unicode escape requires four hexadecimal digits")
         discard lexer.advance()
     of 'n', 'r', 't', 'b', 'f', '\\', '\'':
       discard
     else:
-      failAt(startLine, startColumn, "unsupported Char escape '\\" & $escape & "'")
+      failLexerAt(lexer, startLine, startColumn, "unsupported Char escape '\\" & $escape & "'")
   else:
     let value = lexer.advance()
     if ord(value) > 127:
-      failAt(
+      failLexerAt(lexer,
         startLine,
         startColumn,
         "non-ASCII Char literal must use a \\uXXXX escape"
       )
 
   if lexer.atEnd or lexer.peek != '\'':
-    failAt(startLine, startColumn, "Char literal must contain exactly one character")
+    failLexerAt(lexer, startLine, startColumn, "Char literal must contain exactly one character")
   discard lexer.advance()
 
   let text = lexer.source[startOffset ..< lexer.current]
-  makeToken(
+  lexer.makeToken(
     tkChar, text, startOffset, lexer.current, startLine, startColumn
   )
 
@@ -193,7 +223,7 @@ proc nextToken*(lexer: var Lexer): Token =
   lexer.skipWhitespace()
 
   if lexer.atEnd:
-    return makeToken(
+    return lexer.makeToken(
       tkEof, "", lexer.current, lexer.current, lexer.line, lexer.column
     )
 
@@ -206,7 +236,7 @@ proc nextToken*(lexer: var Lexer): Token =
     while not lexer.atEnd and isIdentPart(lexer.peek):
       discard lexer.advance()
     let text = lexer.source[startOffset ..< lexer.current]
-    return makeToken(
+    return lexer.makeToken(
       keywordKind(text), text, startOffset, lexer.current, startLine, startColumn
     )
 
@@ -237,7 +267,7 @@ proc nextToken*(lexer: var Lexer): Token =
       if lexer.matchNext('='):
         tkBangEqual
       else:
-        failAt(startLine, startColumn, "unexpected character '!'; use '!=' for inequality")
+        failLexerAt(lexer, startLine, startColumn, "unexpected character '!'; use '!=' for inequality")
     of '<':
       if lexer.matchNext('='): tkLessEqual else: tkLess
     of '>':
@@ -247,9 +277,9 @@ proc nextToken*(lexer: var Lexer): Token =
     of '*': tkStar
     of '/': tkSlash
     else:
-      failAt(startLine, startColumn, "unexpected character '" & $c & "'")
+      failLexerAt(lexer, startLine, startColumn, "unexpected character '" & $c & "'")
 
-  makeToken(
+  lexer.makeToken(
     kind,
     lexer.source[startOffset ..< lexer.current],
     startOffset,
@@ -261,6 +291,17 @@ proc nextToken*(lexer: var Lexer): Token =
 ## Scans the entire source into a token sequence ending in EOF. Example: `return true;` yields return, Bool literal, semicolon, and EOF tokens.
 proc lexAll*(source: string): seq[Token] =
   var lexer = initLexer(source)
+  while true:
+    let token = lexer.nextToken()
+    result.add token
+    if token.kind == tkEof:
+      break
+
+
+## Scans an identified project source unit into tokens while preserving source identity.
+## Example: every token from `src/main.eido` carries that path in its SourceSpan.
+proc lexAll*(sourceUnit: SourceUnit): seq[Token] =
+  var lexer = initLexer(sourceUnit)
   while true:
     let token = lexer.nextToken()
     result.add token

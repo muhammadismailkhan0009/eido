@@ -5,6 +5,7 @@ import ../../diagnostics/errors
 import ../../frontend/ast/program as astProgram
 import ../../hir/declarations
 import ../../hir/program as hirProgram
+import ../../project/model
 import ../../types/model
 import ../symbols/ids
 import type_resolution
@@ -15,8 +16,12 @@ import class_analysis
 import method_analysis
 import function_analysis
 
-## Collects declarations in dependency-safe passes, then analyzes method/function bodies.
-proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
+## Collects declarations in dependency-safe passes, then analyzes method/function bodies for the selected target.
+## Example: executable targets require a zero-parameter main while library targets do not.
+proc analyzeProgram*(
+  program: astProgram.Program,
+  target: ProjectTarget = ptExecutable
+): hirProgram.HirProgram =
   var classes = initClassSymbols()
 
   # Pass 1: establish nominal class identities.
@@ -98,14 +103,14 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
     )
     functions.add symbol
 
-    if fn.name == "main":
+    if target == ptExecutable and fn.name == "main":
       mainFound = true
       mainId = symbol.id
       if fn.parameters.len != 0:
         failAt(fn.span, "main function must not declare parameters")
 
-  if not mainFound:
-    raise newException(ValueError, "program must declare function main()")
+  if target == ptExecutable and not mainFound:
+    raise newException(ValueError, "executable project must declare function main()")
 
   # Pass 5: analyze class-owned method bodies with source-level self bound to hidden receivers.
   for classIndex, sourceClass in program.classes:
@@ -132,5 +137,6 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
   hirProgram.HirProgram(
     classes: analyzedClasses,
     functions: analyzedFunctions,
+    hasMain: mainFound,
     mainFunctionId: mainId
   )

@@ -14,15 +14,15 @@ Eido uses a modular compiler architecture with onion-style dependency boundaries
 ## Current pipeline
 
 ```text
-Eido source
+EidoProject
     ↓
-lexer
+SourceUnit[]
     ↓
-parser
+per-source lexer + parser
     ↓
-AST
+merged project AST declaration universe
     ↓
-semantic analysis
+target-aware semantic analysis
     ↓
 typed + resolved HIR
     ↓
@@ -32,14 +32,19 @@ generated Nim
     ↓
 Nim toolchain
     ↓
-native executable
+native executable (executable target)
 ```
+
+Single-source compilation remains a convenience wrapper that constructs a one-source executable project.
 
 ## Ownership
 
 ```text
 compiler/src/source/
-    source locations shared across compiler phases
+    SourceUnit identity/text and source-aware spans shared across compiler phases
+
+compiler/src/project/
+    EidoProject source set and executable/library target model
 
 compiler/src/diagnostics/
     compiler error formatting and reporting helpers
@@ -63,7 +68,7 @@ compiler/src/backend/nim/toolchain/
     generated artifacts and Nim process invocation
 
 compiler/src/pipeline/
-    pure compiler-stage orchestration
+    single-source compatibility plus project parse/analyze/emit orchestration
 
 compiler/src/tooling/
     protocol-neutral compiler services exposed to CLI, MCP, LSP, CI, and agents
@@ -76,6 +81,9 @@ tools/cli/src/
 
 tools/mcp/
     MCP protocol adapter over compiler tooling; semantic logic does not live here
+
+tools/lsp/
+    language-server adapter over compiler tooling; editor semantics do not live here
 
 stdlib/
     foundational APIs guaranteed with the installed SDK
@@ -94,6 +102,8 @@ tests/integration/
 
 - Source and diagnostic concepts must not depend on parser, semantic, HIR, backend, toolchain, or CLI code.
 - Frontend code must not depend on semantic analysis, HIR, or backend code.
+- Project/source identity models are lower-level compiler data and may be consumed by frontend, semantic, pipeline, and tooling layers.
+- Each SourceUnit is parsed independently, but semantic analysis consumes the merged project declaration universe so source order does not define visibility.
 - Semantic analysis may consume AST and produce HIR.
 - HIR must contain resolved symbol identity and semantic types needed by backends.
 - Backends consume HIR, not raw AST.

@@ -9,12 +9,7 @@ proc parseBreakStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skBreak,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    )
+    span: coverSpan(start.span, semicolon.span)
   )
 
 ## Parses one semicolon-terminated continue statement.
@@ -26,10 +21,5 @@ proc parseContinueStmt*(parser: var Parser): Stmt =
 
   Stmt(
     kind: skContinue,
-    span: SourceSpan(
-      startOffset: start.span.startOffset,
-      endOffset: semicolon.span.endOffset,
-      line: start.span.line,
-      column: start.span.column
-    )
+    span: coverSpan(start.span, semicolon.span)
   )

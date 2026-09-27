@@ -19,12 +19,7 @@ proc parseFieldAccessChain(
       let parsed = parser.parseCallArguments()
       result = Expr(
         kind: ekMethodCall,
-        span: SourceSpan(
-          startOffset: result.span.startOffset,
-          endOffset: parsed.closeParen.span.endOffset,
-          line: result.span.line,
-          column: result.span.column
-        ),
+        span: coverSpan(result.span, parsed.closeParen.span),
         receiver: result,
         methodName: member.lexeme,
         methodArguments: parsed.arguments
@@ -32,12 +27,7 @@ proc parseFieldAccessChain(
     else:
       result = Expr(
         kind: ekFieldAccess,
-        span: SourceSpan(
-          startOffset: result.span.startOffset,
-          endOffset: member.span.endOffset,
-          line: result.span.line,
-          column: result.span.column
-        ),
+        span: coverSpan(result.span, member.span),
         target: result,
         fieldName: member.lexeme
       )

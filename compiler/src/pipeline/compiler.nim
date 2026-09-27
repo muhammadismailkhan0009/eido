@@ -1,13 +1,13 @@
-## Composes pure compiler phases from source text to generated Nim text. Example: `compileToNim(source)` runs lexing, parsing, semantic analysis, HIR creation, and emission.
+## Preserves the single-source compiler API as a convenience over the project compiler.
+## Example: `compileToNim(source)` creates one anonymous executable source unit and runs the normal project pipeline.
 
-import ../frontend/lexer/scanner
-import ../frontend/parser/program_parser
-import ../semantic/analysis/program_analysis
-import ../backend/nim/emitter/program_emitter
+import ../project/model
+import ../source/source_unit
+import project_compiler
 
-## Runs the pure compiler pipeline from Eido source text to Nim source text. Example: `function main() returns Int { return 5; }` becomes a Nim `proc` without touching the filesystem.
+## Runs one anonymous Eido source string through the executable project pipeline.
+## Example: `function main() returns Int { return 5; }` still compiles without callers constructing a Project explicitly.
 proc compileToNim*(source: string): string =
-  let tokens = lexAll(source)
-  let ast = parseProgram(tokens)
-  let hir = analyzeProgram(ast)
-  emitNim(hir)
+  compileProjectToNim(
+    initProject(ptExecutable, @[initSourceUnit(0, "", source)])
+  )
