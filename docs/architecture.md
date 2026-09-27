@@ -38,54 +38,56 @@ native executable
 ## Ownership
 
 ```text
-compiler/source/
+compiler/src/source/
     source locations shared across compiler phases
 
-compiler/diagnostics/
+compiler/src/diagnostics/
     compiler error formatting and reporting helpers
 
-compiler/frontend/lexer/
-    token model, keyword recognition, source scanning
+compiler/src/frontend/
+    lexer, AST, and parser capabilities
 
-compiler/frontend/ast/
-    syntax tree grouped by expressions, statements, declarations, program
-
-compiler/frontend/parser/
-    parser mechanics and grammar grouped by construct
-    expression_parser.nim is a thin expression-entry/precedence coordinator
-    expression/ groups literals, calls, grouping, unary negation, arithmetic,
-    comparisons, and Boolean operators by semantic ownership
-    statement/ contains statement-family grammar such as conditional control flow
-
-compiler/types/
+compiler/src/types/
     core Eido semantic type model
 
-compiler/semantic/symbols/
-    symbol identity, function symbols, and lexical local scopes
+compiler/src/semantic/
+    symbol identity, name resolution, type analysis, and statement/expression semantics
 
-compiler/semantic/analysis/
-    type resolution plus expression, statement, function, and program semantic passes
-    expression_analysis.nim is a thin expression semantic coordinator
-    expression/ groups literal/contextual typing, identifiers, calls, unary
-    negation, arithmetic, comparisons, and Boolean rules by semantic ownership
-    statement/ contains statement-family rules such as conditional scopes and
-    definite-return analysis
-
-compiler/hir/
+compiler/src/hir/
     resolved and typed compiler representation
 
-compiler/backend/nim/emitter/
+compiler/src/backend/nim/emitter/
     pure HIR → Nim source translation
-    statement/ contains structured statement-family emitters such as conditionals
 
-compiler/backend/nim/toolchain/
+compiler/src/backend/nim/toolchain/
     generated artifacts and Nim process invocation
 
-compiler/pipeline/
+compiler/src/pipeline/
     pure compiler-stage orchestration
 
-cli/
-    command parsing and build-file orchestration
+compiler/src/tooling/
+    protocol-neutral compiler services exposed to CLI, MCP, LSP, CI, and agents
+
+compiler/tests/
+    compiler-internal and language-facing conformance tests
+
+tools/cli/src/
+    human command parsing and build orchestration over compiler tooling
+
+tools/mcp/
+    MCP protocol adapter over compiler tooling; semantic logic does not live here
+
+stdlib/
+    foundational APIs guaranteed with the installed SDK
+
+packages/
+    higher-level ordinary Eido libraries built above stdlib
+
+installer/
+    SDK assembly and installation logic
+
+tests/integration/
+    cross-component SDK/tool/library integration tests
 ```
 
 ## Dependency rules
@@ -97,7 +99,9 @@ cli/
 - Backends consume HIR, not raw AST.
 - The Nim emitter must not perform Eido name resolution or type checking.
 - Nim-specific types, names, process execution, and artifact paths must not leak into Eido semantic types or AST.
-- Filesystem and process execution stay in the outer toolchain/CLI boundary.
+- `compiler/src/tooling/` may coordinate stable compiler capabilities, but it must not depend on MCP, LSP, editor, or vendor-specific protocol code.
+- Protocol adapters under `tools/` consume compiler tooling services; compiler semantic phases must not depend on those adapters.
+- Filesystem and process execution stay in the outer backend-toolchain/tool-adapter boundary.
 - Dependencies must remain acyclic.
 
 ## Growth rule

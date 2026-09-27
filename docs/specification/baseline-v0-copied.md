@@ -1881,9 +1881,9 @@ a particular heap/pointer/reclamation strategy.
 
 # 39. Approved v0 repository, distribution, and installation layout
 
-> Status: approved architectural specification. This section defines how the
-> Eido implementation repository and installed SDK are organized. It does not
-> add source-language syntax.
+> Status: approved and structurally implemented for v0. This section defines
+> how the Eido implementation repository and installed SDK are organized. It
+> does not add source-language syntax.
 
 ## One v0 monorepo, explicit component boundaries
 
@@ -2116,10 +2116,10 @@ part of the language.
 
 # 40. Approved v0 LLM/MCP-native compiler tooling architecture
 
-> Status: approved architectural specification. Eido is intended to expose the
-> compiler's semantic knowledge programmatically to LLMs, agents, editors, CI,
-> and other tooling. MCP is an important transport, but not the compiler's
-> internal architecture.
+> Status: approved architecture with the protocol-neutral compiler tooling seam
+> now established. MCP transport/tools are not yet implemented. Eido is intended
+> to expose compiler semantic knowledge to LLMs, agents, editors, CI, and other
+> tooling without making MCP part of compiler semantics.
 
 ## Core principle
 

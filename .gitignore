@@ -1,5 +1,6 @@
 # Eido / Nim build outputs
 /bin/
+/eido
 /nimcache/
 /.nimcache/
 
@@ -16,8 +17,9 @@
 *.pdb
 
 # Test executables produced by direct `nim c -r` runs
+/compiler/tests/**/*_test
+/compiler/tests/compiler_test_suite
 /tests/**/*_test
-/tests/compiler_test_suite
 
 # OS/editor noise
 .DS_Store
