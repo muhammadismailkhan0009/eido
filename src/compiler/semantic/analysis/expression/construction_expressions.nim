@@ -38,16 +38,46 @@ proc analyzeConstruction(
       )
 
     suppliedNames.add sourceField.name
+
+    let analyzedValue =
+      if sourceField.value.kind == astExpressions.ekClassRelation:
+        let relationValue = analyzeClassValueRelation(
+          sourceField.value,
+          locals,
+          functions,
+          classes
+        )
+        if relationValue.typ != expectedType:
+          failAt(
+            sourceField.value.span,
+            "type mismatch: expected " & expectedType.displayName &
+              " but got " & relationValue.typ.displayName
+          )
+        relationValue
+      else:
+        let value = analyzeExprExpected(
+          sourceField.value,
+          expectedType,
+          locals,
+          functions,
+          classes
+        )
+        if expectedType.kind == etkClass and
+            sourceField.value.kind notin {
+              astExpressions.ekConstruct,
+              astExpressions.ekCall,
+              astExpressions.ekMethodCall
+            }:
+          failAt(
+            sourceField.value.span,
+            "existing class construction field requires explicit copy or ref"
+          )
+        value
+
     fields.add hirExpressions.HirConstructionField(
       span: sourceField.span,
       sourceName: sourceField.name,
-      value: analyzeExprExpected(
-        sourceField.value,
-        expectedType,
-        locals,
-        functions,
-        classes
-      )
+      value: analyzedValue
     )
 
   for declaredField in target.fields:

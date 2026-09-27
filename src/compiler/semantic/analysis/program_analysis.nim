@@ -62,13 +62,13 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
 
       var parameterTypes: seq[EidoType]
       for parameter in sourceMethod.parameters:
-        parameterTypes.add resolveType(parameter.typeRef)
+        parameterTypes.add resolveDeclaredType(parameter.typeRef, classes)
 
       classSymbol.methods.add MethodSymbol(
         id: MethodId(nextMethodId),
         name: sourceMethod.name,
         parameterTypes: parameterTypes,
-        result: resolveFunctionResult(sourceMethod.result),
+        result: resolveFunctionResult(sourceMethod.result, classes),
         span: sourceMethod.span
       )
       inc nextMethodId
@@ -86,9 +86,9 @@ proc analyzeProgram*(program: astProgram.Program): hirProgram.HirProgram =
 
     var parameterTypes: seq[EidoType]
     for parameter in fn.parameters:
-      parameterTypes.add resolveType(parameter.typeRef)
+      parameterTypes.add resolveDeclaredType(parameter.typeRef, classes)
 
-    let functionResult = resolveFunctionResult(fn.result)
+    let functionResult = resolveFunctionResult(fn.result, classes)
     let symbol = FunctionSymbol(
       id: FunctionId(index),
       name: fn.name,

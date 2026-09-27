@@ -5,12 +5,14 @@ import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import names
 import class_emitter
+import class_copy_emitter
 import method_emitter
 import function_emitter
 
 ## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
   result.add renderClasses(program.classes)
+  result.add renderClassCopiers(program.classes)
 
   # Forward declare every method and function before any callable body.
   for classDecl in program.classes:

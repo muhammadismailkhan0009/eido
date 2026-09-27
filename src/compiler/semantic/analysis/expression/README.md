@@ -10,7 +10,8 @@ to focused modules in this directory.
 - `expected_types.nim` — expected-type validation and contextual Byte/Short/Int literal typing
 - `identifier_expressions.nim` — local/parameter identifier resolution
 - `call_expressions.nim` — function resolution, arity, argument typing, and value-call rules
-- `construction_expressions.nim` — exact-field nominal construction semantics
+- `class_value_relations.nim` — explicit `copy`/`ref` validation and existing/detached class provenance
+- `construction_expressions.nim` — exact-field nominal construction semantics and explicit identity choice for existing class-valued inputs
 - `field_access_expressions.nim` — nominal receiver/field resolution and result typing
 - `method_call_expressions.nim` — nominal receiver/method resolution, arity, argument, and result typing
 - `unary_negation.nim` — Int/Float unary negation semantics

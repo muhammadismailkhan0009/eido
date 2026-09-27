@@ -68,6 +68,13 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     result = renderCall(expr.call)
   of hirExpressions.hekConstruct:
     result = renderConstruction(expr)
+  of hirExpressions.hekClassRelation:
+    case expr.classRelationKind
+    of hirExpressions.hcvrRef:
+      result = renderExpr(expr.relatedValue)
+    of hirExpressions.hcvrCopy:
+      result = classCopyName(expr.typ.className) & "(" &
+        renderExpr(expr.relatedValue) & ")"
   of hirExpressions.hekFieldAccess:
     result = renderFieldAccess(expr)
   of hirExpressions.hekMethodCall:

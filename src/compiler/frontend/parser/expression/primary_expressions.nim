@@ -1,11 +1,29 @@
 ## Dispatches primary atoms and then applies postfix field access.
 ## Example: `employee.address.zip` starts from identifier `employee` and grows through postfix access.
 
+## Parses a complete primary expression including postfix access.
+proc parsePrimary(parser: var Parser): Expr
+
 ## Parses one primary atom before postfix operators are applied.
 proc parsePrimaryAtom(parser: var Parser): Expr =
   let literal = parser.parseLiteral()
   if not literal.isNil:
     return literal
+
+  if parser.check(tkCopy) or parser.check(tkRef):
+    let relation = parser.advance()
+    let value = parser.parsePrimary()
+    return Expr(
+      kind: ekClassRelation,
+      span: SourceSpan(
+        startOffset: relation.span.startOffset,
+        endOffset: value.span.endOffset,
+        line: relation.span.line,
+        column: relation.span.column
+      ),
+      relationKind: if relation.kind == tkCopy: cvrCopy else: cvrRef,
+      relatedValue: value
+    )
 
   if parser.check(tkSelf):
     let token = parser.advance()

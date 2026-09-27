@@ -34,6 +34,7 @@ include expression/literal_expressions
 include expression/expected_types
 include expression/identifier_expressions
 include expression/call_expressions
+include expression/class_value_relations
 include expression/construction_expressions
 include expression/field_access_expressions
 include expression/method_call_expressions
@@ -65,6 +66,12 @@ proc analyzeExpr*(
 
   of astExpressions.ekConstruct:
     analyzeConstruction(expr, locals, functions, classes)
+
+  of astExpressions.ekClassRelation:
+    failAt(
+      expr.span,
+      "copy/ref are only valid for class local bindings or class construction fields"
+    )
 
   of astExpressions.ekFieldAccess:
     analyzeFieldAccess(expr, locals, functions, classes)

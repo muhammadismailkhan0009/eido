@@ -120,7 +120,7 @@ suite "Class representation boundaries":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "setting from an existing class value requires future explicit copy or ref semantics":
+  test "setting from an existing class value remains invalid after copy/ref is defined":
     # Given
     let source = """
       class Marker {}

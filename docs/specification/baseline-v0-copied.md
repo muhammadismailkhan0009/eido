@@ -4,6 +4,8 @@ For now I will use **Eido** as the internal working codename. It is **not the fi
 
 # Eido v0 — baseline specification
 
+> **Preservation note:** this file intentionally retains earlier v0 design text and examples as historical rationale. Later sections marked **Current implemented v0 semantic addendum** are authoritative where older syntax or semantics conflict with the compiler as it exists now. In particular, current source uses semicolon-terminated statements/declarations, explicit `self` for current-instance access, and the class-identity rules recorded in the addendum.
+
 ## 1. Purpose
 
 The original purpose remains the north star:
@@ -1607,3 +1609,232 @@ module organization:
 That is the baseline I would personally code against.
 
 The **three items I would want you to explicitly approve/correct before I write the first compiler code** are: whether `do` exists in v0, whether an interface may `extends` multiple interfaces or only one, and whether `Eido` is acceptable purely as the temporary compiler/project codename. Everything else above reflects the design we've established rather than introducing a new architectural direction.
+---
+
+# 36. Current implemented v0 semantic addendum — receiver and class identity
+
+> This section records later approved and implemented v0 semantics. Earlier
+> sections remain preserved for design history, but this section takes
+> precedence where they disagree.
+
+## Current source punctuation
+
+The implemented compiler uses semicolon-terminated statements and declarations:
+
+```eido
+var account = Account {
+    balance: 100;
+};
+
+account.withdraw(10);
+```
+
+Braces terminate blocks. Older comma-terminated examples above are historical
+and are not the current parser grammar.
+
+## Explicit current-instance receiver and mutation
+
+Inside an instance method, `self` explicitly denotes the current logical
+instance:
+
+```eido
+class Account {
+    Int balance;
+
+    function withdraw(Int amount) {
+        set self.balance = self.balance - amount;
+    }
+
+    function value() returns Int {
+        return self.balance;
+    }
+}
+```
+
+Own fields require `self.field`; own-method calls require `self.method(...)`.
+Unqualified calls remain top-level function calls. `self` is unavailable
+outside instance methods.
+
+Direct field mutation remains class-owned:
+
+```eido
+set self.balance = 10;     // valid inside Account
+set balance = 10;          // invalid
+set account.balance = 10;  // invalid
+```
+
+Parameters cannot be rebound with `set`. Existing field/parameter/local
+non-shadowing rules remain in force even though `self` makes receiver access
+explicit.
+
+## Class-valued callable signatures
+
+Function and method parameters/results may use declared nominal class types:
+
+```eido
+function charge(Account account, Int amount) {
+    account.withdraw(amount);
+}
+
+function snapshot(Account account) returns Account {
+    var result = copy account;
+    return result;
+}
+```
+
+A class parameter preserves the caller's logical object identity for the call.
+Passing does not make a detached copy. The callee still cannot directly assign
+the object's fields; it can invoke the object's behavior, whose implementation
+may mutate its own `self`.
+
+No `ref` or `copy` modifier is written on parameters or arguments.
+
+## Explicit persistent identity decisions
+
+When an existing class object establishes another persistent local binding,
+Eido requires the relationship to be explicit:
+
+```eido
+var original = Account { balance: 100; };
+
+var alias = ref original;
+var detached = copy original;
+var ambiguous = original; // invalid
+```
+
+`ref` preserves the same logical object identity.
+`copy` creates a new detached logical object graph.
+
+`copy` recursively detaches reachable class-valued fields. If the source
+graph contains internal sharing or cycles, the copied graph preserves that
+topology while sharing no copied mutable object with the source graph.
+
+These are logical identity semantics, not pointer or allocation semantics.
+
+## Class construction relationships
+
+When an existing class value is placed into a class-valued construction field,
+the persistent relationship must also be explicit:
+
+```eido
+var order = Order {
+    account: ref account;
+    snapshot: copy account;
+};
+```
+
+A bare existing class value in that position is invalid. Fresh nested
+construction and detached class-valued callable results may be used directly
+because no additional identity choice remains to be made.
+
+## Class-valued return boundary
+
+A class-valued function or method return must produce fresh/detached identity.
+
+Valid:
+
+```eido
+function create() returns Account {
+    return Account { balance: 100; };
+}
+
+function snapshot(Account account) returns Account {
+    var result = copy account;
+    return result;
+}
+```
+
+Returning existing identity is invalid:
+
+```eido
+return account;       // class parameter: invalid
+return self;          // current receiver: invalid
+return self.account;  // existing class field: invalid
+```
+
+`copy` and `ref` are not return modifiers and therefore cannot be written
+directly in a return statement. They are also not callable-result modifiers.
+A class-valued function/method result has already crossed a checked detached
+return boundary, so it may initialize another local directly:
+
+```eido
+var snapshot = account.snapshot();
+```
+
+The following are invalid:
+
+```eido
+var snapshot = copy account.snapshot();
+var alias = ref account.snapshot();
+```
+
+## Ordered mutation and detachment
+
+Mutation before and after a copy intentionally have different semantics, and
+the source makes the ordering visible:
+
+```eido
+function modify(Account account) returns Account {
+    account.withdraw(100);
+    var result = copy account;
+    return result;
+}
+```
+
+Here the caller's Account is mutated first because the parameter preserves
+identity; the returned Account is then detached from the updated state.
+
+By contrast:
+
+```eido
+function modified(Account account) returns Account {
+    var result = copy account;
+    result.withdraw(100);
+    return result;
+}
+```
+
+detaches first, so the original Account is not mutated by the later call.
+
+## Class-valued `set`
+
+`copy` and `ref` are not `set` operands. A class-valued local may currently
+be rebound from a fresh construction or a detached class-valued callable result:
+
+```eido
+set account = Account { balance: 0; };
+set account = createAccount();
+```
+
+Rebinding from an existing class object remains invalid:
+
+```eido
+set account = otherAccount;       // invalid
+set account = copy otherAccount;  // invalid in set
+set account = ref otherAccount;   // invalid in set
+```
+
+Class-valued field mutation through `set self.field = ...` remains outside the
+current implemented slice.
+
+## Memory-model boundary remains open
+
+The language now specifies logical identity flow—same identity versus detached
+identity—but it still does **not** specify allocation, lifetime, or reclamation.
+
+The earlier unresolved memory-model choices remain unresolved:
+
+```text
+GC
+reference counting
+ARC/ORC
+ownership
+regions
+escape-analysis-driven allocation
+hybrid model
+```
+
+The current Nim backend's generated `ref object` layouts, hidden receiver
+parameters, and memoized graph-copy procedures are implementation details.
+The semantic AST/HIR must continue to avoid treating "class" as synonymous with
+a particular heap/pointer/reclamation strategy.

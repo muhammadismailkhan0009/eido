@@ -11,6 +11,10 @@ type
     huoNegate,
     huoNot
 
+  HirClassValueRelationKind* = enum
+    hcvrCopy,
+    hcvrRef
+
   HirBinaryOp* = enum
     hboAdd,
     hboSubtract,
@@ -33,6 +37,7 @@ type
     hekLocal,
     hekCall,
     hekConstruct,
+    hekClassRelation,
     hekFieldAccess,
     hekMethodCall,
     hekUnary,
@@ -79,6 +84,9 @@ type
     of hekConstruct:
       constructedTypeName*: string
       fields*: seq[HirConstructionField]
+    of hekClassRelation:
+      classRelationKind*: HirClassValueRelationKind
+      relatedValue*: HirExpr
     of hekFieldAccess:
       target*: HirExpr
       sourceFieldName*: string

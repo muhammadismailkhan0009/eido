@@ -31,8 +31,12 @@ defined by Feature 004; only local `var` bindings are currently mutable.
 A direct initializer from an existing parameter or local remains invalid:
 
 ```text
-var other = value; // invalid: future copy/ref semantics must be explicit
+var other = value; // invalid at this historical milestone
 ```
+
+Later class-identity work added nominal class parameters/results. Class
+parameters preserve caller identity, while class returns must be detached; see
+`class-copy-ref-semantics.md` for the current rules.
 
 The Nim backend emits forward procedure declarations so Eido source order
 does not determine function-call visibility.

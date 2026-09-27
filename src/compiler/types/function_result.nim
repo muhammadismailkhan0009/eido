@@ -18,6 +18,6 @@ type
 proc noResult*(): FunctionResult =
   FunctionResult(kind: frNone)
 
-## Creates the semantic contract for a function returning one primitive value. Example: `singleResult(etBool)` represents `returns Bool`.
+## Creates the semantic contract for a function returning one typed value. Example: `singleResult(etBool)` represents `returns Bool`, while a nominal class type represents a class-valued result.
 proc singleResult*(typ: EidoType): FunctionResult =
   FunctionResult(kind: frSingle, typ: typ)

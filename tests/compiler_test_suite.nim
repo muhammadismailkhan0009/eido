@@ -11,6 +11,7 @@ import compiler/frontend/lexer/keywords/while_keyword_test
 import compiler/frontend/lexer/keywords/for_keyword_test
 import compiler/frontend/lexer/keywords/set_keyword_test
 import compiler/frontend/lexer/keywords/self_keyword_test
+import compiler/frontend/lexer/keywords/copy_ref_keyword_test
 import compiler/frontend/lexer/keywords/loop_control_keyword_test
 import compiler/frontend/lexer/keywords/class_keyword_test
 import compiler/frontend/parser/expression/literal_expression_parser_test
@@ -19,12 +20,14 @@ import compiler/frontend/parser/expression/construction_expression_parser_test
 import compiler/frontend/parser/expression/field_access_expression_parser_test
 import compiler/frontend/parser/expression/method_call_expression_parser_test
 import compiler/frontend/parser/expression/self_expression_parser_test
+import compiler/frontend/parser/expression/class_value_relation_parser_test
 import compiler/frontend/parser/expression/grouping_expression_parser_test
 import compiler/frontend/parser/expression/unary_negation_parser_test
 import compiler/frontend/parser/expression/arithmetic_operator_parser_test
 import compiler/frontend/parser/expression/comparison_operator_parser_test
 import compiler/frontend/parser/expression/boolean_operator_parser_test
 import compiler/frontend/parser/function_parser_test
+import compiler/frontend/parser/class_value_signature_parser_test
 import compiler/frontend/parser/class_declaration_parser_test
 import compiler/frontend/parser/class_method_declaration_parser_test
 import compiler/frontend/parser/statement/conditional_statement_parser_test
@@ -36,6 +39,8 @@ import compiler/semantic/analysis/local_binding_analysis_test
 import compiler/semantic/analysis/function_analysis_test
 import compiler/semantic/analysis/class_declaration_analysis_test
 import compiler/semantic/analysis/class_method_analysis_test
+import compiler/semantic/analysis/class_value_callable_flow_test
+import compiler/semantic/analysis/class_method_return_flow_test
 import compiler/semantic/analysis/statement/conditional_statement_analysis_test
 import compiler/semantic/analysis/statement/while_statement_analysis_test
 import compiler/semantic/analysis/statement/for_statement_analysis_test
@@ -49,12 +54,14 @@ import compiler/semantic/analysis/expression/construction_expression_analysis_te
 import compiler/semantic/analysis/expression/field_access_expression_analysis_test
 import compiler/semantic/analysis/expression/method_call_expression_analysis_test
 import compiler/semantic/analysis/expression/self_expression_analysis_test
+import compiler/semantic/analysis/expression/class_value_relation_analysis_test
 import compiler/semantic/analysis/expression/unary_negation_analysis_test
 import compiler/semantic/analysis/expression/arithmetic_operator_analysis_test
 import compiler/semantic/analysis/expression/comparison_operator_analysis_test
 import compiler/semantic/analysis/expression/boolean_operator_analysis_test
 import compiler/backend/nim/emitter/nim_emitter_test
 import compiler/backend/nim/emitter/class_method_emitter_test
+import compiler/backend/nim/emitter/class_copy_emitter_test
 import compiler/backend/nim/emitter/expression/boolean_operator_emitter_test
 import compiler/backend/nim/emitter/expression/construction_expression_emitter_test
 import compiler/backend/nim/emitter/expression/field_access_expression_emitter_test
@@ -76,6 +83,7 @@ import features/classes/class_construction_variants_test
 import features/classes/class_field_access_variants_test
 import features/classes/class_method_variants_test
 import features/classes/self_receiver_variants_test
+import features/classes/class_copy_ref_variants_test
 import features/control_flow/conditional_variants_test
 import features/control_flow/else_if_variants_test
 import features/control_flow/while_variants_test

@@ -80,8 +80,9 @@ Method bodies reuse the existing function/statement semantics:
 - `set` mutation of locals;
 - `set self.field = ...` mutation of own primitive fields.
 
-The current signature slice remains primitive-only for explicit method
-parameters and results, matching top-level function signatures.
+Method parameters/results may use primitive or declared nominal class types.
+Class parameters preserve caller identity for the call, while class-valued
+returns must be fresh/detached.
 
 ## Name uniqueness
 
@@ -144,8 +145,9 @@ Only class-owned behavior receives this field-mutation authority. External
 postfix field mutation such as `set account.balance = 0;` is invalid, and
 unqualified `set balance = ...` is rejected.
 
-Class-valued fields remain non-mutable until explicit copy/reference semantics
-are defined.
+Class-valued fields remain non-mutable through `set` in the current slice,
+even though copy/ref identity semantics are now defined for local bindings and
+construction fields.
 
 ## Backend representation
 
@@ -157,8 +159,7 @@ receiver; the generated parameter remains a backend implementation detail.
 
 Not yet included:
 
-- class-valued field mutation;
-- class-valued explicit method parameters/results;
+- class-valued field mutation through `set`;
 - method overloading;
 - interfaces;
 - contracts and invariants.

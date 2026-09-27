@@ -6,7 +6,6 @@ import ../../hir/declarations as hirDeclarations
 import ../../hir/statements
 import ../../types/model
 import ../../types/function_result
-import type_resolution
 import ../symbols/model
 import ../symbols/functions
 import ../symbols/classes
@@ -23,18 +22,20 @@ proc analyzeFunction*(
   var locals = initLocalScope()
   var parameters: seq[HirParameter]
 
-  for parameter in fn.parameters:
+  for index, parameter in fn.parameters:
     if locals.contains(parameter.name):
       failAt(parameter.span, "duplicate parameter '" & parameter.name & "'")
 
-    let typ = resolveType(parameter.typeRef)
+    let typ = symbol.parameterTypes[index]
     let localId = locals.nextLocalId()
     let localSymbol = LocalSymbol(
       id: localId,
       name: parameter.name,
       typ: typ,
       kind: bkParameter,
-      span: parameter.span
+      span: parameter.span,
+      classValueProvenance:
+        if typ.kind == etkClass: cvpExisting else: cvpNotClass
     )
     locals.add(parameter.name, localSymbol)
 

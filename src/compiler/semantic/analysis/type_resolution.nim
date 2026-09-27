@@ -20,16 +20,7 @@ proc resolveType*(typeRef: TypeRef): EidoType =
   else:
     failAt(typeRef.span, "unknown primitive type '" & typeRef.name & "'")
 
-## Resolves a function's source result declaration.
-## Example: no `returns` becomes `frNone`; `returns Char` becomes `frSingle(etChar)`.
-proc resolveFunctionResult*(sourceResult: FunctionResultRef): FunctionResult =
-  case sourceResult.kind
-  of frrNone:
-    noResult()
-  of frrSingle:
-    singleResult(resolveType(sourceResult.typeRef))
-
-## Resolves a field type from primitives or registered nominal classes.
+## Resolves a field, parameter, or result type from primitives or registered nominal classes.
 ## Example: Address resolves to classType("Address") after class-name collection.
 proc resolveDeclaredType*(
   typeRef: TypeRef,
@@ -46,3 +37,14 @@ proc resolveDeclaredType*(
     if classes.contains(typeRef.name):
       return classes.get(typeRef.name).typ
     failAt(typeRef.span, "unknown type '" & typeRef.name & "'")
+
+## Resolves a function's source result declaration.
+proc resolveFunctionResult*(
+  sourceResult: FunctionResultRef,
+  classes: ClassSymbols
+): FunctionResult =
+  case sourceResult.kind
+  of frrNone:
+    noResult()
+  of frrSingle:
+    singleResult(resolveDeclaredType(sourceResult.typeRef, classes))

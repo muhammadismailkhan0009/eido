@@ -39,16 +39,17 @@ var second = 10;
 set second = first;
 ```
 
-Class-valued locals remain representation-neutral. They may currently be
-replaced only by a fresh construction:
+Class-valued locals remain representation-neutral. They may be rebound from a
+fresh construction or detached callable result:
 
 ```eido
 var marker = Marker {};
 set marker = Marker {};
 ```
 
-Setting a class-valued local from an existing class value remains rejected until
-explicit copy/reference semantics are defined.
+Setting from an existing class object remains rejected. `copy` and `ref`
+belong to new local-binding or construction-field relationships and are not
+legal `set` operands.
 
 ## Own-field mutation
 

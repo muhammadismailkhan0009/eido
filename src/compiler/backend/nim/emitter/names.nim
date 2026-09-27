@@ -22,6 +22,22 @@ proc localName*(id: LocalId, sourceName: string): string =
 proc className*(sourceName: string): string =
   "eido_class_" & sourceName
 
+## Builds the generated Nim copier name for one nominal Eido class.
+proc classCopyName*(sourceName: string): string =
+  "eido_copy_" & sourceName
+
+## Builds the generated internal recursive copier name.
+proc classCopyInternalName*(sourceName: string): string =
+  "eido_copy_" & sourceName & "_internal"
+
+## Builds the generated memo field name for one copied class type.
+proc classCopyTableName*(sourceName: string): string =
+  "eido_copies_" & sourceName
+
+## Builds the generated copy-context type name.
+proc copyContextName*(): string =
+  "eido_copy_context"
+
 ## Builds the generated Nim name for one Eido class field.
 proc fieldName*(sourceName: string): string =
   "eido_field_" & sourceName

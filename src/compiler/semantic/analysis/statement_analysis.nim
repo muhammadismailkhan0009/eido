@@ -59,19 +59,34 @@ proc analyzeStmt*(
       of bkVariable:
         failAt(stmt.span, "duplicate local '" & stmt.name & "'")
 
-    let initializer = analyzeExpr(stmt.initializer, locals, functions, classes)
+    let initializer =
+      if stmt.initializer.kind == astExpressions.ekClassRelation:
+        analyzeClassValueRelation(
+          stmt.initializer,
+          locals,
+          functions,
+          classes
+        )
+      else:
+        analyzeExpr(stmt.initializer, locals, functions, classes)
 
     if initializer.typ.kind == etkClass and
-        stmt.initializer.kind != astExpressions.ekConstruct:
+        stmt.initializer.kind notin {
+          astExpressions.ekConstruct,
+          astExpressions.ekCall,
+          astExpressions.ekMethodCall,
+          astExpressions.ekClassRelation
+        }:
       failAt(
         stmt.initializer.span,
-        "class-valued binding requires explicit copy or ref"
+        "existing class local binding requires explicit copy or ref"
       )
 
-    if stmt.initializer.kind == astExpressions.ekIdentifier:
+    if initializer.typ.kind != etkClass and
+        stmt.initializer.kind == astExpressions.ekIdentifier:
       failAt(
         stmt.initializer.span,
-        "bare identifier initializer requires explicit copy or ref"
+        "bare identifier initializer remains unsupported"
       )
 
     let localId = locals.nextLocalId()
@@ -80,7 +95,9 @@ proc analyzeStmt*(
       name: stmt.name,
       typ: initializer.typ,
       kind: bkVariable,
-      span: stmt.span
+      span: stmt.span,
+      classValueProvenance:
+        classValueProvenance(stmt.initializer, initializer, locals)
     )
     locals.add(stmt.name, symbol)
 
@@ -122,11 +139,20 @@ proc analyzeStmt*(
         )
 
         if target.typ.kind == etkClass and
-            stmt.assignedValue.kind != astExpressions.ekConstruct:
+            stmt.assignedValue.kind notin {
+              astExpressions.ekConstruct,
+              astExpressions.ekCall,
+              astExpressions.ekMethodCall
+            }:
           failAt(
             stmt.assignedValue.span,
-            "class-valued set requires explicit copy or ref"
+            "class-valued set requires a fresh/detached result"
           )
+
+        if target.typ.kind == etkClass:
+          var updatedTarget = target
+          updatedTarget.classValueProvenance = cvpDetached
+          locals.add(target.name, updatedTarget)
 
         HirStmt(
           kind: hskAssign,
@@ -218,16 +244,32 @@ proc analyzeStmt*(
           stmt.span,
           "function must return " & functionResult.typ.displayName
         )
+
+      if stmt.value.kind == astExpressions.ekClassRelation:
+        failAt(
+          stmt.value.span,
+          "copy/ref cannot be used directly in return statements"
+        )
+
+      let returnValue = analyzeExprExpected(
+        stmt.value,
+        functionResult.typ,
+        locals,
+        functions,
+        classes
+      )
+
+      if functionResult.typ.kind == etkClass and
+          classValueProvenance(stmt.value, returnValue, locals) != cvpDetached:
+        failAt(
+          stmt.value.span,
+          "class return must produce a fresh/detached object"
+        )
+
       HirStmt(
         kind: hskReturn,
         span: stmt.span,
-        value: analyzeExprExpected(
-          stmt.value,
-          functionResult.typ,
-          locals,
-          functions,
-          classes
-        )
+        value: returnValue
       )
 
   of astStatements.skIf:

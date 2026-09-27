@@ -27,8 +27,10 @@ var b = a; // invalid
 ```
 
 Eido requires explicit relationship semantics for direct reuse of an
-existing binding. Future features will introduce `copy identifier` and
-`ref identifier`; they are not implemented by Feature 002.
+existing binding. At the Feature 002 milestone, `copy`/`ref` were future work.
+They are now implemented for class-valued local bindings: `copy` creates a
+detached class graph and `ref` preserves the same logical object identity.
+Primitive bare-identifier initialization remains governed by its existing rules.
 
 Using an identifier as part of a computed expression is valid:
 

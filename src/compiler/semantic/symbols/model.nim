@@ -6,6 +6,11 @@ import ../../types/function_result
 import ids
 
 type
+  ClassValueProvenance* = enum
+    cvpNotClass,
+    cvpExisting,
+    cvpDetached
+
   BindingKind* = enum
     bkReceiver,
     bkParameter,
@@ -16,6 +21,7 @@ type
     name*: string
     typ*: EidoType
     span*: SourceSpan
+    classValueProvenance*: ClassValueProvenance
     case kind*: BindingKind
     of bkReceiver, bkParameter, bkVariable:
       id*: LocalId

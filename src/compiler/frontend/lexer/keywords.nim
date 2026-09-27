@@ -43,6 +43,8 @@ proc keywordKind*(text: string): TokenKind =
   of "var": tkVar
   of "set": tkSet
   of "self": tkSelf
+  of "copy": tkCopy
+  of "ref": tkRef
   of "Bool", "Byte", "Short", "Int", "Float", "Char":
     tkPrimitiveType
   of "true", "false":

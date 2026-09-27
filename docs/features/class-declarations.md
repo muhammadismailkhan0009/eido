@@ -60,18 +60,20 @@ types are rejected.
 
 ## Representation boundary
 
-This slice deliberately does not define class allocation or ownership semantics.
+The language now defines logical class-identity flow (`ref` preserves identity;
+`copy` creates detached identity), but it still deliberately does not define
+allocation, lifetime, or reclamation semantics.
 
-A semantic class type does not yet mean:
+A semantic class type therefore does not imply:
 
 - heap allocation;
-- reference identity;
 - garbage collection;
-- value-copy semantics;
-- pointer semantics.
+- reference counting;
+- pointer representation;
+- any particular ownership/reclamation strategy.
 
-The semantic type model records nominal identity independently of those later
-decisions.
+The semantic type model records nominal identity independently of those backend
+and memory-management decisions.
 
 ## Construction
 
@@ -80,8 +82,10 @@ See `class-construction.md` for exact-field, nesting, scope, and representation 
 
 ## Current boundary
 
-Not yet included:
+Not yet included in the current class slice:
 
-- field mutation;
-- class types in function signatures;
+- class-valued field mutation through `set`;
 - interfaces or contracts.
+
+Primitive own-field mutation through `set self.field = ...` and nominal class
+types in function/method signatures are now implemented.

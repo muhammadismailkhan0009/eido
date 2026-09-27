@@ -8,6 +8,10 @@ type
     uoNegate,
     uoNot
 
+  ClassValueRelationKind* = enum
+    cvrCopy,
+    cvrRef
+
   BinaryOp* = enum
     boAdd,
     boSubtract,
@@ -30,6 +34,7 @@ type
     ekIdentifier,
     ekCall,
     ekConstruct,
+    ekClassRelation,
     ekFieldAccess,
     ekMethodCall,
     ekUnary,
@@ -59,6 +64,9 @@ type
     of ekConstruct:
       typeName*: string
       fields*: seq[ConstructionField]
+    of ekClassRelation:
+      relationKind*: ClassValueRelationKind
+      relatedValue*: Expr
     of ekFieldAccess:
       target*: Expr
       fieldName*: string

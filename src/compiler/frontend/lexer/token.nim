@@ -18,6 +18,8 @@ type
     tkVar,
     tkSet,
     tkSelf,
+    tkCopy,
+    tkRef,
     tkIf,
     tkElse,
     tkWhile,

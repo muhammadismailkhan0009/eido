@@ -1,4 +1,4 @@
-## Parses primitive-typed parameters and functions with zero or one result. Example: `function notify(Int id) {}` has one input and no result.
+## Parses primitive- or nominal-class-typed parameters and functions with zero or one result. Example: `function notify(Account account) {}` has one nominal class input and no result.
 
 import ../../source/span
 import ../../diagnostics/errors
@@ -8,18 +8,19 @@ import ../ast/statements
 import core
 import statement_parser
 
-## Parses source-level primitive type syntax used by the currently primitive-only function signatures.
-proc parsePrimitiveTypeRef(parser: var Parser): TypeRef =
-  let typeToken = parser.consume(tkPrimitiveType, "expected primitive type")
-  TypeRef(span: typeToken.span, name: typeToken.lexeme)
-
-## Parses a field type, which may be primitive or a nominal class name.
-proc parseFieldTypeRef(parser: var Parser): TypeRef =
+## Parses a declared primitive or nominal class type.
+proc parseDeclaredTypeRef(parser: var Parser): TypeRef =
   if parser.check(tkPrimitiveType) or parser.check(tkIdentifier):
     let typeToken = parser.advance()
+    if typeToken.lexeme in ["Long", "Double"]:
+      failAt(typeToken.span, "removed numeric type '" & typeToken.lexeme & "'")
     return TypeRef(span: typeToken.span, name: typeToken.lexeme)
 
-  failAt(parser.peek.span, "expected field type")
+  failAt(parser.peek.span, "expected declared type")
+
+## Parses a field type using the shared declared-type grammar.
+proc parseFieldTypeRef(parser: var Parser): TypeRef =
+  parser.parseDeclaredTypeRef()
 
 ## Parses comma-separated Java-style typed parameters with no fixed count. Example: `Int a, Bool b, Float c` becomes three parameter AST nodes.
 proc parseParameters(parser: var Parser): seq[Parameter] =
@@ -27,7 +28,7 @@ proc parseParameters(parser: var Parser): seq[Parameter] =
     return
 
   while true:
-    let typeRef = parser.parsePrimitiveTypeRef()
+    let typeRef = parser.parseDeclaredTypeRef()
     let nameToken = parser.consume(tkIdentifier, "expected parameter name")
     result.add Parameter(
       span: SourceSpan(
@@ -52,7 +53,7 @@ proc parseFunctionResult(parser: var Parser): FunctionResultRef =
   discard parser.advance()
   FunctionResultRef(
     kind: frrSingle,
-    typeRef: parser.parsePrimitiveTypeRef()
+    typeRef: parser.parseDeclaredTypeRef()
   )
 
 ## Parses one complete function declaration. Example: `function add(Int a, Int b) returns Int { return a + b; }` becomes a `FunctionDecl`.

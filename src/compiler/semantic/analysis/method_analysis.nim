@@ -27,7 +27,8 @@ proc analyzeMethod*(
       typ: owner.typ,
       span: sourceMethod.span,
       kind: bkReceiver,
-      id: receiverLocalId
+      id: receiverLocalId,
+      classValueProvenance: cvpExisting
     )
   )
 
@@ -40,7 +41,9 @@ proc analyzeMethod*(
         span: field.span,
         kind: bkField,
         receiverId: receiverLocalId,
-        ownerType: owner.typ
+        ownerType: owner.typ,
+        classValueProvenance:
+          if field.typ.kind == etkClass: cvpExisting else: cvpNotClass
       )
     )
 
@@ -62,7 +65,9 @@ proc analyzeMethod*(
         typ: parameterType,
         span: parameter.span,
         kind: bkParameter,
-        id: localId
+        id: localId,
+        classValueProvenance:
+          if parameterType.kind == etkClass: cvpExisting else: cvpNotClass
       )
     )
 

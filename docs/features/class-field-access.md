@@ -78,22 +78,25 @@ A field may itself have a class type, which is necessary for chaining:
 employee.address.zip
 ```
 
-However, Eido still has no implicit class copy/reference semantics.
+Eido does not silently choose whether another persistent binding should share
+or detach class identity.
 
-Therefore this is currently rejected:
+Therefore this remains invalid:
 
 ```eido
 var address = employee.address;
 ```
 
-and so is setting from an existing class-valued field:
+The intent must be explicit:
 
 ```eido
-set otherAddress = employee.address;
+var alias = ref employee.address;
+var detached = copy employee.address;
 ```
 
-Fresh construction remains valid because it does not require choosing whether an
-existing class value is copied or aliased.
+`set otherAddress = employee.address;` remains invalid because `copy`/`ref`
+are not set operands. Fresh construction and detached callable results may
+replace a class-valued local directly.
 
 ## Mutation boundary
 
@@ -114,5 +117,5 @@ set self.x = 20;
 
 Unqualified own-field reads or mutations are rejected.
 
-Class-valued field mutation remains deferred until explicit copy/reference
-semantics exist.
+Class-valued field mutation through `set self.field = ...` remains outside the
+current slice.

@@ -76,27 +76,37 @@ Pair {
 Field initializers are expressions evaluated from the surrounding lexical
 scope, not sequential statements over a partially constructed object.
 
+## Class-valued field identity
+
+When a construction field receives an existing class object, the relationship
+must be explicit:
+
+```eido
+Order {
+    account: ref account;
+    snapshot: copy account;
+}
+```
+
+`ref` preserves the same logical object. `copy` recursively creates a
+detached graph while preserving sharing/cycles inside that graph.
+
+Fresh nested construction and detached callable results do not require another
+identity marker.
+
 ## Representation boundary
 
-The Nim backend currently lowers classes to generated `ref object` types.
-That is an internal backend representation, not an Eido semantic commitment.
+The Nim backend currently lowers classes to generated `ref object` types and
+uses generated graph copiers for `copy`. Those are backend choices, not a
+commitment to GC, RC, heap allocation, or another memory-management model.
 
-Eido still does not define:
-
-- class reference identity;
-- implicit class copying;
-- class equality;
-- setting class-valued locals from existing class values;
-- garbage-collection or ownership semantics.
-
-Setting a class-valued local from an existing class identifier remains rejected until explicit copy/ref
-semantics are designed.
+Class equality and class-valued field mutation through `set` remain outside the
+current slice.
 
 ## Current boundary
 
 Not yet included:
 
-- field mutation;
-- class-valued function parameters/results;
+- class-valued field mutation through `set`;
 - interfaces;
 - contracts.

@@ -19,7 +19,7 @@
 - initializer type checking
 - no implicit field-to-field initializer visibility
 - no implicit class equality
-- no setting from existing class values before copy/ref semantics
+- rejection of bare existing-class rebinding when copy/ref intent is absent
 
 `class_field_access_variants_test.nim` covers:
 
@@ -45,5 +45,9 @@
 `self_receiver_variants_test.nim` covers current-instance field/method access,
 same-name top-level function separation, and invalid receiver contexts.
 
-Interfaces, contracts, class-valued field mutation, and class-valued explicit
-function/method signatures remain outside the current class slice.
+`class_copy_ref_variants_test.nim` covers explicit ref aliasing, detached copy,
+class parameters preserving identity, copy/ref construction fields, recursive
+detachment with internal sharing preservation, and detached class returns.
+
+Interfaces, contracts, and class-valued field mutation through `set` remain
+outside the current class slice.
