@@ -20,8 +20,8 @@ suite "Project compilation":
     let reverseProject = initProject(ptExecutable, @[accountSource, mainSource])
 
     # When
-    let forwardProgram = checkProject(forwardProject)
-    let reverseProgram = checkProject(reverseProject)
+    let forwardProgram = requireCheckedProject(forwardProject)
+    let reverseProgram = requireCheckedProject(reverseProject)
 
     # Then
     check forwardProgram.classes.len == 1
@@ -38,7 +38,7 @@ suite "Project compilation":
     ])
 
     # When
-    let program = checkProject(project)
+    let program = requireCheckedProject(project)
 
     # Then
     check program.functions.len == 1
@@ -53,7 +53,7 @@ suite "Project compilation":
 
     # When / Then
     expect ValueError:
-      discard checkProject(project)
+      discard requireCheckedProject(project)
 
   test "reports the source path for a duplicate declaration":
     # Given
@@ -66,7 +66,7 @@ suite "Project compilation":
 
     # When / Then
     try:
-      discard checkProject(project)
+      discard requireCheckedProject(project)
       check false
     except ValueError as error:
       check "duplicate class 'Account'" in error.msg
@@ -80,7 +80,7 @@ suite "Project compilation":
 
     # When / Then
     try:
-      discard checkProject(project)
+      discard requireCheckedProject(project)
       check false
     except ValueError as error:
       check "src/main.eido:" in error.msg
@@ -94,7 +94,7 @@ suite "Project compilation":
 
     # When / Then
     try:
-      discard checkProject(project)
+      discard requireCheckedProject(project)
       check false
     except ValueError as error:
       check "unknown function 'broken'" in error.msg

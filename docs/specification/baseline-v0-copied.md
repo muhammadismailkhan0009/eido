@@ -2511,3 +2511,121 @@ LSP/editor and MCP implementations are adapters over the compiler tooling API.
 They must not implement independent parsing, name resolution, typing, or member
 lookup. Tooling capabilities are added incrementally alongside the compiler
 facts required to support them.
+
+
+---
+
+# 42. Current implemented v0 structured diagnostics and semantic check model
+
+> Status: approved and implemented foundation. This section defines the
+> machine-readable diagnostic contract and the first semantic-only CLI/tooling
+> check operation used by future LSP/MCP integrations.
+
+## Structured diagnostics
+
+Compiler-reported user errors are represented as `CompilerDiagnostic` data,
+not only human-readable exception strings. A diagnostic contains:
+
+```text
+code
+severity
+message
+optional SourceSpan
+```
+
+Severity supports error, warning, information, and hint categories. Current
+compiler checking emits errors; the broader vocabulary is reserved for later
+analysis/tooling without changing the transport model.
+
+Stable diagnostic codes are part of the tooling contract. The initial v0 codes
+are:
+
+```text
+EIDO1000  generic source-bound compiler error
+EIDO2001  project contains no source units
+EIDO2002  executable project has no main function
+```
+
+EIDO1000 intentionally acts as a migration code for existing parser/semantic
+errors. More specific codes are introduced incrementally when language areas are
+touched; v0 does not require a one-time rewrite of every existing failure site.
+Human diagnostic messages may improve while the stable code remains the primary
+machine identity.
+
+## CompilerError bridge
+
+Existing compiler phases continue to use exception-based control flow for
+fail-fast user errors. `CompilerError` is ValueError-compatible so existing
+compiler tests/callers remain valid, but it embeds the authoritative structured
+`CompilerDiagnostic`.
+
+Protocol/tool adapters must consume the embedded diagnostic or tooling result;
+they must not parse the human exception message to reconstruct source spans,
+severity, or diagnostic identity.
+
+Unexpected internal compiler/backend invariant failures are not converted into
+normal user diagnostics. They remain exceptional so implementation defects are
+not hidden as ordinary source errors.
+
+## ProjectCheckResult
+
+The protocol-neutral tooling API exposes semantic project checking as:
+
+```text
+ProjectCheckResult
+├── success
+├── diagnostics[]
+└── program        # analyzed HIR when successful
+```
+
+`checkProject(project)` performs project parsing and semantic analysis only. It
+does not invoke the Nim emitter, write generated Nim, or run the native backend
+toolchain.
+
+The current compiler is fail-fast, so one check currently yields zero or one
+user diagnostic. The public result is sequence-shaped deliberately so parser
+recovery and multi-diagnostic aggregation can be added later without changing
+CLI/LSP/MCP result contracts.
+
+Compiler-internal code that needs failure to remain exceptional may use the
+strict checked-project path instead of the diagnostic-returning tooling path.
+
+## CLI semantic check
+
+The user-facing command is:
+
+```text
+eido check <source.eido> [<source.eido> ...]
+```
+
+All supplied files form the same executable project source set under the
+current pre-module model. A successful check exits with status 0. Compiler
+diagnostics are rendered to stderr and cause status 1. Example rendering:
+
+```text
+src/main.eido:3:9 error EIDO1000: unknown function 'broken'
+```
+
+`eido check` accepts no output path because it produces no backend artifact.
+Library-target CLI selection remains a later project/manifest concern; the
+compiler tooling API already supports checking library projects directly.
+
+## LSP/MCP significance
+
+This structured check path is the shared basis for future live editor and agent
+diagnostics:
+
+```text
+EidoProject
+    ↓
+checkProject
+    ↓
+ProjectCheckResult
+    ├── CLI -> human rendering
+    ├── LSP -> protocol diagnostics
+    ├── MCP -> machine-readable agent diagnostics
+    └── CI  -> automated check results
+```
+
+No adapter owns independent Eido diagnostic semantics. File identity, source
+spans, codes, severity, and messages originate in the compiler/tooling layer.

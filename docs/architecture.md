@@ -47,7 +47,7 @@ compiler/src/project/
     EidoProject source set and executable/library target model
 
 compiler/src/diagnostics/
-    compiler error formatting and reporting helpers
+    structured diagnostic model/codes, CompilerError bridge, and human formatting
 
 compiler/src/frontend/
     lexer, AST, and parser capabilities
@@ -71,7 +71,7 @@ compiler/src/pipeline/
     single-source compatibility plus project parse/analyze/emit orchestration
 
 compiler/src/tooling/
-    protocol-neutral compiler services exposed to CLI, MCP, LSP, CI, and agents
+    protocol-neutral project check/compile services exposed to CLI, MCP, LSP, CI, and agents
 
 compiler/tests/
     compiler-internal and language-facing conformance tests
@@ -100,7 +100,7 @@ tests/integration/
 
 ## Dependency rules
 
-- Source and diagnostic concepts must not depend on parser, semantic, HIR, backend, toolchain, or CLI code.
+- Source and diagnostic data concepts must not depend on parser, semantic, HIR, backend, toolchain, or CLI code. Diagnostic errors/formatting may depend only on source + diagnostic model/codes.
 - Frontend code must not depend on semantic analysis, HIR, or backend code.
 - Project/source identity models are lower-level compiler data and may be consumed by frontend, semantic, pipeline, and tooling layers.
 - Each SourceUnit is parsed independently, but semantic analysis consumes the merged project declaration universe so source order does not define visibility.
@@ -111,6 +111,8 @@ tests/integration/
 - Nim-specific types, names, process execution, and artifact paths must not leak into Eido semantic types or AST.
 - `compiler/src/tooling/` may coordinate stable compiler capabilities, but it must not depend on MCP, LSP, editor, or vendor-specific protocol code.
 - Protocol adapters under `tools/` consume compiler tooling services; compiler semantic phases must not depend on those adapters.
+- Expected user compiler failures are represented as structured `CompilerDiagnostic` values and may cross phase boundaries through `CompilerError`; adapters must not recover semantic facts by parsing human exception strings.
+- `checkProject` performs parser + semantic work only and does not invoke HIR emission/backend compilation; unexpected compiler invariant failures remain exceptional rather than being mislabeled as user diagnostics.
 - Filesystem and process execution stay in the outer backend-toolchain/tool-adapter boundary.
 - Dependencies must remain acyclic.
 

@@ -1,7 +1,7 @@
 ## Runs program-level semantic analysis in declaration passes.
 ## Class names/fields/method signatures and top-level function signatures are collected before any callable body is analyzed.
 
-import ../../diagnostics/errors
+import ../../diagnostics/[codes, errors]
 import ../../frontend/ast/program as astProgram
 import ../../hir/declarations
 import ../../hir/program as hirProgram
@@ -110,7 +110,10 @@ proc analyzeProgram*(
         failAt(fn.span, "main function must not declare parameters")
 
   if target == ptExecutable and not mainFound:
-    raise newException(ValueError, "executable project must declare function main()")
+    fail(
+      MissingMainDiagnosticCode,
+      "executable project must declare function main()"
+    )
 
   # Pass 5: analyze class-owned method bodies with source-level self bound to hidden receivers.
   for classIndex, sourceClass in program.classes:

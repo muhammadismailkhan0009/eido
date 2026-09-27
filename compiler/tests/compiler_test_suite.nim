@@ -72,6 +72,7 @@ import backend/nim/emitter/statement/loop_control_statement_emitter_test
 import backend/nim/emitter/statement/set_statement_emitter_test
 import pipeline/compiler_pipeline_test
 import project/project_compilation_test
+import diagnostics/structured_diagnostics_test
 
 import features/expression/arithmetic_variants_test
 import features/expression/grouping_variants_test

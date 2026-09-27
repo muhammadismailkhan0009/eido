@@ -41,6 +41,7 @@ compiler/
       statement/
     pipeline/
     project/
+    diagnostics/
 
     features/
       expression/
@@ -74,6 +75,10 @@ These tests answer questions such as:
 ### Project/compiler tests
 
 `compiler/tests/project/` proves project-source assembly, executable/library target rules, source-order independence, and source-aware diagnostics without involving editor/MCP transports.
+
+### Structured diagnostic tests
+
+`compiler/tests/diagnostics/` proves stable diagnostic codes, severity/message/span preservation, project diagnostics without spans, human rendering, and the protocol-neutral `ProjectCheckResult` contract used by CLI/LSP/MCP/CI.
 
 ### Language feature tests
 
@@ -117,7 +122,7 @@ Names describe visible behavior rather than implementation details.
 - Pipeline tests exercise the complete real path through native Nim compilation.
 - Feature tests exercise complete user-facing Eido variants through generated Nim executed by `nim e`; this preserves end-to-end language behavior without paying native compilation cost per scenario.
 - Architecture tests prove dependency/readability/test-organization constraints.
-- Root integration tests prove cross-component flows such as CLI multi-source project builds through the real native toolchain.
+- Root integration tests prove cross-component flows such as CLI multi-source project builds and semantic-only `eido check` behavior.
 - Test through public phase entry points; do not test private procedures directly.
 
 ## Test support
@@ -145,7 +150,7 @@ The canonical test task is parallel and CPU-adaptive:
 5. Language-facing feature tests run one process per individual test, because those cases are comparatively expensive and often execute generated Nim through `nim e`.
 6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
 7. Successful child output is suppressed; failed child output is replayed with its selector.
-8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios; currently this includes multi-source CLI parsing/build/native execution.
+8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios; currently this includes multi-source CLI parsing/build/native execution plus semantic-only check/diagnostic behavior.
 
 Worker count defaults to `max(1, countProcessors() - 2)` so two logical cores remain free for the OS and other work. Override it when needed:
 

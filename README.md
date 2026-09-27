@@ -17,10 +17,13 @@ Eido is an experimental compiled language focused on predictable enterprise soft
 
 Run `nimble build` to build the CLI and `nimble test` to run compiler, language, and toolchain integration tests.
 
-Current explicit multi-source build form:
+Current explicit multi-source commands:
 
 ```text
 eido build src/main.eido src/account.eido src/service.eido -o app
+eido check src/main.eido src/account.eido src/service.eido
 ```
+
+`eido check` performs project parsing + semantic analysis only; it does not invoke the Nim emitter/toolchain. Compiler errors are emitted as structured diagnostics rendered like `path:line:column error EIDO1000: message`.
 
 All supplied files currently form one project declaration universe; module/import/package boundaries are intentionally not implemented yet.
