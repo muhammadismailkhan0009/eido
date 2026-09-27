@@ -1,5 +1,5 @@
-## Parses bodyless top-level native function declarations supplied by backend support.
-## Example: `native function platformArgument(Int index) returns String;`.
+## Parses bodyless native function declarations supplied by backend support.
+## The same grammar is valid at top level or inside a class.
 
 ## Parses one native function signature terminated by a semicolon.
 ## Example: native functions reuse ordinary parameter/result grammar but never contain an Eido body.

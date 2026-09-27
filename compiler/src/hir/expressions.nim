@@ -62,6 +62,7 @@ type
     span*: SourceSpan
     methodId*: MethodId
     methodName*: string
+    isNative*: bool
     ownerType*: EidoType
     arguments*: seq[HirExpr]
     result*: FunctionResult

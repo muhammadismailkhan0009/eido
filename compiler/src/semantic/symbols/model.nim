@@ -41,6 +41,7 @@ type
   MethodSymbol* = object
     id*: MethodId
     name*: string
+    isNative*: bool
     kind*: MethodKind
     parameterTypes*: seq[EidoType]
     result*: FunctionResult

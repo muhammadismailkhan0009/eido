@@ -54,6 +54,7 @@ proc analyzeStaticMethodCall(
     span: expr.span,
     methodId: target.id,
     methodName: target.name,
+    isNative: target.isNative,
     kind: mkStatic,
     ownerType: owner.typ,
     arguments: analyzeMethodArguments(
@@ -119,6 +120,7 @@ proc analyzeMethodCall*(
     span: expr.span,
     methodId: target.id,
     methodName: target.name,
+    isNative: target.isNative,
     kind: mkInstance,
     ownerType: owner.typ,
     receiver: receiver,

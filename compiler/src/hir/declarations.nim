@@ -23,6 +23,7 @@ type
     span*: SourceSpan
     methodId*: MethodId
     sourceName*: string
+    isNative*: bool
     ownerType*: EidoType
     parameters*: seq[HirParameter]
     result*: FunctionResult

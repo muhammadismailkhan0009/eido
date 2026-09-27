@@ -26,7 +26,9 @@ proc parseClass*(parser: var Parser): ClassDecl =
     if parser.check(tkEof):
       failAt(parser.peek.span, "expected '}' after class body")
 
-    if parser.check(tkFunction):
+    if parser.check(tkNative):
+      methods.add parser.parseNativeFunction()
+    elif parser.check(tkFunction):
       methods.add parser.parseFunction()
     else:
       fields.add parser.parseFieldDecl()

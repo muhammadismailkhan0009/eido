@@ -113,10 +113,10 @@ tests/integration/
 - Semantic analysis may consume AST and produce HIR.
 - HIR must contain resolved symbol identity and semantic types needed by backends. Class-owned functions also carry resolved `mkStatic`/`mkInstance` kind: only instance-method HIR variants may contain a receiver ID/value, so backends/tooling cannot accidentally invent receivers for inferred static methods.
 - Backends consume HIR, not raw AST.
-- The Nim emitter must not perform Eido name resolution, type checking, or static/instance inference. Semantic analysis classifies class-owned functions from explicit `self` dependency before HIR; the emitter only obeys the resolved method kind.
+- The Nim emitter must not perform Eido name resolution, type checking, or static/instance inference. Semantic analysis classifies Eido-bodied class functions from explicit `self` dependency before HIR; bodyless class-owned native functions are explicitly resolved as `mkStatic`. The emitter only obeys resolved method kind/native-ness.
 - Nim-specific types, names, process execution, artifact paths, and native-support module layout must not leak into Eido semantic types or AST.
-- `native function` is an explicit language boundary: semantic analysis validates only its Eido-visible signature, while backend symbol/provider mechanics remain backend support concerns.
-- The initial native ABI accepts primitives/String only. Class values remain forbidden until a deliberate cross-native identity/representation model exists.
+- `native function` is an explicit language boundary: semantic analysis validates only its Eido-visible signature, while backend symbol/provider mechanics remain backend support concerns. Native declarations may be top-level or class-owned; class-owned native declarations are resolved as static/type-associated methods with no receiver and no Eido body.
+- The initial native ABI accepts primitives/String only. Class values remain forbidden until a deliberate cross-native identity/representation/lifetime model exists. Native instance methods are also deferred because they would require passing Eido object identity across the native boundary.
 - `compiler/src/tooling/` may coordinate stable compiler capabilities, but it must not depend on MCP, LSP, editor, or vendor-specific protocol code.
 - Protocol adapters under `tools/` consume compiler tooling services; compiler semantic phases must not depend on those adapters.
 - Expected user compiler failures are represented as structured `CompilerDiagnostic` values and may cross phase boundaries through `CompilerError`; adapters must not recover semantic facts by parsing human exception strings.

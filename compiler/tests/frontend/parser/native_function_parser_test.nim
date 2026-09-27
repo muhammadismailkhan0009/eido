@@ -23,6 +23,26 @@ suite "Native function parser":
     check function.result.typeRef.name == "String"
     check function.body.len == 0
 
+  test "parses a class-owned bodyless native function":
+    # Given
+    let source = """
+      class Console {
+        native function writeLine(String value);
+      }
+      function main() {}
+    """
+
+    # When
+    let program = parseSource(source)
+    let nativeMethod = program.classes[0].methods[0]
+
+    # Then
+    check nativeMethod.isNative
+    check nativeMethod.name == "writeLine"
+    check nativeMethod.parameters.len == 1
+    check nativeMethod.result.kind == frrNone
+    check nativeMethod.body.len == 0
+
   test "requires a semicolon after a native function declaration":
     # Given
     let source = """

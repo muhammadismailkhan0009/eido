@@ -3,11 +3,17 @@
 ## Renders one class method call with a receiver only for instance methods.
 ## Example: Calculator.add(1,2) omits a receiver while account.value() passes account first.
 proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
-  result = methodName(
-    call.methodId,
-    call.ownerType.className,
-    call.methodName
-  ) & "("
+  let renderedName =
+    if call.isNative:
+      nativeMethodName(call.ownerType.className, call.methodName)
+    else:
+      methodName(
+        call.methodId,
+        call.ownerType.className,
+        call.methodName
+      )
+
+  result = renderedName & "("
 
   var hasPreviousArgument = false
   if call.kind == mkInstance:

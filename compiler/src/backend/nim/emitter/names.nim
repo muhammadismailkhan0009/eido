@@ -11,6 +11,11 @@ proc functionName*(id: FunctionId, sourceName: string): string =
 proc nativeFunctionName*(sourceName: string): string =
   "eido_native_" & sourceName
 
+## Builds the backend ABI symbol used by a native Eido class method.
+## Example: Console.writeLine maps to eido_native_method_Console_writeLine.
+proc nativeMethodName*(ownerName, sourceName: string): string =
+  "eido_native_method_" & ownerName & "_" & sourceName
+
 ## Builds a collision-safe Nim method name from semantic identity and owner.
 proc methodName*(
   id: MethodId,

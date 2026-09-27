@@ -65,6 +65,7 @@ import semantic/analysis/expression/comparison_operator_analysis_test
 import semantic/analysis/expression/boolean_operator_analysis_test
 import backend/nim/emitter/nim_emitter_test
 import backend/nim/emitter/native_function_emitter_test
+import backend/nim/emitter/native_class_method_emitter_test
 import backend/nim/emitter/class_method_emitter_test
 import backend/nim/emitter/class_static_method_emitter_test
 import backend/nim/emitter/class_copy_emitter_test
@@ -87,6 +88,7 @@ import features/expression/comparison_variants_test
 import features/expression/boolean_operator_variants_test
 import features/function_variants_test
 import features/native/native_function_variants_test
+import features/native/native_class_method_variants_test
 import features/classes/class_declaration_variants_test
 import features/classes/class_construction_variants_test
 import features/classes/class_field_access_variants_test

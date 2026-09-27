@@ -9,6 +9,7 @@ import ../../hir/program as hirProgram
 import ../../project/model
 import ../../types/model
 import ../../types/function_result
+import ../../types/method_kind
 import ../symbols/ids
 import type_resolution
 import ../symbols/model
@@ -94,12 +95,19 @@ proc analyzeProgram*(
       for parameter in sourceMethod.parameters:
         parameterTypes.add resolveDeclaredType(parameter.typeRef, classes)
 
+      let methodResult = resolveFunctionResult(sourceMethod.result, classes)
+      if sourceMethod.isNative:
+        validateNativeSignature(sourceMethod, parameterTypes, methodResult)
+
       classSymbol.methods.add MethodSymbol(
         id: MethodId(nextMethodId),
         name: sourceMethod.name,
-        kind: inferMethodKind(sourceMethod),
+        isNative: sourceMethod.isNative,
+        kind:
+          if sourceMethod.isNative: mkStatic
+          else: inferMethodKind(sourceMethod),
         parameterTypes: parameterTypes,
-        result: resolveFunctionResult(sourceMethod.result, classes),
+        result: methodResult,
         span: sourceMethod.span
       )
       inc nextMethodId

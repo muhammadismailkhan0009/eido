@@ -92,7 +92,9 @@ proc analyzeMethod*(
       symbol.result
     )
 
-  if symbol.result.kind == frSingle and not blockAlwaysReturns(body):
+  if not symbol.isNative and
+      symbol.result.kind == frSingle and
+      not blockAlwaysReturns(body):
     failAt(
       sourceMethod.span,
       "method '" & sourceMethod.name & "' must return " &
@@ -103,6 +105,7 @@ proc analyzeMethod*(
     span: sourceMethod.span,
     methodId: symbol.id,
     sourceName: sourceMethod.name,
+    isNative: symbol.isNative,
     ownerType: owner.typ,
     parameters: parameters,
     result: symbol.result,

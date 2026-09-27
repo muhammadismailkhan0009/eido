@@ -1,6 +1,6 @@
 import std/unittest
 import support/compiler_test_support
-import types/function_result
+import types/[function_result, method_kind]
 
 suite "Native function semantics":
   test "accepts primitive and String native signatures without Eido bodies":
@@ -37,6 +37,40 @@ suite "Native function semantics":
   test "rejects native main as the executable entrypoint":
     # Given
     let source = "native function main();"
+
+    # When / Then
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "class-owned native function is a static method with no Eido body":
+    # Given
+    let source = """
+      class Process {
+        native function argumentCount() returns Int;
+      }
+      function main() returns Int {
+        return Process.argumentCount();
+      }
+    """
+
+    # When
+    let program = analyzeSource(source)
+    let nativeMethod = program.classes[0].methods[0]
+
+    # Then
+    check nativeMethod.isNative
+    check nativeMethod.kind == mkStatic
+    check nativeMethod.result.kind == frSingle
+
+  test "class-owned native function rejects class values at ABI boundary":
+    # Given
+    let source = """
+      class Account { Int balance; }
+      class NativeStore {
+        native function save(Account account);
+      }
+      function main() {}
+    """
 
     # When / Then
     expect ValueError:

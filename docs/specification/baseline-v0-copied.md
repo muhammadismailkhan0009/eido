@@ -2928,3 +2928,103 @@ containers.
 
 The first permanent dogfood users are the standard-library `Console` and
 `Process` classes consumed by the Eido-written CLI.
+
+
+---
+
+# 45. Class-owned native functions and direct stdlib native APIs
+
+> Status: approved and implemented. This section is authoritative over section
+> 43 where the initial native boundary was described as top-level-only and the
+> first stdlib APIs used separate Eido wrapper functions.
+
+Eido native declarations may now appear either at top level or inside a class.
+The declaration remains bodyless and semicolon-terminated:
+
+```eido
+native function clockTicks() returns Int;
+
+class Console {
+    native function writeLine(String value);
+}
+```
+
+## Class-owned native method semantics
+
+A class-owned native function has no Eido body. Therefore v0 does not attempt
+to infer instance dependency from `self`: it is explicitly resolved as a
+**type-associated/static native method**.
+
+It is called through the class:
+
+```eido
+Console.writeLine("hello");
+Process.exit(1);
+```
+
+Calling the same native method through an instance is invalid. Native instance
+methods are not part of v0 because a receiver would require Eido class identity,
+representation, lifetime, and mutation semantics to cross the native ABI.
+
+The initial native ABI remains restricted to primitives and `String` for both
+top-level and class-owned native declarations. Nominal class parameters/results
+remain rejected.
+
+## Direct API rule
+
+A foundational Eido API should not introduce an Eido wrapper whose only job is
+to rename or forward to a native capability. When the public operation is itself
+the native boundary, the public class method is declared native directly.
+
+Therefore the stdlib now uses:
+
+```eido
+class Console {
+    native function writeLine(String value);
+    native function errorLine(String value);
+}
+
+class Process {
+    native function argumentCount() returns Int;
+    native function argument(Int index) returns String;
+    native function exit(Int code);
+}
+```
+
+The previous shape:
+
+```eido
+native function platformWriteLine(String value);
+
+class Console {
+    function writeLine(String value) {
+        platformWriteLine(value);
+    }
+}
+```
+
+is no longer used by shipped stdlib source because it creates an unnecessary
+Eido forwarding layer.
+
+This does not prohibit Eido-bodied wrappers when they add real semantics such
+as validation, conversion, contracts, portability policy, resource management,
+or composition. It only removes wrappers that add no behavior.
+
+## Backend mapping
+
+For the current Nim backend:
+
+```text
+top-level native foo            -> eido_native_foo
+Console.writeLine               -> eido_native_method_Console_writeLine
+Process.argument                -> eido_native_method_Process_argument
+```
+
+Class-owned native declarations emit no generated Eido/Nim method body and no
+hidden receiver. Their native/static facts are preserved in semantic symbols
+and HIR; the backend only maps the already-resolved declaration to its provider
+symbol and imports the bundled native support module.
+
+This remains the Eido SDK/backend support ABI. It is still **not** the general
+arbitrary shared-library FFI/foreign-memory API; that broader design remains
+open and should be driven by an actual ecosystem requirement.

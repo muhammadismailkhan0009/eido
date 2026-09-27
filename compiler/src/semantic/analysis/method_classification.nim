@@ -1,5 +1,5 @@
-## Infers whether class-owned functions are instance or static from explicit self dependency.
-## Because Eido requires explicit self for instance state/calls, AST self reachability is the classification source.
+## Infers whether Eido-bodied class functions are instance or static from explicit self dependency.
+## Bodyless native class functions bypass inference and are resolved as static at signature collection.
 
 import ../../frontend/ast/[declarations, expressions, statements]
 import ../../types/method_kind

@@ -94,6 +94,8 @@ These tests answer questions such as:
 - which expression forms work?
 - are self-free class functions inferred static and callable only as `Type.method(...)`?
 - do self-dependent class functions remain receiver-bound instance methods?
+- do class-owned native functions stay bodyless/static and call backend support without an Eido wrapper body?
+- are class-valued native ABI inputs/results still rejected?
 
 Some behavior is intentionally covered by multiple layers because the boundary risk is different: compiler tests prove the owning implementation contract, feature tests prove the language surface as complete Eido programs, and root integration tests prove adapters/tooling compose those compiler capabilities correctly.
 

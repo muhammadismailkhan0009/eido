@@ -30,4 +30,4 @@ All supplied files currently form one project declaration universe; module/impor
 
 ## Requirement-driven dogfooding
 
-Eido's ecosystem is now grown through permanent product requirements rather than throwaway examples. The first Eido-written product is `tools/cli/eido/main.eido`; it already implements help/version/error/exit behavior using inferred-static Eido stdlib APIs such as `Console.writeLine(...)` and `Process.argument(...)`. The Nim compiler remains the bootstrap compiler/core, while ordinary tooling migrates to Eido as the language gains the required capabilities.
+Eido's ecosystem is now grown through permanent product requirements rather than throwaway examples. The first Eido-written product is `tools/cli/eido/main.eido`; it already implements help/version/error/exit behavior using direct class-owned native stdlib APIs such as `Console.writeLine(...)` and `Process.argument(...)`. No Eido `platform*` wrapper layer sits between those public APIs and backend native support. The Nim compiler remains the bootstrap compiler/core, while ordinary tooling migrates to Eido as the language gains the required capabilities.

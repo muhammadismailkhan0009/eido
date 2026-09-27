@@ -11,22 +11,32 @@ import function_emitter
 
 ## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
-  var hasNativeFunctions = false
+  var hasNativeDeclarations = false
   for fn in program.functions:
     if fn.isNative:
-      hasNativeFunctions = true
+      hasNativeDeclarations = true
       break
 
-  if hasNativeFunctions:
+  if not hasNativeDeclarations:
+    for classDecl in program.classes:
+      for methodDecl in classDecl.methods:
+        if methodDecl.isNative:
+          hasNativeDeclarations = true
+          break
+      if hasNativeDeclarations:
+        break
+
+  if hasNativeDeclarations:
     result.add "import eido_native\n\n"
 
   result.add renderClasses(program.classes)
   result.add renderClassCopiers(program.classes)
 
-  # Forward declare every method and function before any callable body.
+  # Forward declare every Eido-bodied method and function before any callable body.
   for classDecl in program.classes:
     for methodDecl in classDecl.methods:
-      result.add renderMethodSignature(methodDecl) & "\n"
+      if not methodDecl.isNative:
+        result.add renderMethodSignature(methodDecl) & "\n"
 
   for fn in program.functions:
     if not fn.isNative:
@@ -36,8 +46,9 @@ proc emitNim*(program: hirProgram.HirProgram): string =
 
   for classDecl in program.classes:
     for methodDecl in classDecl.methods:
-      result.add renderMethod(methodDecl)
-      result.add "\n"
+      if not methodDecl.isNative:
+        result.add renderMethod(methodDecl)
+        result.add "\n"
 
   for fn in program.functions:
     if not fn.isNative:
