@@ -62,22 +62,9 @@ proc resolveInterfaceMethods*(
 
       var parameterTypes: seq[EidoType]
       for parameter in sourceMethod.parameters:
-        let parameterType = resolveDeclaredType(parameter.typeRef, symbols)
-        if parameterType.kind == etkClass:
-          failAt(
-            parameter.typeRef.span,
-            "interface contracts cannot expose concrete class type '" &
-              parameterType.className & "'"
-          )
-        parameterTypes.add parameterType
+        parameterTypes.add resolveDeclaredType(parameter.typeRef, symbols)
 
       let methodResult = resolveFunctionResult(sourceMethod.result, symbols)
-      if methodResult.kind == frSingle and methodResult.typ.kind == etkClass:
-        failAt(
-          sourceMethod.result.typeRef.span,
-          "interface contracts cannot expose concrete class type '" &
-            methodResult.typ.className & "'"
-        )
 
       interfaceSymbol.methods.add InterfaceMethodSymbol(
         name: sourceMethod.name,

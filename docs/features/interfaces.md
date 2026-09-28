@@ -115,10 +115,9 @@ A `Child` value may be used where `Base` is expected.
 ## Architectural ownership
 
 In module projects, interfaces are architectural declarations. An interface must
-participate in its owning module architecture through either:
-
-- `exports`, or
-- a parent-owned `provides` contract.
+participate in an exported, adopted, or provided API surface. That participation
+may be direct or may arise transitively because a reachable public class
+implements the interface or another reachable interface extends/references it.
 
 Interfaces are closed to their owning module family by default. A class may
 implement, and an interface may extend, a contract only inside the module that
@@ -158,23 +157,25 @@ The compiler verifies that:
   `PaymentService` (or a child interface that extends it);
 - unrelated modules cannot implement the closed contract.
 
-## Boundary type restrictions
+## Boundary type reachability
 
-Concrete behavioral class types are never part of an interface contract.
+Interface signatures may use ordinary classes directly:
 
-Therefore interface parameters/results may currently use:
+```eido
+interface PaymentService {
+    function pay(PaymentRequest request) returns PaymentResult;
+}
+```
 
-- primitives;
-- String;
-- interfaces;
-- optional forms when otherwise legal.
+When such an interface participates in a module API, the referenced classes
+become part of that module's transitive API closure. Those classes remain normal
+classes with their existing fields, construction rules, methods, identity, and
+implemented interfaces; Eido does not convert them into DTO/data projections.
 
-Concrete class parameters/results in interface signatures are rejected.
-
-API data types are the next missing boundary feature. Once Eido has a distinct
-data-type model, public interface signatures will be allowed to carry those
-types and module API closure can expose them transitively without leaking
-behavioral implementation classes.
+This reachability continues recursively through the exposed classes' own fields,
+method signatures, and implemented interfaces. The developer controls the
+architectural consequence by choosing the exported API roots rather than by
+classifying object kinds.
 
 ## Backend representation
 

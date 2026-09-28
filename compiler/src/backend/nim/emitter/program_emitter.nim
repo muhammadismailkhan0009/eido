@@ -5,7 +5,7 @@ import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import names
 import interface_emitter
-import class_emitter
+import nominal_type_emitter
 import class_copy_emitter
 import method_emitter
 import function_emitter
@@ -32,8 +32,7 @@ proc emitNim*(program: hirProgram.HirProgram): string =
     result.add "import eido_native\n"
 
   result.add "\n"
-  result.add renderInterfaces(program.interfaces)
-  result.add renderClasses(program.classes)
+  result.add renderNominalTypes(program.interfaces, program.classes)
   result.add renderClassCopiers(program.classes)
 
   # Forward declare every Eido-bodied method and function before adapters or callable bodies.

@@ -222,3 +222,119 @@ suite "CLI project integration":
 
     buildModuleFile(root / "module.yaml", outputPath)
     check execProcess(outputPath).strip() == "42"
+
+
+  test "builds exported interface with transitive ordinary class API":
+    let root = freshProject("class_api_closure")
+    let outputPath = root / "class_api_app"
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    createDir(root / "payments")
+    createDir(root / "payments" / "processor")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Api.eido
+      children:
+        processor: { path: processor }
+      dependencies: []
+      exports:
+        - PaymentService
+        - Payments
+      provides:
+        PaymentService:
+          by: processor
+      adopts:
+        - processor.ProcessorFactory
+    """)
+    writeFile(root / "payments" / "Api.eido", """
+      class PaymentRequest {
+        Int amount;
+
+        function doubled() returns Int {
+          return self.amount * 2;
+        }
+      }
+
+      class PaymentResult {
+        Int code;
+      }
+
+      interface PaymentService {
+        function pay(PaymentRequest request) returns PaymentResult;
+      }
+
+      class Payments {
+        function service() returns PaymentService {
+          return ProcessorFactory.create();
+        }
+      }
+    """)
+
+    writeFile(root / "payments" / "processor" / "module.yaml", """
+      module: processor
+      sources:
+        - Processor.eido
+      children: []
+      dependencies: []
+      exports:
+        - ProcessorFactory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "processor" / "Processor.eido", """
+      class HiddenService implements PaymentService {
+        Int offset;
+
+        function pay(PaymentRequest request) returns PaymentResult {
+          return PaymentResult {
+            code = request.doubled() + self.offset;
+          };
+        }
+      }
+
+      class ProcessorFactory {
+        function create() returns PaymentService {
+          return HiddenService { offset = 0; };
+        }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        var request = PaymentRequest { amount = 21; };
+        var service = Payments.service();
+        var result = service.pay(request);
+        return result.code;
+      }
+    """)
+
+    buildModuleFile(root / "module.yaml", outputPath)
+    check execProcess(outputPath).strip() == "42"

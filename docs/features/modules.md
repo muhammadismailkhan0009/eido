@@ -81,40 +81,44 @@ Containment controls visibility; dependencies control use.
 
 ## Current public surface
 
-The current module public surface is:
+Modules do not distinguish DTO/data classes from behavioral classes.
 
-```text
-interfaces          behavioral contracts
-static-only classes facades/factories/entry points
-API data types      pending
-```
+An explicitly exported class or interface is an API root. The compiler computes
+the complete transitive nominal API closure from that root through:
 
-A static-only exported class has:
+- class fields;
+- class method parameter/result types;
+- interfaces implemented by a class;
+- parent interfaces;
+- interface method parameter/result types;
+- nested generic type arguments.
 
-```text
-zero fields
-+
-all methods inferred static
-```
+Every reachable class/interface becomes available to consumers as the same
+ordinary Eido declaration it already is. A reachable class may therefore be
+constructed, have fields read, and have its methods called according to the
+normal class rules. The compiler does not project a data-only view and does not
+warn that a behavioral class has become public.
 
-Concrete instance classes cannot cross module boundaries. Top-level functions
-are always module-internal. Cross-module construction or use of a concrete
-behavioral class as a field/parameter/result type is rejected.
+Declarations that are not reachable from an allowed API surface remain
+module-internal. Top-level functions remain module-internal and cannot be
+exported.
 
-Interfaces are closed to their owning module family by default. Parent-owned
-`provides` contracts propagate only into the declared provider subtree, while
-external dependencies may consume an exported interface but may not implement
-it.
-
-A public interface cannot currently mention a concrete class parameter/result.
-Distinct API data types and transitive public API data closure remain the next
-boundary feature.
+Interfaces are still closed to their owning module family by default.
+Parent-owned `provides` contracts and their full nominal closure propagate only
+into the declared provider subtree, while external dependencies may consume an
+exported interface but may not implement it.
 
 ## Dependency graph
 
-Explicit module dependencies must be acyclic and are non-transitive. A child may
-consume dependencies supplied by its ancestors without declaring a dependency
-back to the parent.
+Explicit module dependencies must be acyclic and are non-transitive as usage
+relationships. A child may consume dependencies supplied by its ancestors
+without declaring a dependency back to the parent.
+
+API closure is different from dependency transitivity. If module A's exported
+surface references an exported class/interface from dependency B, that specific
+reachable declaration becomes part of A's public API and is therefore visible
+to consumers of A. Unrelated declarations from B remain invisible unless they
+also become reachable through A's API graph.
 
 The current module-aware resolver still requires interface, class, and
 top-level-function names to be project-unique. Module-qualified internal symbol identities are a

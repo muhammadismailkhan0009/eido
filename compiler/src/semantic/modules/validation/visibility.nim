@@ -80,15 +80,6 @@ proc exportedSymbol(
     )
   (targetModule, symbolName)
 
-## Reports whether one class is legal as a module-level static API.
-proc isStaticOnly(source: ClassDecl): bool =
-  if source.fields.len != 0:
-    return false
-  for methodDecl in source.methods:
-    if not methodDecl.isNative and inferMethodKind(methodDecl) != mkStatic:
-      return false
-  true
-
 ## Returns a module and all of its canonical ancestors, nearest first.
 proc moduleAncestors(moduleName: string): seq[string] =
   var current = moduleName
@@ -136,59 +127,6 @@ proc resolveChildExport(
 
   target
 
-## Returns public export owners for a symbol from one module boundary.
-proc publicExportOwners(
-  modules: ModuleRegistry,
-  rootModule, moduleName, symbolName: string
-): seq[string] =
-  if moduleName notin modules:
-    return
-
-  let moduleSpec = modules[moduleName]
-  for exportRef in moduleSpec.exports:
-    let target = exportedSymbol(
-      modules,
-      rootModule,
-      moduleSpec,
-      exportRef
-    )
-    if target.symbolName == symbolName and target.moduleName notin result:
-      result.add target.moduleName
-
-## Returns declaration owners made visible downward by ancestor architecture.
-proc familyVisibleOwners(
-  modules: ModuleRegistry,
-  rootModule, currentModule, symbolName: string
-): seq[string] =
-  for ancestor in moduleAncestors(currentModule):
-    if ancestor notin modules:
-      continue
-    let spec = modules[ancestor]
-
-    # Public ancestor API propagates downward.
-    for owner in publicExportOwners(
-      modules, rootModule, ancestor, symbolName
-    ):
-      if owner notin result:
-        result.add owner
-
-    # Explicit child adoption becomes family-visible from the adopting parent.
-    for adoption in spec.adopts:
-      let target = exportedSymbol(
-        modules,
-        rootModule,
-        spec,
-        adoption
-      )
-      if target.symbolName == symbolName and target.moduleName notin result:
-        result.add target.moduleName
-
-    # A parent-owned provided contract propagates into its designated provider subtree.
-    for provision in spec.provides:
-      if provision.contract == symbolName and
-          isSameOrDescendant(provision.providerModule, currentModule):
-        if spec.canonicalName notin result:
-          result.add spec.canonicalName
 
 ## Returns explicit dependencies inherited from the current module's ancestors.
 proc effectiveDependencyNames(
@@ -202,29 +140,48 @@ proc effectiveDependencyNames(
       if dependency notin result:
         result.add dependency
 
-## Returns owners visible either through family propagation or explicit dependencies.
-proc visibleOwners(
+## Reports whether a symbol belongs to one precomputed architecture surface.
+proc surfaceContains(
+  surfaces: SurfaceRegistry,
+  key, symbolName: string
+): bool =
+  key in surfaces and symbolName in surfaces[key]
+
+## Reports whether a declaration is visible through family propagation or dependencies.
+proc isSymbolVisible(
   modules: ModuleRegistry,
-  rootModule, currentModule, symbolName: string
-): seq[string] =
-  for owner in familyVisibleOwners(
-    modules, rootModule, currentModule, symbolName
-  ):
-    if owner notin result:
-      result.add owner
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  currentModule, symbolName: string
+): bool =
+  for ancestor in moduleAncestors(currentModule):
+    if ancestor notin modules:
+      continue
+
+    if publicSurfaces.surfaceContains(ancestor, symbolName):
+      return true
+    if adoptedSurfaces.surfaceContains(ancestor, symbolName):
+      return true
+
+    let spec = modules[ancestor]
+    for provision in spec.provides:
+      if not isSameOrDescendant(provision.providerModule, currentModule):
+        continue
+      let key = ancestor & "->" & provision.providerModule
+      if providedSurfaces.surfaceContains(key, symbolName):
+        return true
 
   for dependency in effectiveDependencyNames(modules, currentModule):
-    for owner in publicExportOwners(
-      modules, rootModule, dependency, symbolName
-    ):
-      if owner notin result:
-        result.add owner
+    if publicSurfaces.surfaceContains(dependency, symbolName):
+      return true
 
-## Requires a cross-module static class reference to be publicly/family visible.
-proc requireStaticVisibility(
+  false
+
+## Requires a cross-module class to belong to the effective API surface.
+proc requireClassVisibility(
   modules: ModuleRegistry,
   classes: ClassRegistry,
-  rootModule, currentModule, className: string,
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  currentModule, className: string,
   spanPath: string,
   line, column: int
 ) =
@@ -235,22 +192,27 @@ proc requireStaticVisibility(
   if target.moduleName == currentModule:
     return
 
-  let owners = visibleOwners(
-    modules, rootModule, currentModule, className
-  )
-  if target.moduleName notin owners:
+  if not isSymbolVisible(
+    modules,
+    publicSurfaces,
+    adoptedSurfaces,
+    providedSurfaces,
+    currentModule,
+    className
+  ):
     failAt(
       spanPath, line, column,
-      "module '" & currentModule & "' cannot access '" & className &
+      "module '" & currentModule & "' cannot access class '" & className &
         "' from module '" & target.moduleName &
-        "'; expose it through an allowed module boundary"
+        "'; it is not reachable from an allowed module API surface"
     )
 
-## Requires an interface type to be visible through the current architecture.
+## Requires an interface to belong to the effective API/contract surface.
 proc requireInterfaceVisibility(
   modules: ModuleRegistry,
   interfaces: InterfaceRegistry,
-  rootModule, currentModule, interfaceName: string,
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  currentModule, interfaceName: string,
   spanPath: string,
   line, column: int
 ) =
@@ -261,14 +223,17 @@ proc requireInterfaceVisibility(
   if target.moduleName == currentModule:
     return
 
-  let owners = visibleOwners(
-    modules, rootModule, currentModule, interfaceName
-  )
-  if target.moduleName notin owners:
+  if not isSymbolVisible(
+    modules,
+    publicSurfaces,
+    adoptedSurfaces,
+    providedSurfaces,
+    currentModule,
+    interfaceName
+  ):
     failAt(
       spanPath, line, column,
       "module '" & currentModule & "' cannot use interface '" &
         interfaceName & "' from module '" & target.moduleName &
-        "'; expose or propagate that contract explicitly"
+        "'; it is not reachable from an allowed module API surface"
     )
-

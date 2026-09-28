@@ -6,17 +6,17 @@ import ../../diagnostics/errors
 import ../../frontend/ast/[declarations, expressions, program, statements, type_references]
 import ../../project/model as projectModel
 import ../../project/modules/model as moduleModel
-import ../../types/method_kind
-import ../analysis/method_classification
 
 type
   ClassRegistry = Table[string, ClassDecl]
   InterfaceRegistry = Table[string, InterfaceDecl]
   FunctionOwnerRegistry = Table[string, string]
   ModuleRegistry = Table[string, moduleModel.ModuleSpec]
+  SurfaceRegistry = Table[string, HashSet[string]]
 
 
 include validation/visibility
+include validation/public_surface
 include validation/interfaces
 include validation/source_usage
 
@@ -69,16 +69,37 @@ proc validateModuleArchitecture*(
     functions,
     project.rootModule
   )
+  let publicSurfaces = buildPublicSurfaces(
+    modules,
+    classes,
+    interfaces,
+    project.rootModule
+  )
+  let adoptedSurfaces = buildAdoptedSurfaces(
+    modules,
+    classes,
+    interfaces,
+    project.rootModule
+  )
+  let providedSurfaces = buildProvidedSurfaces(
+    modules,
+    classes,
+    interfaces
+  )
+
   validateInterfacePurpose(
     interfaces,
-    modules,
-    project.rootModule
+    publicSurfaces,
+    adoptedSurfaces,
+    providedSurfaces
   )
   validateInterfaceOwnership(
     classes,
     interfaces,
     modules,
-    project.rootModule
+    publicSurfaces,
+    adoptedSurfaces,
+    providedSurfaces
   )
   validateProviders(
     classes,
@@ -93,7 +114,9 @@ proc validateModuleArchitecture*(
         requireInterfaceVisibility(
           modules,
           interfaces,
-          project.rootModule,
+          publicSurfaces,
+          adoptedSurfaces,
+          providedSurfaces,
           sourceInterface.moduleName,
           parent,
           sourceInterface.span.sourcePath,
@@ -109,7 +132,9 @@ proc validateModuleArchitecture*(
         interfaces,
         functions,
         modules,
-        project.rootModule,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
         false
       )
 
@@ -126,7 +151,9 @@ proc validateModuleArchitecture*(
         classes,
         interfaces,
         modules,
-        project.rootModule
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces
       )
 
     for methodDecl in sourceClass.methods:
@@ -138,7 +165,9 @@ proc validateModuleArchitecture*(
         interfaces,
         functions,
         modules,
-        project.rootModule,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
         true
       )
 
@@ -151,6 +180,8 @@ proc validateModuleArchitecture*(
       interfaces,
       functions,
       modules,
-      project.rootModule,
+      publicSurfaces,
+      adoptedSurfaces,
+      providedSurfaces,
       false
     )

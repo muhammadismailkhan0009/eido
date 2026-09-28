@@ -60,14 +60,6 @@ proc validateManifestSurfaces(
             sourceClass.moduleName & "'"
         )
 
-      if not isStaticOnly(sourceClass):
-        failAt(
-          sourceClass.span,
-          "module export '" & exportRef &
-            "' must be an interface, API data type, or static-only class; " &
-            "concrete instance classes cannot cross module boundaries"
-        )
-
     for adoption in moduleSpec.adopts:
       let target = resolveChildExport(
         modules,
@@ -81,31 +73,28 @@ proc validateManifestSurfaces(
           "adopt must reference a child module export"
         )
 
-## Verifies every interface declaration participates in exports or provides.
+## Verifies every interface declaration participates in an architectural surface.
 proc validateInterfacePurpose(
   interfaces: InterfaceRegistry,
-  modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 ) =
   for interfaceName, sourceInterface in interfaces:
-    let owner = modules[sourceInterface.moduleName]
     var architectural = false
 
-    for exportRef in owner.exports:
-      let target = exportedSymbol(
-        modules,
-        rootModule,
-        owner,
-        exportRef
-      )
-      if target.moduleName == sourceInterface.moduleName and
-          target.symbolName == interfaceName:
+    for _, surface in publicSurfaces:
+      if interfaceName in surface:
         architectural = true
         break
 
     if not architectural:
-      for provision in owner.provides:
-        if provision.contract == interfaceName:
+      for _, surface in adoptedSurfaces:
+        if interfaceName in surface:
+          architectural = true
+          break
+
+    if not architectural:
+      for _, surface in providedSurfaces:
+        if interfaceName in surface:
           architectural = true
           break
 
@@ -113,7 +102,7 @@ proc validateInterfacePurpose(
       failAt(
         sourceInterface.span,
         "interface '" & interfaceName &
-          "' must be exported or used as a parent-owned provided contract"
+          "' must participate in an exported, adopted, or provided module API surface"
       )
 
 ## Verifies closed interface extension and class implementation ownership.
@@ -121,7 +110,7 @@ proc validateInterfaceOwnership(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 ) =
   for _, sourceInterface in interfaces:
     for parent in sourceInterface.extends:
@@ -131,7 +120,9 @@ proc validateInterfaceOwnership(
       requireInterfaceVisibility(
         modules,
         interfaces,
-        rootModule,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
         sourceInterface.moduleName,
         parent,
         sourceInterface.span.sourcePath,
@@ -156,7 +147,9 @@ proc validateInterfaceOwnership(
       requireInterfaceVisibility(
         modules,
         interfaces,
-        rootModule,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
         sourceClass.moduleName,
         implemented,
         sourceClass.span.sourcePath,

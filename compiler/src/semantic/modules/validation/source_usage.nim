@@ -6,22 +6,29 @@ proc validateTypeRef(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 ) =
   if source.name notin typeParameters:
     if source.name in classes:
-      let owner = classes[source.name].moduleName
-      if owner != currentModule:
-        failAt(
-          source.span,
-          "concrete class type '" & source.name & "' belongs to module '" &
-            owner & "' and cannot cross into module '" & currentModule & "'"
-        )
+      requireClassVisibility(
+        modules,
+        classes,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
+        currentModule,
+        source.name,
+        source.span.sourcePath,
+        source.span.line,
+        source.span.column
+      )
     elif source.name in interfaces:
       requireInterfaceVisibility(
         modules,
         interfaces,
-        rootModule,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
         currentModule,
         source.name,
         source.span.sourcePath,
@@ -37,7 +44,9 @@ proc validateTypeRef(
       classes,
       interfaces,
       modules,
-      rootModule
+      publicSurfaces,
+      adoptedSurfaces,
+      providedSurfaces
     )
 
 ## Declares recursive expression architecture validation.
@@ -50,7 +59,7 @@ proc validateExpr(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 )
 
 ## Declares recursive statement architecture validation.
@@ -63,7 +72,7 @@ proc validateStmtBlock(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 )
 
 ## Validates architecture-sensitive names inside one expression.
@@ -76,7 +85,7 @@ proc validateExpr(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 ) =
   if source.isNil:
     return
@@ -88,10 +97,12 @@ proc validateExpr(
   of ekTypeReference:
     let typeRef = source.referencedTypeRef
     if typeRef.name in classes and typeRef.name notin typeParameters:
-      requireStaticVisibility(
+      requireClassVisibility(
         modules,
         classes,
-        rootModule,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
         currentModule,
         typeRef.name,
         source.span.sourcePath,
@@ -106,7 +117,9 @@ proc validateExpr(
         classes,
         interfaces,
         modules,
-        rootModule
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces
       )
 
   of ekCall:
@@ -119,7 +132,8 @@ proc validateExpr(
     for argument in source.arguments:
       validateExpr(
         argument, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
   of ekConstruct:
@@ -130,32 +144,39 @@ proc validateExpr(
       classes,
       interfaces,
       modules,
-      rootModule
+      publicSurfaces,
+      adoptedSurfaces,
+      providedSurfaces
     )
     for field in source.fields:
       validateExpr(
         field.value, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
   of ekClassRelation:
     validateExpr(
       source.relatedValue, currentModule, locals, typeParameters,
-      classes, interfaces, functions, modules, rootModule
+      classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
     )
 
   of ekFieldAccess:
     validateExpr(
       source.target, currentModule, locals, typeParameters,
-      classes, interfaces, functions, modules, rootModule
+      classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
     )
 
   of ekMethodCall:
     if source.receiver.kind == ekIdentifier and
         source.receiver.name notin locals and
         source.receiver.name in classes:
-      requireStaticVisibility(
-        modules, classes, rootModule, currentModule, source.receiver.name,
+      requireClassVisibility(
+        modules, classes,
+        publicSurfaces, adoptedSurfaces, providedSurfaces,
+        currentModule, source.receiver.name,
         source.receiver.span.sourcePath,
         source.receiver.span.line,
         source.receiver.span.column
@@ -163,29 +184,34 @@ proc validateExpr(
     else:
       validateExpr(
         source.receiver, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     for argument in source.methodArguments:
       validateExpr(
         argument, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
   of ekUnary:
     validateExpr(
       source.operand, currentModule, locals, typeParameters,
-      classes, interfaces, functions, modules, rootModule
+      classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
     )
 
   of ekBinary:
     validateExpr(
       source.left, currentModule, locals, typeParameters,
-      classes, interfaces, functions, modules, rootModule
+      classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
     )
     validateExpr(
       source.right, currentModule, locals, typeParameters,
-      classes, interfaces, functions, modules, rootModule
+      classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
     )
 
 ## Validates architecture-sensitive names inside one statement block.
@@ -198,7 +224,7 @@ proc validateStmtBlock(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   modules: ModuleRegistry,
-  rootModule: string
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 ) =
   var locals = initialLocals
 
@@ -207,64 +233,76 @@ proc validateStmtBlock(
     of skVar:
       validateExpr(
         statement.initializer, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       locals.incl statement.name
 
     of skAssign:
       validateExpr(
         statement.target, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       validateExpr(
         statement.assignedValue, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skCall:
       validateExpr(
         statement.call, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skReturn:
       validateExpr(
         statement.value, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skIf:
       validateExpr(
         statement.condition, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       validateStmtBlock(
         statement.thenBranch, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       validateStmtBlock(
         statement.elseBranch, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skExists:
       validateExpr(
         statement.existsTarget, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       validateStmtBlock(
         statement.existsBody, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skWhile:
       validateExpr(
         statement.whileCondition, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       validateStmtBlock(
         statement.body, currentModule, locals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skFor:
@@ -272,22 +310,26 @@ proc validateStmtBlock(
       if not statement.forInitializer.isNil:
         validateStmtBlock(
           @[statement.forInitializer], currentModule, loopLocals,
-          typeParameters, classes, interfaces, functions, modules, rootModule
+          typeParameters, classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
         )
         if statement.forInitializer.kind == skVar:
           loopLocals.incl statement.forInitializer.name
       validateExpr(
         statement.forCondition, currentModule, loopLocals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
       if not statement.forUpdate.isNil:
         validateStmtBlock(
           @[statement.forUpdate], currentModule, loopLocals,
-          typeParameters, classes, interfaces, functions, modules, rootModule
+          typeParameters, classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
         )
       validateStmtBlock(
         statement.forBody, currentModule, loopLocals, typeParameters,
-        classes, interfaces, functions, modules, rootModule
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
       )
 
     of skBreak, skContinue:
@@ -302,7 +344,7 @@ proc validateCallable(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   modules: ModuleRegistry,
-  rootModule: string,
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
   includeSelf: bool
 ) =
   var locals = initHashSet[string]()
@@ -317,7 +359,9 @@ proc validateCallable(
       classes,
       interfaces,
       modules,
-      rootModule
+      publicSurfaces,
+      adoptedSurfaces,
+      providedSurfaces
     )
     locals.incl parameter.name
 
@@ -329,11 +373,14 @@ proc validateCallable(
       classes,
       interfaces,
       modules,
-      rootModule
+      publicSurfaces,
+      adoptedSurfaces,
+      providedSurfaces
     )
 
   validateStmtBlock(
     source.body, currentModule, locals, typeParameters,
-    classes, interfaces, functions, modules, rootModule
+    classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
   )
 

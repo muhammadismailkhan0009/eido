@@ -3715,3 +3715,197 @@ This is not Eido's object/interface ABI contract.
 Another backend may use vtables, fat pointers, tagged handles, or another
 representation as long as it preserves the same nominal conformance, hidden
 implementation identity, conversions, and runtime dispatch semantics.
+
+
+
+---
+
+# 51. Ordinary classes participate directly in transitive module API closure
+
+> Status: approved and implemented for v0.
+>
+> This section supersedes the parts of sections 49 and 50 that restricted
+> cross-module class exposure to static-only/data-like classes or rejected
+> ordinary concrete class types from interface signatures.
+
+Eido has one ordinary class abstraction. The language does not classify classes
+as DTOs, data classes, entities, services, or behavioral classes for module
+visibility purposes.
+
+A class may carry data, behavior, identity, implemented interfaces, or any
+combination of them.
+
+## API roots
+
+Module declarations remain explicit.
+
+Outward public API begins only from declarations named by:
+
+```yaml
+exports:
+  - SomeClass
+  - SomeInterface
+```
+
+Family-only API begins from declarations named by `adopts`.
+
+Provider-only contract API begins from the parent-owned interface named by
+`provides`.
+
+Filesystem placement still creates no API visibility by itself.
+
+Top-level functions remain module-internal and cannot be exported.
+
+## Transitive nominal closure
+
+For every API root, the compiler computes a recursive nominal declaration graph.
+
+For a reachable class, closure follows:
+
+- every field type;
+- every method parameter type;
+- every method result type;
+- every explicitly implemented interface;
+- every nested generic type argument appearing in those types.
+
+For a reachable interface, closure follows:
+
+- every parent interface;
+- every method parameter type;
+- every method result type;
+- every nested generic type argument appearing in those types.
+
+Primitive and String types terminate closure because they are built-in rather
+than module-owned nominal declarations.
+
+Cycles in the type graph are handled by ordinary visited-set closure and do not
+create errors merely because the API graph is recursive.
+
+## Whole declaration availability
+
+A class that becomes reachable through API closure is available as the ordinary
+class it already is.
+
+No data-only projection is created.
+
+Therefore, subject to the ordinary Eido rules, consumers may use its:
+
+- construction syntax;
+- fields;
+- instance methods;
+- inferred static methods;
+- class identity semantics;
+- implemented interfaces;
+- further reachable nominal types.
+
+The compiler does not warn that the class is behavioral or suggest introducing
+a DTO.
+
+Architectural consequences of exposing a class belong to the module author.
+
+## Interface signatures may use classes
+
+Ordinary class types are valid in interface method parameters and results:
+
+```eido
+class PaymentRequest {
+    Int amount;
+}
+
+class PaymentResult {
+    Int code;
+}
+
+interface PaymentService {
+    function pay(PaymentRequest request) returns PaymentResult;
+}
+```
+
+If `PaymentService` is part of a module API, `PaymentRequest` and
+`PaymentResult` automatically enter that API closure.
+
+Their own fields, method signatures, implemented interfaces, and nested generic
+arguments are then traversed recursively.
+
+No distinct `data` declaration is required.
+
+## Visibility of unreachable declarations
+
+A declaration does not become public merely because it lives in the same module
+or dependency.
+
+For example:
+
+```text
+exported Api
+  -> PaymentRequest
+  -> Money
+
+InternalCoordinator
+SecretCache
+UnrelatedDependencyType
+```
+
+Only `Api`, `PaymentRequest`, and `Money` are visible through that API
+graph. The other declarations remain module-internal unless another allowed
+surface reaches them.
+
+## Dependency interaction
+
+Module dependency edges remain explicit, non-transitive usage relationships.
+
+If module A depends on B and A's exported API references a B declaration that A
+is legally allowed to use, that specific declaration becomes part of A's API
+closure and is therefore re-exposed to consumers of A.
+
+This does not expose B wholesale.
+
+```text
+B exports: Money, Logger, Metrics
+
+A depends B
+A public PaymentRequest -> Money
+
+C depends A
+
+C may use Money    ✅ reachable through A's API
+C may use Logger   ❌ not reachable through A's API
+C may use Metrics  ❌ not reachable through A's API
+```
+
+Thus declaration reachability may cross a dependency boundary while the module
+dependency graph itself remains non-transitive.
+
+## Parent/child propagation
+
+The directional module rule remains unchanged.
+
+Nothing rises automatically from a child merely because the child contains it.
+
+A parent must still explicitly adopt or re-export a child API root.
+
+Once that root is authorized, however, its entire transitive nominal closure is
+propagated with it.
+
+Likewise, a parent-owned `provides` contract propagates its complete nominal
+closure only into the declared provider subtree.
+
+## Interface ownership
+
+Closed-interface implementation ownership is unchanged.
+
+Making an interface reachable/public permits other modules to consume interface
+values and signatures. It does not permit unrelated modules to implement or
+extend that interface.
+
+Open extension remains a future explicit opt-in feature.
+
+## Backend consequence
+
+Because classes may now appear in interface signatures and interfaces may appear
+in class surfaces, class/interface declarations can mutually reference one
+another.
+
+The Nim backend therefore emits all nominal class/interface layouts in one Nim
+`type` section. This is a backend representation requirement only; the Eido
+semantic rule is simply mutual nominal type reachability.
