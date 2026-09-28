@@ -6,6 +6,7 @@ import declarations
 
 type
   HirProgram* = object
+    interfaces*: seq[HirInterface]
     classes*: seq[HirClass]
     functions*: seq[HirFunction]
     hasMain*: bool

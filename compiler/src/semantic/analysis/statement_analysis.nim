@@ -9,7 +9,7 @@ import ../../types/model
 import ../../types/function_result
 import ../symbols/model
 import ../symbols/functions
-import ../symbols/classes
+import ../symbols/nominals
 import ../symbols/scope
 import expression_analysis
 import optional_paths
@@ -20,7 +20,7 @@ proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols,
+  classes: NominalSymbols,
   functionResult: FunctionResult,
   loopDepth: int = 0
 ): hirStatements.HirStmt
@@ -37,7 +37,7 @@ proc analyzeStmt*(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols,
+  classes: NominalSymbols,
   functionResult: FunctionResult,
   loopDepth: int = 0
 ): hirStatements.HirStmt =

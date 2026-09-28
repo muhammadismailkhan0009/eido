@@ -8,6 +8,7 @@ include keywords/while_statements
 include keywords/for_statements
 include keywords/loop_control_statements
 include keywords/class_declarations
+include keywords/interface_declarations
 include keywords/native_functions
 
 ## Maps identifier text to its token kind.
@@ -36,6 +37,10 @@ proc keywordKind*(text: string): TokenKind =
   let classKeyword = classKeywordKind(text)
   if classKeyword != tkIdentifier:
     return classKeyword
+
+  let interfaceKeyword = interfaceKeywordKind(text)
+  if interfaceKeyword != tkIdentifier:
+    return interfaceKeyword
 
   let nativeKeyword = nativeFunctionKeywordKind(text)
   if nativeKeyword != tkIdentifier:

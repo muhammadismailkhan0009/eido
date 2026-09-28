@@ -16,6 +16,10 @@ type
     hcvrCopy,
     hcvrRef
 
+  HirMethodDispatchKind* = enum
+    hmdClass,
+    hmdInterface
+
   HirBinaryOp* = enum
     hboAdd,
     hboSubtract,
@@ -43,6 +47,7 @@ type
     hekCall,
     hekConstruct,
     hekClassRelation,
+    hekInterfaceConvert,
     hekFieldAccess,
     hekMethodCall,
     hekUnary,
@@ -63,6 +68,7 @@ type
 
   HirMethodCall* = ref object
     span*: SourceSpan
+    dispatchKind*: HirMethodDispatchKind
     methodId*: MethodId
     methodName*: string
     isNative*: bool
@@ -104,6 +110,8 @@ type
     of hekClassRelation:
       classRelationKind*: HirClassValueRelationKind
       relatedValue*: HirExpr
+    of hekInterfaceConvert:
+      interfaceValue*: HirExpr
     of hekFieldAccess:
       target*: HirExpr
       sourceFieldName*: string

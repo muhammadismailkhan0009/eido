@@ -13,7 +13,8 @@ type
   EidoTypeKind* = enum
     etkPrimitive,
     etkString,
-    etkClass
+    etkClass,
+    etkInterface
 
   EidoType* = object
     isOptional*: bool
@@ -24,6 +25,8 @@ type
       discard
     of etkClass:
       className*: string
+    of etkInterface:
+      interfaceName*: string
 
 const
   etBool* = EidoType(kind: etkPrimitive, primitive: ptBool)
@@ -38,6 +41,10 @@ const
 ## Example: classType("Employee") identifies the declared Employee type.
 proc classType*(name: string): EidoType =
   EidoType(kind: etkClass, className: name)
+
+## Creates a nominal non-optional interface type.
+proc interfaceType*(name: string): EidoType =
+  EidoType(kind: etkInterface, interfaceName: name)
 
 ## Marks a type as optional without changing its underlying value identity.
 ## Example: optionalType(etInt) represents source Int?.
@@ -64,6 +71,8 @@ proc `==`*(left, right: EidoType): bool =
     true
   of etkClass:
     left.className == right.className
+  of etkInterface:
+    left.interfaceName == right.interfaceName
 
 ## Returns the human-readable Eido type name including optional suffix.
 ## Example: classType("Employee") displays Employee while optional Employee displays Employee?.
@@ -72,6 +81,8 @@ proc displayName*(typ: EidoType): string =
     case typ.kind
     of etkClass:
       typ.className
+    of etkInterface:
+      typ.interfaceName
     of etkString:
       "String"
     of etkPrimitive:

@@ -1,8 +1,21 @@
-## Renders resolved inferred-static and instance method calls as Nim procedure calls.
+## Renders resolved direct class calls and dynamic interface calls.
 
-## Renders one class method call with a receiver only for instance methods.
-## Example: Calculator.add(1,2) omits a receiver while account.value() passes account first.
+## Renders one class/interface method call.
 proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
+  if call.dispatchKind == hmdInterface:
+    result = renderExpr(call.receiver) & "." &
+      interfaceMethodFieldName(
+        call.ownerType.interfaceName,
+        call.methodName
+      ) & "("
+
+    for index, argument in call.arguments:
+      if index > 0:
+        result.add ", "
+      result.add renderExpr(argument)
+    result.add ")"
+    return
+
   let renderedName =
     if call.isNative:
       nativeMethodName(call.ownerType.className, call.methodName)

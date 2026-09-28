@@ -7,7 +7,7 @@ proc analyzeArithmetic(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   let left = analyzeExpr(expr.left, locals, functions, classes)
   let right = analyzeExpr(expr.right, locals, functions, classes)

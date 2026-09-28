@@ -1,13 +1,12 @@
-## Resolves class-qualified inferred-static calls and value-qualified instance calls.
+## Resolves class-qualified static calls and value-qualified class/interface calls.
 
 ## Analyzes arguments against one resolved class method signature.
-## Example: Calculator.add(1, 2) checks both values against the add parameter types.
 proc analyzeMethodArguments(
   expr: astExpressions.Expr,
   target: MethodSymbol,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): seq[HirExpr] =
   if expr.methodArguments.len != target.parameterTypes.len:
     failAt(
@@ -26,15 +25,39 @@ proc analyzeMethodArguments(
       classes
     )
 
+## Analyzes arguments against one interface method contract.
+proc analyzeInterfaceMethodArguments(
+  expr: astExpressions.Expr,
+  target: InterfaceMethodSymbol,
+  locals: LocalScope,
+  functions: FunctionSymbols,
+  classes: NominalSymbols
+): seq[HirExpr] =
+  if expr.methodArguments.len != target.parameterTypes.len:
+    failAt(
+      expr.span,
+      "interface method '" & expr.methodName & "' expects " &
+        $target.parameterTypes.len & " arguments but got " &
+        $expr.methodArguments.len
+    )
+
+  for index, argument in expr.methodArguments:
+    result.add analyzeExprExpected(
+      argument,
+      target.parameterTypes[index],
+      locals,
+      functions,
+      classes
+    )
+
 ## Resolves a class-qualified call to an inferred static method.
-## Example: Calculator.add(1, 2) resolves without creating or passing a Calculator receiver.
 proc analyzeStaticMethodCall(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirMethodCall =
-  let owner = classes.get(expr.receiver.name)
+  let owner = classes.getClass(expr.receiver.name)
   if not owner.containsMethod(expr.methodName):
     failAt(
       expr.span,
@@ -52,6 +75,7 @@ proc analyzeStaticMethodCall(
 
   HirMethodCall(
     span: expr.span,
+    dispatchKind: hmdClass,
     methodId: target.id,
     methodName: target.name,
     isNative: target.isNative,
@@ -67,20 +91,55 @@ proc analyzeStaticMethodCall(
     result: target.result
   )
 
-## Resolves one class member call and enforces inferred static/instance call form.
-## Example: Calculator.add(...) is static while account.balance() requires an account receiver.
+## Resolves an interface-qualified dynamic call through its contract wrapper.
+proc analyzeInterfaceMethodCall(
+  expr: astExpressions.Expr,
+  receiver: HirExpr,
+  locals: LocalScope,
+  functions: FunctionSymbols,
+  classes: NominalSymbols
+): hirExpressions.HirMethodCall =
+  let interfaceName = receiver.typ.interfaceName
+  if not classes.containsInterfaceMethod(interfaceName, expr.methodName):
+    failAt(
+      expr.span,
+      "interface '" & interfaceName & "' has no method '" &
+        expr.methodName & "'"
+    )
+
+  let target = classes.getInterfaceMethod(interfaceName, expr.methodName)
+  HirMethodCall(
+    span: expr.span,
+    dispatchKind: hmdInterface,
+    methodId: MethodId(-1),
+    methodName: target.name,
+    isNative: false,
+    kind: mkInstance,
+    ownerType: receiver.typ,
+    receiver: receiver,
+    arguments: analyzeInterfaceMethodArguments(
+      expr,
+      target,
+      locals,
+      functions,
+      classes
+    ),
+    result: target.result
+  )
+
+## Resolves one class/interface member call and enforces its call form.
 proc analyzeMethodCall*(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirMethodCall =
   if expr.kind != astExpressions.ekMethodCall:
-    failAt(expr.span, "expected class method call")
+    failAt(expr.span, "expected method call")
 
   if expr.receiver.kind == astExpressions.ekIdentifier and
       not locals.contains(expr.receiver.name) and
-      classes.contains(expr.receiver.name):
+      classes.containsClass(expr.receiver.name):
     return analyzeStaticMethodCall(
       expr,
       locals,
@@ -96,17 +155,26 @@ proc analyzeMethodCall*(
         "' requires an exists block before method access"
     )
 
+  if receiver.typ.kind == etkInterface:
+    return analyzeInterfaceMethodCall(
+      expr,
+      receiver,
+      locals,
+      functions,
+      classes
+    )
+
   if receiver.typ.kind != etkClass:
     failAt(
       expr.span,
-      "method call requires a class receiver but got " &
+      "method call requires a class or interface receiver but got " &
         receiver.typ.displayName
     )
 
-  if not classes.contains(receiver.typ.className):
+  if not classes.containsClass(receiver.typ.className):
     failAt(expr.span, "unknown class type '" & receiver.typ.className & "'")
 
-  let owner = classes.get(receiver.typ.className)
+  let owner = classes.getClass(receiver.typ.className)
   if not owner.containsMethod(expr.methodName):
     failAt(
       expr.span,
@@ -125,6 +193,7 @@ proc analyzeMethodCall*(
 
   HirMethodCall(
     span: expr.span,
+    dispatchKind: hmdClass,
     methodId: target.id,
     methodName: target.name,
     isNative: target.isNative,
@@ -142,12 +211,11 @@ proc analyzeMethodCall*(
   )
 
 ## Resolves a method call used as a value and rejects zero-result methods.
-## Example: Calculator.add(...) may initialize Int while Logger.flush() cannot initialize a value.
 proc analyzeValueMethodCall(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   let call = analyzeMethodCall(expr, locals, functions, classes)
   if call.result.kind == frNone:

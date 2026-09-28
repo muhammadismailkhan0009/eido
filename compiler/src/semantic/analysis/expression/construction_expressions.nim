@@ -6,12 +6,12 @@ proc analyzeConstruction(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
-  if not classes.contains(expr.constructionTypeRef.name):
+  if not classes.containsClass(expr.constructionTypeRef.name):
     failAt(expr.span, "unknown class '" & expr.constructionTypeRef.name & "'")
 
-  let target = classes.get(expr.constructionTypeRef.name)
+  let target = classes.getClass(expr.constructionTypeRef.name)
   var suppliedNames: seq[string]
   var fields: seq[hirExpressions.HirConstructionField]
 

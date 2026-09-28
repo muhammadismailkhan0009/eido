@@ -4,6 +4,7 @@ import ../../../hir/program as hirProgram
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import names
+import interface_emitter
 import class_emitter
 import class_copy_emitter
 import method_emitter
@@ -31,10 +32,11 @@ proc emitNim*(program: hirProgram.HirProgram): string =
     result.add "import eido_native\n"
 
   result.add "\n"
+  result.add renderInterfaces(program.interfaces)
   result.add renderClasses(program.classes)
   result.add renderClassCopiers(program.classes)
 
-  # Forward declare every Eido-bodied method and function before any callable body.
+  # Forward declare every Eido-bodied method and function before adapters or callable bodies.
   for classDecl in program.classes:
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
@@ -45,6 +47,11 @@ proc emitNim*(program: hirProgram.HirProgram): string =
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
+  result.add renderInterfaceUpcasts(program.interfaces)
+  result.add renderClassInterfaceAdapters(
+    program.interfaces,
+    program.classes
+  )
 
   for classDecl in program.classes:
     for methodDecl in classDecl.methods:

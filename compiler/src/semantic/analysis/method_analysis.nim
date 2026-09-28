@@ -8,7 +8,7 @@ import ../../hir/statements
 import ../../types/function_result
 import ../../types/model
 import ../../types/method_kind
-import ../symbols/[classes, functions, ids, model, scope]
+import ../symbols/[functions, ids, model, nominals, scope]
 import statement_analysis
 
 ## Creates the classified method scope and lowers one checked class function body.
@@ -17,7 +17,7 @@ proc analyzeMethod*(
   owner: ClassSymbol,
   symbol: MethodSymbol,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirDeclarations.HirMethod =
   var locals = initLocalScope()
   var receiverLocalId = LocalId(-1)

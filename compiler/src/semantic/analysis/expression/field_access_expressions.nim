@@ -7,7 +7,7 @@ proc analyzeFieldAccess(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   let target = analyzeExpr(expr.target, locals, functions, classes)
 
@@ -25,13 +25,13 @@ proc analyzeFieldAccess(
         target.typ.displayName
     )
 
-  if not classes.contains(target.typ.className):
+  if not classes.containsClass(target.typ.className):
     failAt(
       expr.span,
       "unknown class type '" & target.typ.className & "'"
     )
 
-  let classSymbol = classes.get(target.typ.className)
+  let classSymbol = classes.getClass(target.typ.className)
   for field in classSymbol.fields:
     if field.name == expr.fieldName:
       let raw = HirExpr(

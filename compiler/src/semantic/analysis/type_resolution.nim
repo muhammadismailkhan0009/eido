@@ -5,7 +5,7 @@ import ../../diagnostics/errors
 import ../../frontend/ast/declarations
 import ../../types/model
 import ../../types/function_result
-import ../symbols/classes
+import ../symbols/nominals
 
 ## Converts source built-in type syntax into a semantic Eido type.
 ## Example: `TypeRef("Float")` resolves to `etFloat` and String resolves to `etString`.
@@ -28,7 +28,7 @@ proc resolveType*(typeRef: TypeRef): EidoType =
 ## Example: Address resolves to classType("Address") after class-name collection.
 proc resolveDeclaredType*(
   typeRef: TypeRef,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): EidoType =
   let base =
     case typeRef.name
@@ -40,8 +40,8 @@ proc resolveDeclaredType*(
     of "Char": etChar
     of "String": etString
     else:
-      if classes.contains(typeRef.name):
-        classes.get(typeRef.name).typ
+      if classes.containsNominal(typeRef.name):
+        classes.nominalType(typeRef.name, typeRef.span)
       else:
         failAt(typeRef.span, "unknown type '" & typeRef.name & "'")
 
@@ -50,7 +50,7 @@ proc resolveDeclaredType*(
 ## Resolves a function's source result declaration.
 proc resolveFunctionResult*(
   sourceResult: FunctionResultRef,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): FunctionResult =
   case sourceResult.kind
   of frrNone:

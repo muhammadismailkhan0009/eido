@@ -45,6 +45,20 @@ proc parseClass*(parser: var Parser): ClassDecl =
       )
       break
 
+  var implementedInterfaces: seq[string]
+  if parser.check(tkImplements):
+    discard parser.advance()
+    while true:
+      let interfaceName = parser.consume(
+        tkIdentifier,
+        "expected interface name after 'implements'"
+      )
+      implementedInterfaces.add interfaceName.lexeme
+
+      if not parser.check(tkComma):
+        break
+      discard parser.advance()
+
   discard parser.consume(tkLBrace, "expected '{' before class body")
 
   var fields: seq[FieldDecl]
@@ -66,6 +80,7 @@ proc parseClass*(parser: var Parser): ClassDecl =
     span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
     typeParameters: typeParameters,
+    implements: implementedInterfaces,
     fields: fields,
     methods: methods
   )

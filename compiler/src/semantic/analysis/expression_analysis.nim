@@ -8,8 +8,9 @@ import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
 import ../symbols/model
+import ../symbols/ids
 import ../symbols/functions
-import ../symbols/classes
+import ../symbols/nominals
 import ../symbols/scope
 import optional_paths
 
@@ -19,7 +20,7 @@ proc analyzeExpr*(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr
 
 ## Analyzes an expression against an expected semantic type.
@@ -29,7 +30,7 @@ proc analyzeExprExpected*(
   expected: EidoType,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr
 
 include expression/literal_expressions
@@ -51,7 +52,7 @@ proc analyzeExpr*(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   case expr.kind
   of astExpressions.ekInteger,

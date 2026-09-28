@@ -10,6 +10,8 @@ proc renderRequiredType(typ: EidoType): string =
   case typ.kind
   of etkClass:
     className(typ.className)
+  of etkInterface:
+    interfaceName(typ.interfaceName)
   of etkString:
     "string"
   of etkPrimitive:

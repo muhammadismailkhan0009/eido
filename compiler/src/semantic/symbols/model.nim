@@ -54,7 +54,9 @@ type
 
   ClassSymbol* = object
     name*: string
+    moduleName*: string
     typ*: EidoType
+    implements*: seq[string]
     fields*: seq[ClassFieldSymbol]
     methods*: seq[MethodSymbol]
     span*: SourceSpan

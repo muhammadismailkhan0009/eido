@@ -7,7 +7,7 @@ proc analyzeConditional(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols,
+  classes: NominalSymbols,
   functionResult: FunctionResult,
   loopDepth: int
 ): hirStatements.HirStmt =
@@ -51,7 +51,7 @@ proc analyzeExists(
   stmt: astStatements.Stmt,
   locals: var LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols,
+  classes: NominalSymbols,
   functionResult: FunctionResult,
   loopDepth: int
 ): hirStatements.HirStmt =

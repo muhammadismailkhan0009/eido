@@ -92,6 +92,24 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
     of hirExpressions.hcvrCopy:
       result = classCopyName(expr.typ.className) & "(" &
         renderExpr(expr.relatedValue) & ")"
+  of hirExpressions.hekInterfaceConvert:
+    let source = expr.interfaceValue
+    case source.typ.kind
+    of etkClass:
+      result = interfaceAdapterName(
+        source.typ.className,
+        expr.typ.interfaceName
+      ) & "(" & renderExpr(source) & ")"
+    of etkInterface:
+      result = interfaceUpcastName(
+        source.typ.interfaceName,
+        expr.typ.interfaceName
+      ) & "(" & renderExpr(source) & ")"
+    else:
+      raise newException(
+        ValueError,
+        "backend invariant: interface conversion has non-nominal source"
+      )
   of hirExpressions.hekFieldAccess:
     result = renderFieldAccess(expr)
   of hirExpressions.hekMethodCall:

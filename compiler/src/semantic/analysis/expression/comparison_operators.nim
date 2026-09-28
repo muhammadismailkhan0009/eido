@@ -7,7 +7,7 @@ proc analyzeComparisonOperands(
   leftExpr, rightExpr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): tuple[left, right: hirExpressions.HirExpr] =
   if leftExpr.kind == astExpressions.ekInteger and
       rightExpr.kind != astExpressions.ekInteger:
@@ -32,7 +32,7 @@ proc analyzeComparison(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   let operands = analyzeComparisonOperands(
     expr.left, expr.right, locals, functions, classes

@@ -8,7 +8,7 @@ proc analyzeClassRelationshipMutationValue(
   expected: EidoType,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): HirExpr =
   if expected.kind != etkClass:
     raise newException(

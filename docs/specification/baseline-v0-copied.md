@@ -3517,3 +3517,201 @@ function names to be project-unique after module loading. Visibility,
 containment, propagation, source ownership, and dependency enforcement are
 already module-aware. Fully module-qualified internal symbol identity is a
 separate resolver refinement and does not alter this module contract.
+
+
+
+---
+
+# 50. Interfaces are explicit module contracts with runtime dispatch
+
+> Status: approved and implemented for v0.
+>
+> This section supersedes the older statements that v0 interfaces are
+> compile-time-only, that runtime interface dispatch is deferred, and that an
+> exported interface may be implemented by unrelated modules by default.
+
+## Syntax
+
+Interfaces declare bodyless behavioral method signatures:
+
+```eido
+interface PaymentService {
+    function pay(Int amount) returns Int;
+}
+```
+
+Classes state architectural intent explicitly:
+
+```eido
+class StripeService implements PaymentService {
+    Int multiplier;
+
+    function pay(Int amount) returns Int {
+        return amount * self.multiplier;
+    }
+}
+```
+
+One class may implement multiple interfaces:
+
+```eido
+class Store implements Readable, Writable {
+    ...
+}
+```
+
+An interface may extend one parent interface in v0:
+
+```eido
+interface Child extends Parent {
+    function child() returns Int;
+}
+```
+
+Multiple-interface extension and generic interfaces remain deferred. Class
+inheritance remains unsupported.
+
+## Conformance
+
+Interface conformance is explicit and nominal. Matching method names alone never
+create conformance.
+
+For every direct or inherited interface method, the implementing class must
+contain an instance method with exactly matching:
+
+- method name;
+- parameter count and parameter types;
+- result cardinality and result type.
+
+A self-free Eido class method is inferred `mkStatic` and therefore cannot
+satisfy an interface method. Interface contracts describe behavior on an
+instance.
+
+Extra class methods remain implementation-local.
+
+## Interface types and values
+
+An interface is a real Eido semantic type. Interface values may appear as
+locals, parameters, results, fields, and optional values where the ordinary type
+rules permit them.
+
+A class value may flow to an interface type only when the class explicitly
+implements that interface.
+
+A child-interface value may flow to an ancestor interface only through a
+declared `extends` relationship.
+
+These conversions are explicit in typed HIR even though source code does not
+spell a cast.
+
+Calls through an interface are runtime interface dispatch:
+
+```eido
+var service = Payments.service();
+var result = service.pay(42);
+```
+
+HIR distinguishes runtime interface dispatch from direct class-instance and
+class-static dispatch. Runtime dispatch is therefore part of Eido semantics,
+not a backend inference.
+
+## Interface identity boundary
+
+An interface value is an opaque behavioral handle to its hidden implementation.
+
+Converting a concrete object to an interface preserves that implementation
+identity. The caller cannot construct, inspect, or name the hidden concrete
+implementation through the interface.
+
+Source `copy` and `ref` remain concrete-class identity operations and are not
+valid directly on interface handles. An interface-valued relationship therefore
+acts as an opaque identity/capability boundary rather than exposing the
+concrete object graph.
+
+## Interface extension
+
+Implementing a child interface implies every ancestor contract. The class does
+not redundantly list ancestor interfaces.
+
+A child-interface value is assignable to its ancestor interface.
+
+Interface extension cycles are rejected.
+
+Redeclaring an inherited interface method in the child is rejected in v0 rather
+than introducing override/refinement rules.
+
+## Contract boundary types
+
+An interface signature may not expose an ordinary concrete behavioral class as
+a parameter or result.
+
+This prevents public contracts from leaking implementation classes before Eido
+has a distinct API-data model.
+
+Primitive, String, interface, and otherwise legal optional types may be used.
+Distinct API data types and transitive public API data closure are specified
+when that feature is implemented.
+
+## Module ownership
+
+Interfaces are architectural declarations in normal module projects.
+
+A module-owned interface must participate in the module architecture through at
+least one of:
+
+```yaml
+exports:
+  - PaymentService
+```
+
+or:
+
+```yaml
+provides:
+  PaymentService:
+    by: processor
+```
+
+Interfaces are closed to their owning module family by default.
+
+If `payments` owns `PaymentService`, then classes/interfaces in
+`payments` and its declared descendants may implement/extend the contract.
+An unrelated module that merely depends on `payments` may consume an exported
+`PaymentService`, but cannot implement it.
+
+If an open/plugin contract is needed later, openness must be introduced as an
+explicit architectural opt-in. It is not the default.
+
+## providers
+
+A parent declaration:
+
+```yaml
+provides:
+  PaymentService:
+    by: processor
+```
+
+means:
+
+1. `PaymentService` must be an interface owned by that parent module;
+2. `processor` must be a declared descendant provider;
+3. the contract propagates downward into that provider subtree;
+4. the provider subtree must contain an explicit implementation of that
+   interface, directly or through a child interface extending it.
+
+Thus `provides` is now compiler-checked architecture, not descriptive
+metadata.
+
+## Backend independence
+
+The current Nim backend lowers each interface value to a generated wrapper
+containing closures for the interface contract methods. A concrete
+class-to-interface adapter captures the hidden object; interface-extension
+upcasts preserve the bound closures.
+
+This is not Eido's object/interface ABI contract.
+
+Another backend may use vtables, fat pointers, tagged handles, or another
+representation as long as it preserves the same nominal conformance, hidden
+implementation identity, conversions, and runtime dispatch semantics.

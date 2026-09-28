@@ -48,9 +48,9 @@ features are intentionally outside the manifest grammar.
 - `exports` are the module's outward API.
 - `adopts` explicitly accepts an exported child contract/API into the parent
   family. Nothing propagates upward automatically.
-- `provides` records that a child module fulfills a parent-owned contract.
-  Contract fulfillment becomes semantically active with interfaces; the loader
-  already validates that the provider is a descendant.
+- `provides` records that a child module fulfills a parent-owned interface
+  contract. The compiler validates that the contract is owned by the parent and
+  that the declared provider subtree contains an explicit implementation.
 
 Canonical child identity is derived:
 
@@ -81,8 +81,15 @@ Containment controls visibility; dependencies control use.
 
 ## Current public surface
 
-Until interfaces and API data types land, the only declaration Eido can
-currently export is a static-only class:
+The current module public surface is:
+
+```text
+interfaces          behavioral contracts
+static-only classes facades/factories/entry points
+API data types      pending
+```
+
+A static-only exported class has:
 
 ```text
 zero fields
@@ -91,18 +98,17 @@ all methods inferred static
 ```
 
 Concrete instance classes cannot cross module boundaries. Top-level functions
-are always module-internal. Cross-module construction or use of a concrete class
-as a field/parameter/result type is rejected.
+are always module-internal. Cross-module construction or use of a concrete
+behavioral class as a field/parameter/result type is rejected.
 
-When interfaces/data types land, the intended public surface is:
+Interfaces are closed to their owning module family by default. Parent-owned
+`provides` contracts propagate only into the declared provider subtree, while
+external dependencies may consume an exported interface but may not implement
+it.
 
-```text
-interfaces          behavioral contracts
-static-only classes facades/factories/entry points
-API data types      closure required by public signatures
-```
-
-Concrete behavioral implementation classes remain private at all times.
+A public interface cannot currently mention a concrete class parameter/result.
+Distinct API data types and transitive public API data closure remain the next
+boundary feature.
 
 ## Dependency graph
 
@@ -110,8 +116,8 @@ Explicit module dependencies must be acyclic and are non-transitive. A child may
 consume dependencies supplied by its ancestors without declaring a dependency
 back to the parent.
 
-The current module-aware resolver still requires class and top-level-function
-names to be project-unique. Module-qualified internal symbol identities are a
+The current module-aware resolver still requires interface, class, and
+top-level-function names to be project-unique. Module-qualified internal symbol identities are a
 separate resolver improvement; this limitation does not weaken visibility or
 dependency enforcement.
 

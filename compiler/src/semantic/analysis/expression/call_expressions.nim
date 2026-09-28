@@ -7,7 +7,7 @@ proc analyzeCall*(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirCall =
   if expr.kind != astExpressions.ekCall:
     failAt(expr.span, "expected function call")
@@ -49,7 +49,7 @@ proc analyzeValueCall(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   let call = analyzeCall(expr, locals, functions, classes)
   if call.result.kind == frNone:

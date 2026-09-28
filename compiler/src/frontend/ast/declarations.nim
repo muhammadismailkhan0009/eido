@@ -37,10 +37,18 @@ type
     result*: FunctionResultRef
     body*: seq[Stmt]
 
+  InterfaceDecl* = object
+    span*: SourceSpan
+    name*: string
+    moduleName*: string
+    extends*: seq[string]
+    methods*: seq[FunctionDecl]
+
   ClassDecl* = object
     span*: SourceSpan
     name*: string
     moduleName*: string
     typeParameters*: seq[TypeParameterDecl]
+    implements*: seq[string]
     fields*: seq[FieldDecl]
     methods*: seq[FunctionDecl]

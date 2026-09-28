@@ -8,7 +8,7 @@ import ../../types/model
 import ../../types/function_result
 import ../symbols/model
 import ../symbols/functions
-import ../symbols/classes
+import ../symbols/nominals
 import ../symbols/scope
 import statement_analysis
 
@@ -17,7 +17,7 @@ proc analyzeFunction*(
   fn: FunctionDecl,
   symbol: FunctionSymbol,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirDeclarations.HirFunction =
   var locals = initLocalScope()
   var parameters: seq[HirParameter]

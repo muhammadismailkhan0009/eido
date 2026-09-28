@@ -1,8 +1,7 @@
-## Applies expected-type checking, contextual integral typing, and optional injection.
-## Example: Int can flow into Int?, while none is valid only when an optional type is expected.
+## Applies expected-type checking, contextual integral typing, optional injection,
+## and explicit nominal conversion into interface values.
 
 ## Wraps a definitely-present value in the optional representation expected by its context.
-## Example: Int value 7 becomes an Int? HIR some node when returning Int?.
 proc liftOptionalValue(
   value: hirExpressions.HirExpr,
   expected: EidoType
@@ -14,14 +13,36 @@ proc liftOptionalValue(
     optionalValue: value
   )
 
+## Converts one proven class/interface subtype to its expected interface wrapper.
+proc convertInterfaceValue(
+  value: hirExpressions.HirExpr,
+  expected: EidoType,
+  classes: NominalSymbols
+): hirExpressions.HirExpr =
+  if value.typ == expected:
+    return value
+
+  if not classes.isAssignable(value.typ, expected):
+    failAt(
+      value.span,
+      "type mismatch: expected " & expected.displayName &
+        " but got " & value.typ.displayName
+    )
+
+  HirExpr(
+    kind: hekInterfaceConvert,
+    span: value.span,
+    typ: expected,
+    interfaceValue: value
+  )
+
 ## Analyzes an expression against an expected semantic type.
-## Example: none becomes the expected T?, while a proven T may be injected into T?.
 proc analyzeExprExpected*(
   expr: astExpressions.Expr,
   expected: EidoType,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   if expr.kind == astExpressions.ekNone:
     if not expected.isOptional:
@@ -44,6 +65,14 @@ proc analyzeExprExpected*(
     if analyzed.typ == required:
       return liftOptionalValue(analyzed, expected)
 
+    if required.kind == etkInterface and
+        not analyzed.typ.isOptional and
+        classes.isAssignable(analyzed.typ, required):
+      return liftOptionalValue(
+        convertInterfaceValue(analyzed, required, classes),
+        expected
+      )
+
     failAt(
       expr.span,
       "type mismatch: expected " & expected.displayName &
@@ -54,10 +83,15 @@ proc analyzeExprExpected*(
     return analyzeIntegerAs(expr, expected)
 
   let analyzed = analyzeExpr(expr, locals, functions, classes)
-  if analyzed.typ != expected:
-    failAt(
-      expr.span,
-      "type mismatch: expected " & expected.displayName &
-        " but got " & analyzed.typ.displayName
-    )
-  analyzed
+  if analyzed.typ == expected:
+    return analyzed
+
+  if expected.kind == etkInterface and
+      classes.isAssignable(analyzed.typ, expected):
+    return convertInterfaceValue(analyzed, expected, classes)
+
+  failAt(
+    expr.span,
+    "type mismatch: expected " & expected.displayName &
+      " but got " & analyzed.typ.displayName
+  )

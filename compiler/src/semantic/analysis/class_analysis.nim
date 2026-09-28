@@ -4,13 +4,13 @@ import std/sets
 import ../../diagnostics/errors
 import ../../frontend/ast/declarations as astDeclarations
 import ../../hir/declarations as hirDeclarations
-import ../symbols/classes
+import ../symbols/nominals
 import type_resolution
 
 ## Resolves one class declaration and rejects duplicate field names.
 proc analyzeClass*(
   source: astDeclarations.ClassDecl,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirDeclarations.HirClass =
   var fieldNames = initHashSet[string]()
   var fields: seq[hirDeclarations.HirField]
@@ -29,7 +29,8 @@ proc analyzeClass*(
   hirDeclarations.HirClass(
     span: source.span,
     sourceName: source.name,
-    typ: classes.get(source.name).typ,
+    typ: classes.getClass(source.name).typ,
+    implements: source.implements,
     fields: fields,
     methods: @[]
   )

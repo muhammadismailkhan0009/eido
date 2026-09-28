@@ -11,7 +11,9 @@ proc parseProgram*(tokens: seq[Token]): Program =
   var parser = initParser(tokens)
 
   while not parser.check(tkEof):
-    if parser.check(tkClass):
+    if parser.check(tkInterface):
+      result.interfaces.add parser.parseInterface()
+    elif parser.check(tkClass):
       result.classes.add parser.parseClass()
     elif parser.check(tkNative):
       result.functions.add parser.parseNativeFunction()
@@ -20,8 +22,8 @@ proc parseProgram*(tokens: seq[Token]): Program =
     else:
       failAt(
         parser.peek.span,
-        "expected top-level class, function, or native function declaration"
+        "expected top-level interface, class, function, or native function declaration"
       )
 
-  if result.classes.len == 0 and result.functions.len == 0:
+  if result.interfaces.len == 0 and result.classes.len == 0 and result.functions.len == 0:
     failAt(parser.peek.span, "expected at least one declaration")

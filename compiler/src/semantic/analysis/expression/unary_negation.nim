@@ -7,7 +7,7 @@ proc analyzeUnaryNegation(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   let operand = analyzeExpr(expr.operand, locals, functions, classes)
   if operand.typ != etInt and operand.typ != etFloat:

@@ -120,3 +120,105 @@ suite "CLI project integration":
     let output = execProcess(outputPath).strip()
 
     check output == "42"
+
+
+  test "builds module interface provider and dispatches through public contract":
+    let root = freshProject("interface_modules")
+    let outputPath = root / "interface_app"
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    createDir(root / "payments")
+    createDir(root / "payments" / "processor")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - PaymentService.eido
+        - Payments.eido
+      children:
+        processor: { path: processor }
+      dependencies: []
+      exports:
+        - PaymentService
+        - Payments
+      provides:
+        PaymentService:
+          by: processor
+      adopts:
+        - processor.ProcessorFactory
+    """)
+    writeFile(root / "payments" / "PaymentService.eido", """
+      interface PaymentService {
+        function value() returns Int;
+      }
+    """)
+    writeFile(root / "payments" / "Payments.eido", """
+      class Payments {
+        function service() returns PaymentService {
+          return ProcessorFactory.create();
+        }
+      }
+    """)
+
+    writeFile(root / "payments" / "processor" / "module.yaml", """
+      module: processor
+      sources:
+        - Processor.eido
+      children: []
+      dependencies: []
+      exports:
+        - ProcessorFactory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "processor" / "Processor.eido", """
+      class HiddenService implements PaymentService {
+        Int stored;
+
+        function value() returns Int {
+          return self.stored;
+        }
+      }
+
+      class ProcessorFactory {
+        function create() returns PaymentService {
+          return HiddenService { stored = 42; };
+        }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        var service = Payments.service();
+        return service.value();
+      }
+    """)
+
+    buildModuleFile(root / "module.yaml", outputPath)
+    check execProcess(outputPath).strip() == "42"

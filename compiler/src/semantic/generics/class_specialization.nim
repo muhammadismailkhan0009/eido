@@ -13,6 +13,7 @@ type
 
   SpecializationContext = object
     templates: Table[string, ClassDecl]
+    interfaceNames: HashSet[string]
     queuedNames: HashSet[string]
     queue: seq[SpecializationRequest]
 
@@ -86,6 +87,11 @@ proc specializeTypeRef(
     if source.arguments.len != 0:
       failAt(source.span, "built-in type '" & source.name &
         "' cannot receive type arguments")
+    return flatTypeRef(source, source.name, source.isOptional)
+
+  if source.name in context.interfaceNames:
+    if source.arguments.len != 0:
+      failAt(source.span, "interfaces are non-generic in v0")
     return flatTypeRef(source, source.name, source.isOptional)
 
   if source.name notin context.templates:
@@ -388,6 +394,7 @@ proc specializeClass(
     name: name,
     moduleName: source.moduleName,
     typeParameters: @[],
+    implements: source.implements,
     fields: fields,
     methods: methods
   )
@@ -409,6 +416,11 @@ proc validateTypeRef(
     if source.arguments.len != 0:
       failAt(source.span, "built-in type '" & source.name &
         "' cannot receive type arguments")
+    return
+
+  if source.name in context.interfaceNames:
+    if source.arguments.len != 0:
+      failAt(source.span, "interfaces are non-generic in v0")
     return
 
   if source.name notin context.templates:
@@ -579,23 +591,47 @@ proc validateTemplateShape(
 proc specializeGenericClasses*(source: Program): Program =
   var context = SpecializationContext(
     templates: initTable[string, ClassDecl](),
+    interfaceNames: initHashSet[string](),
     queuedNames: initHashSet[string](),
     queue: @[]
   )
 
+  for interfaceDecl in source.interfaces:
+    if interfaceDecl.name in context.interfaceNames:
+      failAt(interfaceDecl.span, "duplicate interface '" & interfaceDecl.name & "'")
+    context.interfaceNames.incl interfaceDecl.name
+
   for classDecl in source.classes:
     if classDecl.name in context.templates:
       failAt(classDecl.span, "duplicate class '" & classDecl.name & "'")
+    if classDecl.name in context.interfaceNames:
+      failAt(classDecl.span, "type name '" & classDecl.name & "' is already used by an interface")
     context.templates[classDecl.name] = classDecl
 
   for classDecl in source.classes:
     validateTemplateShape(context, classDecl)
 
   var noTypeParameters = initHashSet[string]()
+  for interfaceDecl in source.interfaces:
+    for methodDecl in interfaceDecl.methods:
+      validateFunctionTypes(context, methodDecl, noTypeParameters)
+
   for fn in source.functions:
     validateFunctionTypes(context, fn, noTypeParameters)
 
   var emptyBindings = initTable[string, TypeRef]()
+
+  for interfaceDecl in source.interfaces:
+    var methods: seq[FunctionDecl]
+    for methodDecl in interfaceDecl.methods:
+      methods.add specializeFunction(context, methodDecl, emptyBindings)
+    result.interfaces.add InterfaceDecl(
+      span: interfaceDecl.span,
+      name: interfaceDecl.name,
+      moduleName: interfaceDecl.moduleName,
+      extends: interfaceDecl.extends,
+      methods: methods
+    )
 
   for classDecl in source.classes:
     if classDecl.typeParameters.len == 0:

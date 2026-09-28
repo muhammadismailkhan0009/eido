@@ -34,10 +34,23 @@ type
     of mkStatic:
       discard
 
+  HirInterfaceMethod* = object
+    sourceName*: string
+    parameterTypes*: seq[EidoType]
+    result*: FunctionResult
+
+  HirInterface* = object
+    span*: SourceSpan
+    sourceName*: string
+    typ*: EidoType
+    extends*: seq[string]
+    methods*: seq[HirInterfaceMethod]
+
   HirClass* = object
     span*: SourceSpan
     sourceName*: string
     typ*: EidoType
+    implements*: seq[string]
     fields*: seq[HirField]
     methods*: seq[HirMethod]
 

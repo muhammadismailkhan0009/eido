@@ -401,3 +401,197 @@ suite "Module architecture":
     """)
 
     check checkModule(root).success
+
+  test "parent-owned interface is implemented by declared child provider":
+    let root = freshModuleDir("interface_provider")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "payments" / "processor")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - PaymentService.eido
+        - Payments.eido
+      children:
+        processor: { path: processor }
+      dependencies: []
+      exports:
+        - PaymentService
+        - Payments
+      provides:
+        PaymentService:
+          by: processor
+      adopts:
+        - processor.ProcessorFactory
+    """)
+    writeFile(root / "payments" / "PaymentService.eido", """
+      interface PaymentService {
+        function value() returns Int;
+      }
+    """)
+    writeFile(root / "payments" / "Payments.eido", """
+      class Payments {
+        function service() returns PaymentService {
+          return ProcessorFactory.create();
+        }
+      }
+    """)
+
+    writeFile(root / "payments" / "processor" / "module.yaml", """
+      module: processor
+      sources:
+        - Processor.eido
+      children: []
+      dependencies: []
+      exports:
+        - ProcessorFactory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "processor" / "Processor.eido", """
+      class HiddenService implements PaymentService {
+        Int stored;
+
+        function value() returns Int {
+          return self.stored;
+        }
+      }
+
+      class ProcessorFactory {
+        function create() returns PaymentService {
+          return HiddenService { stored = 42; };
+        }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        var service = Payments.service();
+        return service.value();
+      }
+    """)
+
+    check checkModule(root).success
+
+  test "unrelated module cannot implement a closed interface":
+    let root = freshModuleDir("closed_interface")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "plugin")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources:
+        - Main.eido
+      children:
+        payments: { path: payments }
+        plugin: { path: plugin }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", "function main() {}")
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - PaymentService.eido
+      children: []
+      dependencies: []
+      exports:
+        - PaymentService
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "PaymentService.eido", """
+      interface PaymentService {
+        function value() returns Int;
+      }
+    """)
+
+    writeFile(root / "plugin" / "module.yaml", """
+      module: plugin
+      sources:
+        - Fake.eido
+      children: []
+      dependencies:
+        - payments
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "plugin" / "Fake.eido", """
+      class Fake implements PaymentService {
+        function value() returns Int {
+          return 1;
+        }
+      }
+    """)
+
+    check not checkModule(root).success
+
+  test "provides requires an implementation in the declared provider subtree":
+    let root = freshModuleDir("missing_provider")
+    defer: removeDir(root)
+    createDir(root / "processor")
+
+    writeFile(root / "module.yaml", """
+      module: payments
+      sources:
+        - PaymentService.eido
+        - Main.eido
+      children:
+        processor: { path: processor }
+      dependencies: []
+      exports: []
+      provides:
+        PaymentService:
+          by: processor
+      adopts: []
+    """)
+    writeFile(root / "PaymentService.eido", """
+      interface PaymentService {
+        function value() returns Int;
+      }
+    """)
+    writeFile(root / "Main.eido", "function main() {}")
+
+    writeFile(root / "processor" / "module.yaml", """
+      module: processor
+      sources:
+        - Empty.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "processor" / "Empty.eido", "class Empty {}")
+
+    check not checkModule(root).success

@@ -14,6 +14,7 @@ import frontend/lexer/keywords/self_keyword_test
 import frontend/lexer/keywords/copy_ref_keyword_test
 import frontend/lexer/keywords/loop_control_keyword_test
 import frontend/lexer/keywords/class_keyword_test
+import frontend/lexer/keywords/interface_keyword_test
 import frontend/lexer/keywords/native_function_keyword_test
 import frontend/parser/expression/literal_expression_parser_test
 import frontend/parser/expression/call_expression_parser_test
@@ -33,6 +34,7 @@ import frontend/parser/class_value_signature_parser_test
 import frontend/parser/class_declaration_parser_test
 import frontend/parser/generic_class_parser_test
 import frontend/parser/class_method_declaration_parser_test
+import frontend/parser/interface_parser_test
 import frontend/parser/statement/conditional_statement_parser_test
 import frontend/parser/optional_parser_test
 import frontend/parser/statement/while_statement_parser_test
@@ -47,6 +49,7 @@ import semantic/analysis/optional_analysis_test
 import semantic/analysis/generic_class_analysis_test
 import semantic/analysis/class_method_analysis_test
 import semantic/analysis/class_static_method_analysis_test
+import semantic/analysis/interfaces/interface_conformance_test
 import semantic/analysis/class_value_callable_flow_test
 import semantic/analysis/class_method_return_flow_test
 import semantic/analysis/statement/conditional_statement_analysis_test
@@ -105,6 +108,7 @@ import features/classes/class_method_variants_test
 import features/classes/class_static_method_variants_test
 import features/classes/self_receiver_variants_test
 import features/classes/class_copy_ref_variants_test
+import features/interfaces/interface_variants_test
 import features/control_flow/conditional_variants_test
 import features/control_flow/else_if_variants_test
 import features/control_flow/while_variants_test

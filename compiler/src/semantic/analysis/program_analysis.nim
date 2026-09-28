@@ -1,5 +1,5 @@
-## Runs program-level semantic analysis in declaration passes.
-## Class names/fields/method signatures and top-level function signatures are collected before any callable body is analyzed.
+## Runs program-level semantic analysis in dependency-safe declaration passes.
+## Interfaces and classes establish nominal identities before any signature or body is resolved.
 
 import ../../diagnostics/[codes, errors]
 import ../../frontend/ast/declarations as astDeclarations
@@ -14,15 +14,15 @@ import ../symbols/ids
 import ../generics/class_specialization
 import type_resolution
 import ../symbols/model
-import ../symbols/classes
+import ../symbols/nominals
 import ../symbols/functions
 import class_analysis
+import interface_analysis
 import method_classification
 import method_analysis
 import function_analysis
 
-## Rejects class-identity values at the initial native ABI boundary.
-## Example: Int/String parameters are allowed while Account parameters/results remain unsupported until native class ABI semantics are designed.
+## Rejects unsupported nominal/optional values at the initial native ABI boundary.
 proc validateNativeSignature(
   sourceFunction: astDeclarations.FunctionDecl,
   parameterTypes: seq[EidoType],
@@ -36,12 +36,21 @@ proc validateNativeSignature(
           parameterType.displayName & "' in v0"
       )
 
-    if parameterType.kind == etkClass:
+    case parameterType.kind
+    of etkClass:
       failAt(
         sourceFunction.parameters[index].typeRef.span,
         "native function parameters cannot use class type '" &
           parameterType.className & "'"
       )
+    of etkInterface:
+      failAt(
+        sourceFunction.parameters[index].typeRef.span,
+        "native function parameters cannot use interface type '" &
+          parameterType.interfaceName & "' in v0"
+      )
+    else:
+      discard
 
   if functionResult.kind == frSingle:
     if functionResult.typ.isOptional:
@@ -51,54 +60,113 @@ proc validateNativeSignature(
           functionResult.typ.displayName & "' in v0"
       )
 
-    if functionResult.typ.kind == etkClass:
+    case functionResult.typ.kind
+    of etkClass:
       failAt(
         sourceFunction.result.typeRef.span,
         "native function results cannot use class type '" &
           functionResult.typ.className & "'"
       )
+    of etkInterface:
+      failAt(
+        sourceFunction.result.typeRef.span,
+        "native function results cannot use interface type '" &
+          functionResult.typ.interfaceName & "' in v0"
+      )
+    else:
+      discard
 
-## Collects declarations in dependency-safe passes, then analyzes method/function bodies for the selected target.
-## Example: executable targets require a zero-parameter main while library targets do not.
+## Converts one resolved interface contract to backend-neutral HIR.
+proc lowerInterface(
+  source: astDeclarations.InterfaceDecl,
+  symbols: NominalSymbols
+): HirInterface =
+  var methods: seq[HirInterfaceMethod]
+  for contract in symbols.requiredInterfaceMethods(source.name):
+    methods.add HirInterfaceMethod(
+      sourceName: contract.name,
+      parameterTypes: contract.parameterTypes,
+      result: contract.result
+    )
+
+  HirInterface(
+    span: source.span,
+    sourceName: source.name,
+    typ: symbols.getInterface(source.name).typ,
+    extends: source.extends,
+    methods: methods
+  )
+
+## Collects declarations in dependency-safe passes, then analyzes callable bodies.
 proc analyzeProgram*(
   program: astProgram.Program,
   target: ProjectTarget = ptExecutable
 ): hirProgram.HirProgram =
   let specializedProgram = specializeGenericClasses(program)
-  var classes = initClassSymbols()
+  var symbols = initNominalSymbols()
 
-  # Pass 1: establish nominal class identities.
+  # Pass 1: establish interface identities before any signatures.
+  for sourceInterface in specializedProgram.interfaces:
+    if symbols.containsNominal(sourceInterface.name):
+      failAt(
+        sourceInterface.span,
+        "duplicate nominal type '" & sourceInterface.name & "'"
+      )
+
+    symbols.addInterface InterfaceSymbol(
+      name: sourceInterface.name,
+      moduleName: sourceInterface.moduleName,
+      typ: interfaceType(sourceInterface.name),
+      extends: sourceInterface.extends,
+      methods: @[],
+      span: sourceInterface.span
+    )
+
+  # Pass 2: establish class identities.
   for sourceClass in specializedProgram.classes:
-    if classes.contains(sourceClass.name):
-      failAt(sourceClass.span, "duplicate class '" & sourceClass.name & "'")
+    if symbols.containsNominal(sourceClass.name):
+      failAt(
+        sourceClass.span,
+        "duplicate nominal type '" & sourceClass.name & "'"
+      )
 
-    classes.add ClassSymbol(
+    symbols.addClass ClassSymbol(
       name: sourceClass.name,
+      moduleName: sourceClass.moduleName,
       typ: classType(sourceClass.name),
+      implements: sourceClass.implements,
       fields: @[],
       methods: @[],
       span: sourceClass.span
     )
 
-  # Pass 2: resolve field schemas against the complete class registry.
+  # Pass 3: resolve interface inheritance and direct method contracts.
+  validateInterfaceInheritance(specializedProgram.interfaces, symbols)
+  resolveInterfaceMethods(specializedProgram.interfaces, symbols)
+
+  var analyzedInterfaces: seq[HirInterface]
+  for sourceInterface in specializedProgram.interfaces:
+    analyzedInterfaces.add lowerInterface(sourceInterface, symbols)
+
+  # Pass 4: resolve class field schemas against the complete nominal registry.
   var analyzedClasses: seq[HirClass]
   for sourceClass in specializedProgram.classes:
-    let analyzedClass = analyzeClass(sourceClass, classes)
+    let analyzedClass = analyzeClass(sourceClass, symbols)
     analyzedClasses.add analyzedClass
 
-    var classSymbol = classes.get(sourceClass.name)
+    var classSymbol = symbols.getClass(sourceClass.name)
     for field in analyzedClass.fields:
       classSymbol.fields.add ClassFieldSymbol(
         name: field.sourceName,
         typ: field.typ,
         span: field.span
       )
-    classes.add classSymbol
+    symbols.addClass classSymbol
 
-  # Pass 3: collect every class method signature before any method body.
+  # Pass 5: collect every class method signature before conformance/body analysis.
   var nextMethodId = 0
   for sourceClass in specializedProgram.classes:
-    var classSymbol = classes.get(sourceClass.name)
+    var classSymbol = symbols.getClass(sourceClass.name)
 
     for sourceMethod in sourceClass.methods:
       if classSymbol.containsMethod(sourceMethod.name):
@@ -110,9 +178,9 @@ proc analyzeProgram*(
 
       var parameterTypes: seq[EidoType]
       for parameter in sourceMethod.parameters:
-        parameterTypes.add resolveDeclaredType(parameter.typeRef, classes)
+        parameterTypes.add resolveDeclaredType(parameter.typeRef, symbols)
 
-      let methodResult = resolveFunctionResult(sourceMethod.result, classes)
+      let methodResult = resolveFunctionResult(sourceMethod.result, symbols)
       if sourceMethod.isNative:
         validateNativeSignature(sourceMethod, parameterTypes, methodResult)
 
@@ -129,9 +197,13 @@ proc analyzeProgram*(
       )
       inc nextMethodId
 
-    classes.add classSymbol
+    symbols.addClass classSymbol
 
-  # Pass 4: collect top-level function signatures before analyzing methods.
+  # Pass 6: verify explicit class/interface architectural conformance.
+  for sourceClass in specializedProgram.classes:
+    validateClassInterfaces(sourceClass, symbols)
+
+  # Pass 7: collect top-level function signatures.
   var functions = initFunctionSymbols()
   var mainFound = false
   var mainId = FunctionId(-1)
@@ -142,9 +214,9 @@ proc analyzeProgram*(
 
     var parameterTypes: seq[EidoType]
     for parameter in fn.parameters:
-      parameterTypes.add resolveDeclaredType(parameter.typeRef, classes)
+      parameterTypes.add resolveDeclaredType(parameter.typeRef, symbols)
 
-    let functionResult = resolveFunctionResult(fn.result, classes)
+    let functionResult = resolveFunctionResult(fn.result, symbols)
     if fn.isNative:
       validateNativeSignature(fn, parameterTypes, functionResult)
 
@@ -172,29 +244,30 @@ proc analyzeProgram*(
       "executable project must declare function main()"
     )
 
-  # Pass 5: analyze class-owned method bodies with source-level self bound to hidden receivers.
+  # Pass 8: analyze class-owned method bodies.
   for classIndex, sourceClass in specializedProgram.classes:
-    let owner = classes.get(sourceClass.name)
+    let owner = symbols.getClass(sourceClass.name)
     for sourceMethod in sourceClass.methods:
       analyzedClasses[classIndex].methods.add analyzeMethod(
         sourceMethod,
         owner,
         owner.getMethod(sourceMethod.name),
         functions,
-        classes
+        symbols
       )
 
-  # Pass 6: analyze top-level function bodies.
+  # Pass 9: analyze top-level function bodies.
   var analyzedFunctions: seq[HirFunction]
   for fn in specializedProgram.functions:
     analyzedFunctions.add analyzeFunction(
       fn,
       functions.get(fn.name),
       functions,
-      classes
+      symbols
     )
 
   hirProgram.HirProgram(
+    interfaces: analyzedInterfaces,
     classes: analyzedClasses,
     functions: analyzedFunctions,
     hasMain: mainFound,

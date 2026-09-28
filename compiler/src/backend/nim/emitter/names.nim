@@ -45,6 +45,24 @@ proc localName*(id: LocalId, sourceName: string): string =
 proc className*(sourceName: string): string =
   "eido_class_" & nominalName(sourceName)
 
+## Builds the generated Nim name for one Eido interface wrapper type.
+proc interfaceName*(sourceName: string): string =
+  "eido_interface_" & nominalName(sourceName)
+
+## Builds the generated closure field for one interface method.
+proc interfaceMethodFieldName*(interfaceSourceName, methodSourceName: string): string =
+  "eido_iface_" & nominalName(interfaceSourceName) & "_" & methodSourceName
+
+## Builds the concrete-class adapter used to create one interface value.
+proc interfaceAdapterName*(classSourceName, interfaceSourceName: string): string =
+  "eido_adapt_" & nominalName(classSourceName) & "_to_" &
+    nominalName(interfaceSourceName)
+
+## Builds the adapter used for an interface-extension upcast.
+proc interfaceUpcastName*(sourceInterface, targetInterface: string): string =
+  "eido_upcast_" & nominalName(sourceInterface) & "_to_" &
+    nominalName(targetInterface)
+
 ## Builds the generated Nim copier name for one nominal Eido class.
 proc classCopyName*(sourceName: string): string =
   "eido_copy_" & nominalName(sourceName)

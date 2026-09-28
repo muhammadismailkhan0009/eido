@@ -5,7 +5,7 @@ proc analyzeClassValueRelation*(
   expr: astExpressions.Expr,
   locals: LocalScope,
   functions: FunctionSymbols,
-  classes: ClassSymbols
+  classes: NominalSymbols
 ): hirExpressions.HirExpr =
   if expr.kind != astExpressions.ekClassRelation:
     failAt(expr.span, "expected copy/ref class relation")
