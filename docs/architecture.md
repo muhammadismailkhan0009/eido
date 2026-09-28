@@ -14,13 +14,17 @@ Eido uses a modular compiler architecture with onion-style dependency boundaries
 ## Current pipeline
 
 ```text
-EidoProject
+module.yaml tree
     ↓
-SourceUnit[]
+module loader + source ownership + dependency DAG
+    ↓
+EidoProject / SourceUnit[]
     ↓
 per-source lexer + parser
     ↓
-merged project AST declaration universe
+merged project AST declaration universe with module ownership
+    ↓
+module architecture validation
     ↓
 generic-class static specialization
     ↓
@@ -46,7 +50,7 @@ compiler/src/source/
     SourceUnit identity/text and source-aware spans shared across compiler phases
 
 compiler/src/project/
-    EidoProject source set and executable/library target model
+    EidoProject target/source set plus module.yaml manifest model, loader, child ownership, and dependency graph validation
 
 compiler/src/diagnostics/
     structured diagnostic model/codes, CompilerError bridge, and human formatting
@@ -111,8 +115,10 @@ tests/integration/
 - Source and diagnostic data concepts must not depend on parser, semantic, HIR, backend, toolchain, or CLI code. Diagnostic errors/formatting may depend only on source + diagnostic model/codes.
 - Frontend code must not depend on semantic analysis, HIR, or backend code.
 - Project/source identity models are lower-level compiler data and may be consumed by frontend, semantic, pipeline, and tooling layers.
-- Each SourceUnit is parsed independently, but semantic analysis consumes the merged project declaration universe so source order does not define visibility.
-- Semantic analysis may consume AST and produce HIR.
+- Each SourceUnit is parsed independently and retains its owning canonical module. Source order never defines visibility.
+- Normal user projects are loaded from mandatory `module.yaml`; explicit manifest source membership is authoritative and filesystem discovery never creates modules or source ownership implicitly.
+- Module architecture validation runs on the merged AST before ordinary semantic analysis. Explicit dependency edges must be acyclic; ancestor dependencies propagate downward, while child exports never propagate upward without parent adoption/re-export.
+- Semantic analysis may consume the architecture-validated AST and produce HIR.
 - Generic class applications are statically specialized from AST templates into concrete nominal AST classes before ordinary semantic declaration/body analysis. HIR carries no unresolved generic class parameters in this first slice.
 - Optionality is semantic state, not a source-level wrapper API. `T?` remains explicit through semantic types/HIR; `if path exists` introduces an exact lexical presence proof, and HIR inserts backend unwrap nodes only at proven reads. The Nim backend currently represents optionals with `Option[T]`, but Eido semantics do not depend on Nim's representation.
 - HIR must contain resolved symbol identity and semantic types needed by backends. Class-owned functions also carry resolved `mkStatic`/`mkInstance` kind: only instance-method HIR variants may contain a receiver ID/value, so backends/tooling cannot accidentally invent receivers for inferred static methods.

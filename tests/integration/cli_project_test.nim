@@ -1,111 +1,122 @@
 import std/[os, osproc, strutils, unittest]
 import cli/[arguments, build_command, check_command]
 
+proc freshProject(name: string): string =
+  result = getTempDir() / ("eido_cli_" & name & "_" & $getCurrentProcessId())
+  if dirExists(result):
+    removeDir(result)
+  createDir(result)
+
 suite "CLI project integration":
-  test "parses multiple build sources before the output option":
-    # Given / When
+  test "parses manifest-driven build with output option":
     let options = parseArgs(@[
-      "build", "src/main.eido", "src/account.eido", "-o", "bin/app"
+      "build", "shop/module.yaml", "-o", "bin/app"
     ])
 
-    # Then
     check options.command == ccBuild
-    check options.sourcePaths == @["src/main.eido", "src/account.eido"]
+    check options.modulePath == "shop/module.yaml"
     check options.outputPath == "bin/app"
 
-  test "parses multiple check sources without an output option":
-    # Given / When
-    let options = parseArgs(@[
-      "check", "src/main.eido", "src/account.eido"
-    ])
+  test "parses manifest-driven check":
+    let options = parseArgs(@["check", "shop/module.yaml"])
 
-    # Then
     check options.command == ccCheck
-    check options.sourcePaths == @["src/main.eido", "src/account.eido"]
+    check options.modulePath == "shop/module.yaml"
 
-  test "rejects an output option for check":
-    # Given / When / Then
+  test "rejects source-file project entrypoints":
     expect ValueError:
-      discard parseArgs(@["check", "src/main.eido", "-o", "app"])
+      discard parseArgs(@["check", "src/main.eido"])
 
-  test "checks multiple source files without invoking backend compilation":
-    # Given
-    let stem = getTempDir() / ("eido_cli_check_" & $getCurrentProcessId())
-    let mainPath = stem & "_main.eido"
-    let accountPath = stem & "_account.eido"
-    let generatedPath = stem & "_generated.nim"
-
+  test "checks a module project without invoking backend compilation":
+    let root = freshProject("check")
+    let generatedPath = root / "generated.nim"
     defer:
-      for path in [mainPath, accountPath, generatedPath]:
-        if fileExists(path):
-          removeFile(path)
+      if dirExists(root):
+        removeDir(root)
 
-    writeFile(mainPath, """
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+        - Account.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", """
       function main() {
         var account = Account { balance = 42; };
         read(account);
       }
     """)
-    writeFile(accountPath, """
+    writeFile(root / "Account.eido", """
       class Account { Int balance; }
       function read(Account account) returns Int { return account.balance; }
     """)
 
-    # When
-    let result = checkFiles(@[mainPath, accountPath])
+    let result = checkModuleFile(root / "module.yaml")
 
-    # Then
     check result.success
     check result.diagnostics.len == 0
     check not fileExists(generatedPath)
 
-  test "returns structured diagnostics from check":
-    # Given
-    let stem = getTempDir() / ("eido_cli_check_error_" & $getCurrentProcessId())
-    let mainPath = stem & "_main.eido"
-
+  test "returns structured diagnostics from module check":
+    let root = freshProject("check_error")
     defer:
-      if fileExists(mainPath):
-        removeFile(mainPath)
+      if dirExists(root):
+        removeDir(root)
 
-    writeFile(mainPath, "function main() { broken(); }")
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", "function main() { broken(); }")
 
-    # When
-    let result = checkFiles(@[mainPath])
+    let result = checkModuleFile(root / "module.yaml")
 
-    # Then
     check not result.success
     check result.diagnostics.len == 1
     check result.diagnostics[0].code == "EIDO1000"
-    check result.diagnostics[0].span.sourcePath == mainPath
+    check result.diagnostics[0].span.sourcePath == root / "Main.eido"
 
-  test "builds multiple Eido source files into one native executable":
-    # Given
-    let stem = getTempDir() / ("eido_cli_project_" & $getCurrentProcessId())
-    let mainPath = stem & "_main.eido"
-    let accountPath = stem & "_account.eido"
-    let outputPath = stem & "_app"
-    let generatedPath = outputPath & "_generated.nim"
-
+  test "builds a multi-source module project into one native executable":
+    let root = freshProject("build")
+    let outputPath = root / "app"
     defer:
-      for path in [mainPath, accountPath, outputPath, generatedPath]:
-        if fileExists(path):
-          removeFile(path)
+      if dirExists(root):
+        removeDir(root)
 
-    writeFile(mainPath, """
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+        - Account.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", """
       function main() returns Int {
         var account = Account { balance = 42; };
         return read(account);
       }
     """)
-    writeFile(accountPath, """
+    writeFile(root / "Account.eido", """
       class Account { Int balance; }
       function read(Account account) returns Int { return account.balance; }
     """)
 
-    # When
-    buildFiles(@[mainPath, accountPath], outputPath)
+    buildModuleFile(root / "module.yaml", outputPath)
     let output = execProcess(outputPath).strip()
 
-    # Then
     check output == "42"

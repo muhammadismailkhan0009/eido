@@ -84,6 +84,9 @@ import backend/nim/emitter/statement/loop_control_statement_emitter_test
 import backend/nim/emitter/statement/set_statement_emitter_test
 import pipeline/compiler_pipeline_test
 import project/project_compilation_test
+import project/module_manifest_parser_test
+import project/module_loader_test
+import semantic/modules/module_architecture_test
 import diagnostics/structured_diagnostics_test
 
 import features/expression/arithmetic_variants_test

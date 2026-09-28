@@ -3302,3 +3302,218 @@ avoiding general alias/effect analysis.
 The Nim backend currently represents `T?` with `Option[T]` and inserts
 presence tests/unwraps in generated code. This representation is not part of
 Eido's semantic contract.
+
+
+
+---
+
+# 49. Modules use mandatory module.yaml architecture manifests
+
+> Status: approved and implemented for the current v0 module slice.
+>
+> This section supersedes earlier `module.lang` and pre-module visibility text.
+
+Normal Eido projects are entered through a mandatory file named:
+
+```text
+module.yaml
+```
+
+Module vocabulary is not Eido source-language vocabulary. `module.yaml` is a
+separate declarative architecture layer, so words such as `children`,
+`dependencies`, `exports`, `provides`, and `adopts` do not become
+reserved words in `.eido`.
+
+The v0 schema is:
+
+```yaml
+module: payments
+
+sources:
+  - Payments.eido
+  - PaymentCoordinator.eido
+
+children:
+  processor:
+    path: processor
+
+dependencies:
+  - logging
+
+exports:
+  - Payments
+
+provides:
+  PaymentProcessor:
+    by: processor
+
+adopts:
+  - processor.ProcessorHealth
+```
+
+The implementation accepts the schema-required YAML subset: mappings,
+sequences, plain/quoted scalars, empty `[]`/`{}`, and small inline mappings
+such as:
+
+```yaml
+children:
+  processor: { path: processor }
+```
+
+YAML anchors, tags, and unrelated advanced YAML features are not part of the v0
+manifest grammar.
+
+## Module identity and source ownership
+
+`module` is the local module name.
+
+`sources` is an explicit complete list of source files owned directly by that
+module. Undeclared `.eido` files are not compiled.
+
+Filesystem hierarchy does not create modules or architectural membership.
+
+A child exists only when its parent manifest declares it:
+
+```yaml
+children:
+  processor:
+    path: processor
+```
+
+`path` identifies the physical directory containing the child's
+`module.yaml`. It does not define architectural identity.
+
+Canonical identity is derived from parent ownership:
+
+```text
+payments
+  child processor
+    child stripe
+
+=> payments.processor.stripe
+```
+
+A child manifest declares only its own local name. It never declares or depends
+back on its parent merely because it is a child.
+
+## Parent-child propagation
+
+Module containment is asymmetric:
+
+```text
+parent -> child     authorized downward propagation
+child  -> parent    never automatic
+```
+
+The parent owns the architecture of its complete module family.
+
+Parent dependencies propagate downward to descendants.
+
+A child's exported declaration does not automatically become visible to its
+parent, siblings, or external modules.
+
+To make a child export visible inside the parent family, the parent must
+explicitly adopt it:
+
+```yaml
+adopts:
+  - processor.ProcessorHealth
+```
+
+To expose a child export publicly, the parent must explicitly re-export it:
+
+```yaml
+exports:
+  - processor.ProcessorHealth
+```
+
+The referenced child must itself export that declaration.
+
+Therefore children cannot enlarge their parent's architecture accidentally.
+
+## Provider relationships
+
+A parent may declare that one of its child modules supplies a parent-owned
+contract:
+
+```yaml
+provides:
+  PaymentProcessor:
+    by: processor
+```
+
+The provider must resolve to a descendant module.
+
+The manifest/graph representation for this relationship is implemented now.
+Full semantic verification that the named contract is an interface and that the
+child fulfills it becomes active with the interface feature; no placeholder
+interface semantics are invented by the module implementation.
+
+## Dependencies
+
+`dependencies` declares direct module dependencies.
+
+Dependencies are:
+
+- explicit;
+- non-transitive;
+- independent from parent/child containment;
+- required to form a directed acyclic graph.
+
+A child may consume dependencies supplied by its ancestors without declaring a
+dependency back to the parent.
+
+Unknown module references, self-dependencies, ambiguous module references, and
+dependency cycles are compiler errors.
+
+## Public surface
+
+The intended module public surface is:
+
+```text
+interfaces           behavioral contracts
+static-only classes  facades/factories/entry points
+API data types       data reachable through public signatures
+```
+
+Concrete behavioral instance classes never cross module boundaries.
+
+Until interfaces and API data types are implemented, the currently executable
+cross-module surface is deliberately limited to static-only classes.
+
+A class is static-only for module export when:
+
+```text
+field count = 0
+and
+every method is inferred/static-native mkStatic
+```
+
+Top-level functions are module-internal and cannot be exported.
+
+Cross-module construction of a concrete class, or use of another module's
+concrete class as a field/parameter/result type, is rejected.
+
+Public API data closure will be added with the data/interface features. A future
+public interface may expose required data types transitively, but it must never
+leak a concrete behavioral implementation class.
+
+## CLI
+
+Normal user-facing project commands are manifest-driven:
+
+```text
+eido check module.yaml
+eido build module.yaml -o app
+```
+
+Raw source-set compiler helpers remain available internally for bootstrap,
+compiler, and conformance tests; they are not the normal Eido project model.
+
+## Current resolver limitation
+
+The current module-aware v0 resolver still requires class names and top-level
+function names to be project-unique after module loading. Visibility,
+containment, propagation, source ownership, and dependency enforcement are
+already module-aware. Fully module-qualified internal symbol identity is a
+separate resolver refinement and does not alter this module contract.

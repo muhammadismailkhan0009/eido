@@ -31,6 +31,7 @@ type
   FunctionDecl* = object
     span*: SourceSpan
     name*: string
+    moduleName*: string
     isNative*: bool
     parameters*: seq[Parameter]
     result*: FunctionResultRef
@@ -39,6 +40,7 @@ type
   ClassDecl* = object
     span*: SourceSpan
     name*: string
+    moduleName*: string
     typeParameters*: seq[TypeParameterDecl]
     fields*: seq[FieldDecl]
     methods*: seq[FunctionDecl]

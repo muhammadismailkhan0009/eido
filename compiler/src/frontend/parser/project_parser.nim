@@ -14,6 +14,12 @@ proc parseProject*(project: EidoProject): Program =
     fail(EmptyProjectDiagnosticCode, "project must contain at least one source unit")
 
   for sourceUnit in project.sources:
-    let sourceProgram = parseProgram(lexAll(sourceUnit))
+    var sourceProgram = parseProgram(lexAll(sourceUnit))
+
+    for index in 0 ..< sourceProgram.classes.len:
+      sourceProgram.classes[index].moduleName = sourceUnit.moduleName
+    for index in 0 ..< sourceProgram.functions.len:
+      sourceProgram.functions[index].moduleName = sourceUnit.moduleName
+
     result.classes.add sourceProgram.classes
     result.functions.add sourceProgram.functions

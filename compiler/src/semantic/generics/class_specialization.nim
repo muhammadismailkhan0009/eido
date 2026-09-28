@@ -347,6 +347,7 @@ proc specializeFunction(
   FunctionDecl(
     span: source.span,
     name: source.name,
+    moduleName: source.moduleName,
     isNative: source.isNative,
     parameters: parameters,
     result: functionResult,
@@ -385,6 +386,7 @@ proc specializeClass(
   ClassDecl(
     span: source.span,
     name: name,
+    moduleName: source.moduleName,
     typeParameters: @[],
     fields: fields,
     methods: methods

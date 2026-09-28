@@ -2,6 +2,7 @@
 ## Example: `eido check main.eido account.eido` checks both files as one executable project.
 
 import ../../../../compiler/src/project/model
+import ../../../../compiler/src/project/modules/loader
 import ../../../../compiler/src/source/source_unit
 import ../../../../compiler/src/tooling/compiler_service
 
@@ -13,3 +14,7 @@ proc checkFiles*(sourcePaths: seq[string]): ProjectCheckResult =
     sources.add initSourceUnit(index, sourcePath, readFile(sourcePath))
 
   checkProject(initProject(ptExecutable, sources))
+
+## Checks a normal Eido project from its mandatory module.yaml without backend emission.
+proc checkModuleFile*(manifestPath: string): ProjectCheckResult =
+  checkProject(loadModuleProject(manifestPath, ptExecutable))

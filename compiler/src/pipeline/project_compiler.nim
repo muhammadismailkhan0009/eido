@@ -5,12 +5,15 @@ import ../project/model
 import ../frontend/parser/project_parser
 import ../hir/program as hirProgram
 import ../semantic/analysis/program_analysis
+import ../semantic/modules/architecture_validation
 import ../backend/nim/emitter/program_emitter
 
 ## Analyzes every source in one Eido project into resolved typed HIR.
 ## Example: a function in service.eido can resolve a class declared in account.eido.
 proc analyzeProject*(project: EidoProject): hirProgram.HirProgram =
-  analyzeProgram(parseProject(project), project.target)
+  let parsed = parseProject(project)
+  validateModuleArchitecture(parsed, project)
+  analyzeProgram(parsed, project.target)
 
 ## Compiles one Eido project through semantic analysis to generated Nim source.
 ## Example: an executable project emits one Nim program containing declarations from all supplied Eido files.

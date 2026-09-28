@@ -2,6 +2,7 @@
 ## Example: main.eido and account.eido are loaded as one project before native compilation.
 
 import ../../../../compiler/src/project/model
+import ../../../../compiler/src/project/modules/loader
 import ../../../../compiler/src/source/source_unit
 import ../../../../compiler/src/tooling/compiler_service
 import ../../../../compiler/src/backend/nim/toolchain/compiler as nimCompiler
@@ -16,7 +17,12 @@ proc buildFiles*(sourcePaths: seq[string], outputPath: string) =
   let nimSource = compileProject(initProject(ptExecutable, sources))
   nimCompiler.compileWithNim(nimSource, outputPath)
 
-## Preserves the one-file build convenience API over project compilation.
-## Example: `buildFile("main.eido", "bin/main")` builds a one-source executable project.
+## Builds a normal Eido project from its mandatory module.yaml architecture root.
+proc buildModuleFile*(manifestPath, outputPath: string) =
+  let project = loadModuleProject(manifestPath, ptExecutable)
+  let nimSource = compileProject(project)
+  nimCompiler.compileWithNim(nimSource, outputPath)
+
+## Preserves the one-file bootstrap convenience API for compiler/internal tests.
 proc buildFile*(sourcePath, outputPath: string) =
   buildFiles(@[sourcePath], outputPath)

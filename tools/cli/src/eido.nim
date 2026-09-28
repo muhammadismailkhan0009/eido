@@ -10,11 +10,11 @@ when isMainModule:
 
     case options.command
     of ccBuild:
-      buildFiles(options.sourcePaths, options.outputPath)
+      buildModuleFile(options.modulePath, options.outputPath)
       echo "Built " & options.outputPath
 
     of ccCheck:
-      let checkResult = checkFiles(options.sourcePaths)
+      let checkResult = checkModuleFile(options.modulePath)
       for diagnostic in checkResult.diagnostics:
         stderr.writeLine(formatDiagnostic(diagnostic))
 

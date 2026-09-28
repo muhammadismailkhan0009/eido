@@ -1,5 +1,5 @@
 ## Parses the user-facing Eido command line.
-## Example: `eido build main.eido account.eido -o app` and `eido check main.eido account.eido`.
+## Normal project commands are manifest-driven: module.yaml is mandatory.
 
 import std/os
 
@@ -10,54 +10,50 @@ type
 
   CliOptions* = object
     command*: CliCommand
-    sourcePaths*: seq[string]
+    modulePath*: string
     outputPath*: string
 
-## Returns the CLI usage text for build and semantic-check commands.
-## Example: invalid arguments display both accepted multi-source command shapes.
+## Returns manifest-driven CLI usage for normal Eido projects.
 proc usage*(): string =
   "Usage:\n" &
-  "  eido build <source.eido> [<source.eido> ...] [-o <output>]\n" &
-  "  eido check <source.eido> [<source.eido> ...]"
+  "  eido build <module.yaml> [-o <output>]\n" &
+  "  eido check <module.yaml>"
 
-## Parses source paths shared by build/check until an optional build output flag.
-## Example: two file arguments become one ordered project source set.
-proc parseSourcePaths(
-  args: seq[string],
-  startIndex: int
-): tuple[paths: seq[string], nextIndex: int] =
-  result.nextIndex = startIndex
-  while result.nextIndex < args.len and args[result.nextIndex] != "-o":
-    result.paths.add args[result.nextIndex]
-    inc result.nextIndex
+## Rejects user project entrypoints that are not named module.yaml.
+proc requireModuleManifest(path: string) =
+  if path.extractFilename != "module.yaml":
+    raise newException(
+      ValueError,
+      "Eido projects must be built or checked through module.yaml\n" & usage()
+    )
 
-## Converts command-line words into project-aware CLI options.
-## Example: check accepts one or more source files and never accepts an output path.
+## Parses build/check commands rooted at one mandatory module.yaml.
 proc parseArgs*(args: seq[string]): CliOptions =
   if args.len < 2:
     raise newException(ValueError, usage())
 
+  result.modulePath = args[1]
+  requireModuleManifest(result.modulePath)
+
   case args[0]
   of "build":
     result.command = ccBuild
-    let parsed = parseSourcePaths(args, 1)
-    result.sourcePaths = parsed.paths
-    if result.sourcePaths.len == 0:
+    if args.len == 2:
+      let projectDir = parentDir(result.modulePath)
+      let projectName =
+        if projectDir.len == 0: "eido-app"
+        else: projectDir.extractFilename
+      result.outputPath =
+        if projectDir.len == 0: projectName
+        else: projectDir / projectName
+    elif args.len == 4 and args[2] == "-o":
+      result.outputPath = args[3]
+    else:
       raise newException(ValueError, usage())
-
-    result.outputPath = changeFileExt(result.sourcePaths[0], "")
-    if parsed.nextIndex < args.len:
-      if args[parsed.nextIndex] != "-o" or
-          parsed.nextIndex + 1 >= args.len or
-          parsed.nextIndex + 2 != args.len:
-        raise newException(ValueError, usage())
-      result.outputPath = args[parsed.nextIndex + 1]
 
   of "check":
     result.command = ccCheck
-    let parsed = parseSourcePaths(args, 1)
-    result.sourcePaths = parsed.paths
-    if result.sourcePaths.len == 0 or parsed.nextIndex != args.len:
+    if args.len != 2:
       raise newException(ValueError, usage())
 
   else:
