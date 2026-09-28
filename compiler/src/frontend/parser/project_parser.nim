@@ -16,6 +16,15 @@ proc parseProject*(project: EidoProject): Program =
   for sourceUnit in project.sources:
     var sourceProgram = parseProgram(lexAll(sourceUnit))
 
+    if project.modules.len > 0 and
+        sourceProgram.interfaces.len + sourceProgram.classes.len > 1:
+      failAt(
+        sourceUnit.path,
+        1,
+        1,
+        "source file may declare only one top-level class or interface"
+      )
+
     for index in 0 ..< sourceProgram.interfaces.len:
       sourceProgram.interfaces[index].moduleName = sourceUnit.moduleName
       for methodIndex in 0 ..< sourceProgram.interfaces[index].methods.len:

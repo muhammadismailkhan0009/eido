@@ -35,6 +35,8 @@ sequences, plain/quoted scalars, empty `[]`/`{}`, and small inline mappings
 such as `processor: { path: processor }`. YAML anchors/tags and unrelated YAML
 features are intentionally outside the manifest grammar.
 
+Each listed `.eido` source may contain at most one outermost nominal declaration total: one class or one interface. Top-level functions may coexist in that file. Multiple same-level classes/interfaces must be split into separate source files; nested nominal declarations are not part of the current grammar.
+
 ## Architectural meaning
 
 - `module` is the local module name.
@@ -81,10 +83,11 @@ Containment controls visibility; dependencies control use.
 
 ## Current public surface
 
-Modules do not distinguish DTO/data classes from behavioral classes.
+Modules do not distinguish DTO/data classes from behavioral classes once a type is reachable through the public API closure.
 
-An explicitly exported class or interface is an API root. The compiler computes
-the complete transitive nominal API closure from that root through:
+Explicit export roots are intentionally narrower: an export must be an interface or a static-only class. A static-only class has no fields and all of its Eido-bodied methods are inferred static (native class methods are static by definition). Concrete instance classes cannot be named directly in `exports`.
+
+From each legal export root, the compiler computes the complete transitive nominal API closure through:
 
 - class fields;
 - class method parameter/result types;
@@ -93,11 +96,7 @@ the complete transitive nominal API closure from that root through:
 - interface method parameter/result types;
 - nested generic type arguments.
 
-Every reachable class/interface becomes available to consumers as the same
-ordinary Eido declaration it already is. A reachable class may therefore be
-constructed, have fields read, and have its methods called according to the
-normal class rules. The compiler does not project a data-only view and does not
-warn that a behavioral class has become public.
+Every transitively reachable class/interface becomes available to consumers as the same ordinary Eido declaration it already is. A reachable class may therefore be constructed, have fields read, and have its methods called according to the normal class rules. The compiler does not project a data-only view and does not warn that a behavioral class became reachable; the restriction applies to explicit architectural roots, not to required signature closure.
 
 Declarations that are not reachable from an allowed API surface remain
 module-internal. Top-level functions remain module-internal and cannot be
@@ -120,10 +119,26 @@ reachable declaration becomes part of A's public API and is therefore visible
 to consumers of A. Unrelated declarations from B remain invisible unless they
 also become reachable through A's API graph.
 
-The current module-aware resolver still requires interface, class, and
-top-level-function names to be project-unique. Module-qualified internal symbol identities are a
-separate resolver improvement; this limitation does not weaken visibility or
-dependency enforcement.
+## Name resolution and qualification
+
+Declarations are internally identified by canonical module identity plus local name, for example `shop.payments.Result` and `shop.users.Result`. Same-named declarations in different modules are legal.
+
+Unqualified lookup prefers the current module. Otherwise it resolves when exactly one declaration with that local name is visible through the effective module API surfaces. Multiple visible matches are an ambiguity error.
+
+Use module qualification to disambiguate:
+
+```eido
+function read(payments.Result value) returns Int {
+    return value.code;
+}
+
+var result = payments.Result { code = 42; };
+var value = payments.Factory.create();
+```
+
+The qualifier is resolved through the module graph; it does not grant access to declarations that are otherwise invisible. Ordinary value member access remains unchanged.
+
+Top-level functions stay module-internal. Same-named top-level functions in different modules are legal internally, but cross-module function calls are not introduced.
 
 ## CLI
 

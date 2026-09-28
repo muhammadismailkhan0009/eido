@@ -178,7 +178,8 @@ suite "CLI project integration":
     writeFile(root / "payments" / "processor" / "module.yaml", """
       module: processor
       sources:
-        - Processor.eido
+        - HiddenService.eido
+        - ProcessorFactory.eido
       children: []
       dependencies: []
       exports:
@@ -186,7 +187,7 @@ suite "CLI project integration":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "payments" / "processor" / "Processor.eido", """
+    writeFile(root / "payments" / "processor" / "HiddenService.eido", """
       class HiddenService implements PaymentService {
         Int stored;
 
@@ -194,7 +195,8 @@ suite "CLI project integration":
           return self.stored;
         }
       }
-
+    """)
+    writeFile(root / "payments" / "processor" / "ProcessorFactory.eido", """
       class ProcessorFactory {
         function create() returns PaymentService {
           return HiddenService { stored = 42; };
@@ -250,7 +252,10 @@ suite "CLI project integration":
     writeFile(root / "payments" / "module.yaml", """
       module: payments
       sources:
-        - Api.eido
+        - PaymentRequest.eido
+        - PaymentResult.eido
+        - PaymentService.eido
+        - Payments.eido
       children:
         processor: { path: processor }
       dependencies: []
@@ -263,7 +268,7 @@ suite "CLI project integration":
       adopts:
         - processor.ProcessorFactory
     """)
-    writeFile(root / "payments" / "Api.eido", """
+    writeFile(root / "payments" / "PaymentRequest.eido", """
       class PaymentRequest {
         Int amount;
 
@@ -271,15 +276,14 @@ suite "CLI project integration":
           return self.amount * 2;
         }
       }
-
-      class PaymentResult {
-        Int code;
-      }
-
+    """)
+    writeFile(root / "payments" / "PaymentResult.eido", "class PaymentResult { Int code; }")
+    writeFile(root / "payments" / "PaymentService.eido", """
       interface PaymentService {
         function pay(PaymentRequest request) returns PaymentResult;
       }
-
+    """)
+    writeFile(root / "payments" / "Payments.eido", """
       class Payments {
         function service() returns PaymentService {
           return ProcessorFactory.create();
@@ -290,7 +294,8 @@ suite "CLI project integration":
     writeFile(root / "payments" / "processor" / "module.yaml", """
       module: processor
       sources:
-        - Processor.eido
+        - HiddenService.eido
+        - ProcessorFactory.eido
       children: []
       dependencies: []
       exports:
@@ -298,7 +303,7 @@ suite "CLI project integration":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "payments" / "processor" / "Processor.eido", """
+    writeFile(root / "payments" / "processor" / "HiddenService.eido", """
       class HiddenService implements PaymentService {
         Int offset;
 
@@ -308,7 +313,8 @@ suite "CLI project integration":
           };
         }
       }
-
+    """)
+    writeFile(root / "payments" / "processor" / "ProcessorFactory.eido", """
       class ProcessorFactory {
         function create() returns PaymentService {
           return HiddenService { offset = 0; };
@@ -338,3 +344,130 @@ suite "CLI project integration":
 
     buildModuleFile(root / "module.yaml", outputPath)
     check execProcess(outputPath).strip() == "42"
+
+  test "builds duplicate module-local class names with explicit qualification":
+    let root = freshProject("qualified_nominals")
+    let outputPath = root / "qualified_app"
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    createDir(root / "payments")
+    createDir(root / "users")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        users: { path: users }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Result.eido
+        - Factory.eido
+      children: []
+      dependencies: []
+      exports:
+        - Factory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "Result.eido", "class Result { Int code; }")
+    writeFile(root / "payments" / "Factory.eido", """
+      class Factory {
+        function create() returns Result {
+          return Result { code = 20; };
+        }
+      }
+    """)
+
+    writeFile(root / "users" / "module.yaml", """
+      module: users
+      sources:
+        - Result.eido
+        - Factory.eido
+      children: []
+      dependencies: []
+      exports:
+        - Factory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "users" / "Result.eido", "class Result { Int score; }")
+    writeFile(root / "users" / "Factory.eido", """
+      class Factory {
+        function create() returns Result {
+          return Result { score = 22; };
+        }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+        - users
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function readPayment(payments.Result value) returns Int {
+        return value.code;
+      }
+
+      function readUser(users.Result value) returns Int {
+        return value.score;
+      }
+
+      function main() returns Int {
+        var payment = payments.Factory.create();
+        var user = users.Factory.create();
+        return readPayment(payment) + readUser(user);
+      }
+    """)
+
+    buildModuleFile(root / "module.yaml", outputPath)
+    check execProcess(outputPath).strip() == "42"
+
+  test "builds module project with class-owned native method":
+    let root = freshProject("module_native_method")
+    let outputPath = root / "native_app"
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", """
+      class Console {
+        native function writeLine(String value);
+      }
+
+      function main() {
+        Console.writeLine("hello");
+      }
+    """)
+
+    buildModuleFile(root / "module.yaml", outputPath)
+    check execProcess(outputPath).strip() == "hello"

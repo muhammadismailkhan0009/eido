@@ -81,6 +81,8 @@ These tests answer questions such as:
 
 `compiler/tests/diagnostics/` proves stable diagnostic codes, severity/message/span preservation, project diagnostics without spans, human rendering, and the protocol-neutral `ProjectCheckResult` contract used by CLI/LSP/MCP/CI.
 
+`compiler/tests/tooling/` proves protocol-neutral semantic editor queries such as typed HIR hover without involving an editor protocol. `tests/integration/lsp_server_test.nim` proves LSP initialization, full-document overlays, live diagnostics, hover responses, and JSON-RPC framing over the thin adapter.
+
 ### Language feature tests
 
 `compiler/tests/features/` is the executable catalog of user-visible Eido behavior.

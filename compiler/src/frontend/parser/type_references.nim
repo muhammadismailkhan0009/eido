@@ -20,8 +20,23 @@ proc parseDeclaredTypeRef*(parser: var Parser): TypeRef =
   if typeToken.lexeme in ["Long", "Double"]:
     failAt(typeToken.span, "removed numeric type '" & typeToken.lexeme & "'")
 
-  var arguments: seq[TypeRef]
+  var typeName = typeToken.lexeme
   var endSpan = typeToken.span
+
+  # Module qualification is legal only for identifier-based nominal types.
+  if typeToken.kind == tkIdentifier:
+    while parser.check(tkDot):
+      var candidate = parser
+      discard candidate.advance()
+      if not candidate.check(tkIdentifier):
+        break
+
+      discard parser.advance()
+      let segment = parser.advance()
+      typeName.add "." & segment.lexeme
+      endSpan = segment.span
+
+  var arguments: seq[TypeRef]
 
   if parser.check(tkLess):
     discard parser.advance()
@@ -49,7 +64,7 @@ proc parseDeclaredTypeRef*(parser: var Parser): TypeRef =
 
   TypeRef(
     span: coverSpan(typeToken.span, endSpan),
-    name: typeToken.lexeme,
+    name: typeName,
     arguments: arguments,
     isOptional: isOptional
   )

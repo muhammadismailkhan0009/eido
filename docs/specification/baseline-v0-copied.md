@@ -3720,13 +3720,11 @@ implementation identity, conversions, and runtime dispatch semantics.
 
 ---
 
-# 51. Ordinary classes participate directly in transitive module API closure
+# 51. Ordinary classes participate transitively in module API closure
 
 > Status: approved and implemented for v0.
 >
-> This section supersedes the parts of sections 49 and 50 that restricted
-> cross-module class exposure to static-only/data-like classes or rejected
-> ordinary concrete class types from interface signatures.
+> This section supersedes the parts of sections 49 and 50 that rejected ordinary concrete class types from interface signatures or prevented such classes from becoming transitively reachable. It does **not** remove the section 49 rule that explicit export roots are limited to interfaces and static-only classes.
 
 Eido has one ordinary class abstraction. The language does not classify classes
 as DTOs, data classes, entities, services, or behavioral classes for module
@@ -3739,13 +3737,15 @@ combination of them.
 
 Module declarations remain explicit.
 
-Outward public API begins only from declarations named by:
+Outward public API begins only from declarations named by `exports`. An explicit export root must be either an interface or a static-only class. A static-only class has zero fields and only inferred/static-native methods.
 
 ```yaml
 exports:
-  - SomeClass
   - SomeInterface
+  - SomeStaticFacade
 ```
+
+Concrete stateful/instance classes cannot be explicit export roots. They may still become public transitively when a legal interface/static-facade root requires them in its nominal API graph.
 
 Family-only API begins from declarations named by `adopts`.
 
@@ -3909,3 +3909,289 @@ another.
 The Nim backend therefore emits all nominal class/interface layouts in one Nim
 `type` section. This is a backend representation requirement only; the Eido
 semantic rule is simply mutual nominal type reachability.
+
+
+---
+
+# 52. Module-qualified symbol identity and ambiguity resolution
+
+> Status: approved and implemented for v0.
+>
+> This section removes the temporary project-global nominal/function-name
+> uniqueness limitation recorded in earlier module addenda.
+
+## Canonical identity
+
+Every module-owned class/interface declaration has an internal canonical identity:
+
+```text
+<canonical-module>.<local-name>
+```
+
+For example, `shop.payments.Result` and `shop.users.Result` are distinct declarations even though both use local source name `Result`.
+
+Module-internal top-level functions are canonicalized by the same rule, so different modules may contain same-named helper functions. Method and field names remain scoped to their owning class.
+
+## Source lookup
+
+Unqualified nominal lookup is intentionally concise:
+
+1. a declaration owned directly by the current module wins;
+2. otherwise collect same-named declarations visible through the current module's effective exported, adopted, provided, and dependency API surfaces;
+3. exactly one visible candidate resolves automatically;
+4. multiple visible candidates are a compile-time ambiguity.
+
+Invisible or unrelated same-named declarations do not create ambiguity.
+
+When disambiguation is needed, source uses a module-qualified name:
+
+```eido
+payments.Result
+users.Result
+```
+
+The module part is resolved through normal module-reference rules. A shorter module reference is sufficient when it is unambiguous; source code does not need to spell the full canonical root identity.
+
+Qualification is valid in declared type positions, construction, and class/static access:
+
+```eido
+function read(payments.Result value) returns Int {
+    return value.code;
+}
+
+var result = payments.Result { code = 42; };
+var value = payments.Factory.create();
+```
+
+Qualification is disambiguation, not an access bypass. `payments.Secret` is rejected when the current module is not allowed to consume `Secret`.
+
+A same-module nominal declaration shadows a same-named visible dependency declaration. Lexical value names still shadow type-like interpretation in expression member chains, so ordinary `payment.result.read()` is not mistaken for module/type qualification.
+
+Top-level functions remain module-internal. Same-named functions in different modules are legal, but cross-module top-level function qualification/calls are not introduced.
+
+Canonical identities may contain dots or generic-specialization syntax that are illegal backend identifiers. Backends must encode them into collision-safe names; raw source qualification never leaks into backend syntax.
+
+
+---
+
+# 53. LSP/editor tooling is implemented incrementally with the language
+
+> Status: approved and implemented as the first permanent LSP slice.
+>
+> This section strengthens the earlier parallel toolchain completion policy:
+> editor tooling is not a post-language phase.
+
+Eido development treats the language, compiler tooling API, LSP, and editor
+clients as one evolving development experience.
+
+When a language feature changes compiler-known facts that matter to an editor,
+the corresponding protocol-neutral query/diagnostic capability and LSP/editor
+surface should be updated in the same development cycle where practical.
+
+Examples include:
+
+```text
+new syntax               -> syntax coloring / semantic tokens
+new type/member behavior -> hover / completion / signature help
+new symbol identity      -> definition / references / rename
+new validation rule      -> live diagnostics / code actions
+new canonical formatting -> formatter / format-on-save
+```
+
+The compiler remains authoritative. LSP/editor adapters must not implement
+independent Eido parsing, module resolution, typing, member lookup, or symbol
+identity.
+
+## Current LSP slice
+
+The repository now contains a working editor-neutral `eido-lsp` stdio server.
+
+Implemented protocol behavior:
+
+```text
+initialize
+initialized
+shutdown
+exit
+textDocument/didOpen
+textDocument/didChange    (full synchronization)
+textDocument/didSave
+textDocument/didClose
+textDocument/hover
+textDocument/definition
+textDocument/semanticTokens/full
+textDocument/formatting
+textDocument/publishDiagnostics
+```
+
+The server uses standard Content-Length framed JSON-RPC over stdin/stdout.
+
+Open documents are stored as unsaved overlays. Project checking loads the real
+mandatory `module.yaml` graph and substitutes those editor snapshots for disk
+source before invoking the same compiler `checkProject` pipeline used by other
+tooling.
+
+Thus:
+
+```text
+editor buffer
+    ↓
+LSP document overlay
+    ↓
+real Eido project/module loader
+    ↓
+compiler parser + module resolver + semantic analysis
+    ↓
+structured diagnostics / typed HIR
+    ↓
+LSP response
+```
+
+No editor-specific semantic implementation exists.
+
+Hover is derived from typed HIR through a protocol-neutral compiler tooling
+service. The initial implementation returns the narrowest known semantic
+expression/statement/declaration type or callable signature at the cursor.
+
+## Current VS Code slice
+
+`tools/vscode/` is a thin client of the editor-neutral LSP and existing CLI.
+
+It currently provides:
+
+```text
+.eido language registration
+TextMate syntax coloring
+compiler semantic highlighting
+live LSP diagnostics
+semantic hover
+go-to-definition / Ctrl+click
+Format Document
+Eido: Check Project
+Eido: Build Project
+Eido: Build and Run Project
+```
+
+Check/build/run invoke the existing `eido` CLI and root `module.yaml`; VS Code
+does not own compilation semantics.
+
+Other editors can launch the same `eido-lsp` binary directly.
+
+## Bootstrap implementation policy
+
+The current LSP adapter is written in Nim because Eido does not yet have all
+required stdio, JSON, collections, and persistent project-state facilities.
+
+This is bootstrap infrastructure, not a decision to keep ecosystem tooling in
+Nim permanently.
+
+As those prerequisites become expressible in Eido under requirement-driven
+development, ordinary LSP implementation code should migrate to Eido while the
+compiler's semantic/query boundary remains unchanged.
+
+## Incremental next editor capabilities
+
+The intended order is not a rigid phase gate. Add capabilities as their
+compiler facts become available:
+
+```text
+references
+ordinary/member completion
+signature help
+safe rename
+compiler-safe code actions
+```
+
+A language feature should no longer be considered fully integrated merely
+because it parses and compiles when it also creates obvious editor-facing
+semantics that the existing tooling can expose.
+
+
+---
+
+# 54. One outermost nominal declaration per source file
+
+> Status: approved and implemented for v0.
+
+Normal Eido project sources use Java-style nominal isolation at the file level.
+
+A single `.eido` source file may declare at most one outermost nominal declaration total:
+
+```text
+one class
+or
+one interface
+```
+
+Top-level functions may coexist in that source file because Eido intentionally supports file-level procedural functions.
+
+Therefore this is valid:
+
+```eido
+class Order {
+    Int id;
+}
+
+function formatId(Int id) returns Int {
+    return id;
+}
+```
+
+but this is invalid:
+
+```eido
+class Order {}
+class Customer {}
+```
+
+and this is also invalid:
+
+```eido
+interface Repository {}
+class RepositoryImpl {}
+```
+
+Those nominals must be split into separate `.eido` source files.
+
+This rule is enforced when assembling a normal Eido project from its source units. Low-level parser/compiler test helpers may still parse aggregate snippets internally; they are not the user-facing project model.
+
+Nested class/interface declarations are not part of the current v0 grammar. If nested nominals are added later, they are not counted as additional outermost declarations for this rule.
+
+
+---
+
+# 55. Semantic symbol indexing is compiler-owned
+
+> Status: approved and implemented for the current tooling slice.
+
+Editor navigation and semantic highlighting use one protocol-neutral compiler symbol index rather than editor-side name inference.
+
+The index binds exact source spans to resolved declaration identity for:
+
+```text
+classes
+interfaces
+top-level functions
+class/interface methods
+class fields
+parameters
+local variables
+```
+
+Each indexed reference records the declaration span it resolves to. Function, method, and local identity reuse the compiler's resolved semantic IDs; nominal and field identity reuse canonical module-qualified types plus the compiler lexer for exact source-token spans.
+
+This index is the shared foundation for:
+
+```text
+textDocument/semanticTokens/full
+textDocument/definition
+future references
+future safe rename
+future completion/navigation queries
+```
+
+Semantic highlighting currently distinguishes class, interface, function, method, property, parameter, and variable tokens, with declaration and static modifiers where known.
+
+Go-to-definition works across module/source files and follows resolved interface inheritance for interface method dispatch.
+
+TextMate grammar coloring remains the lexical fallback for syntax such as keywords, literals, and punctuation. Semantic tokens layer compiler-known symbol meaning on top; the editor client must not independently reproduce Eido resolution rules.

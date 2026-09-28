@@ -1,4 +1,5 @@
 import std/unittest
+import frontend/ast/expressions
 import frontend/lexer/scanner
 import frontend/parser/program_parser
 
@@ -52,3 +53,27 @@ suite "Interface parsing":
 
     check program.classes.len == 1
     check program.classes[0].implements == @["Readable", "Writable"]
+
+
+  test "parses module-qualified declared types":
+    let program = parseProgram(lexAll("""
+      function read(payments.Result value) returns payments.Result {
+        return value;
+      }
+
+      function main() {}
+    """))
+
+    check program.functions[0].parameters[0].typeRef.name == "payments.Result"
+    check program.functions[0].result.typeRef.name == "payments.Result"
+
+  test "parses module-qualified construction":
+    let program = parseProgram(lexAll("""
+      function main() {
+        var value = payments.Result { code = 42; };
+      }
+    """))
+
+    let initializer = program.functions[0].body[0].initializer
+    check initializer.kind == ekConstruct
+    check initializer.constructionTypeRef.name == "payments.Result"

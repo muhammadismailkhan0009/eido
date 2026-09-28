@@ -91,6 +91,9 @@ import project/module_manifest_parser_test
 import project/module_loader_test
 import semantic/modules/module_architecture_test
 import diagnostics/structured_diagnostics_test
+import tooling/hover_service_test
+import tooling/formatting_service_test
+import tooling/symbol_service_test
 
 import features/expression/arithmetic_variants_test
 import features/expression/grouping_variants_test

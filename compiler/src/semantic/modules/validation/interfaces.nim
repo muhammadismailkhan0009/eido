@@ -1,3 +1,5 @@
+## Validates interface/module architecture after canonical module name resolution.
+
 ## Reports whether one interface transitively extends another, including identity.
 proc interfaceExtends(
   interfaces: InterfaceRegistry,
@@ -29,35 +31,30 @@ proc validateManifestSurfaces(
         moduleSpec,
         exportRef
       )
+      let key = declarationKey(target.moduleName, target.symbolName)
 
-      if target.symbolName in functions:
+      if key in functions:
         failAt(
           moduleSpec.manifestPath, 1, 1,
           "top-level functions cannot be exported from modules"
         )
 
-      if target.symbolName in interfaces:
-        let sourceInterface = interfaces[target.symbolName]
-        if sourceInterface.moduleName != target.moduleName:
-          failAt(
-            moduleSpec.manifestPath, 1, 1,
-            "export '" & exportRef & "' resolves to interface owned by '" &
-              sourceInterface.moduleName & "'"
-          )
+      if key in interfaces:
         continue
 
-      if target.symbolName notin classes:
+      if key notin classes:
         failAt(
           moduleSpec.manifestPath, 1, 1,
           "unknown exported declaration '" & exportRef & "'"
         )
 
-      let sourceClass = classes[target.symbolName]
-      if sourceClass.moduleName != target.moduleName:
+      let sourceClass = classes[key]
+      if not isStaticOnly(sourceClass):
         failAt(
-          moduleSpec.manifestPath, 1, 1,
-          "export '" & exportRef & "' resolves to class owned by '" &
-            sourceClass.moduleName & "'"
+          sourceClass.span,
+          "module export '" & exportRef &
+            "' must be an interface or static-only class; " &
+            "concrete instance classes cannot be export roots"
         )
 
     for adoption in moduleSpec.adopts:
@@ -101,11 +98,12 @@ proc validateInterfacePurpose(
     if not architectural:
       failAt(
         sourceInterface.span,
-        "interface '" & interfaceName &
+        "interface '" & declarationLocalName(interfaceName) &
           "' must participate in an exported, adopted, or provided module API surface"
       )
 
 ## Verifies closed interface extension and class implementation ownership.
+## References must already be canonical when this pass runs.
 proc validateInterfaceOwnership(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
@@ -134,8 +132,9 @@ proc validateInterfaceOwnership(
       if not isSameOrDescendant(owner, sourceInterface.moduleName):
         failAt(
           sourceInterface.span,
-          "interface '" & sourceInterface.name &
-            "' cannot extend closed interface '" & parent &
+          "interface '" & declarationLocalName(sourceInterface.name) &
+            "' cannot extend closed interface '" &
+            declarationLocalName(parent) &
             "' outside its owning module family '" & owner & "'"
         )
 
@@ -161,8 +160,9 @@ proc validateInterfaceOwnership(
       if not isSameOrDescendant(owner, sourceClass.moduleName):
         failAt(
           sourceClass.span,
-          "class '" & sourceClass.name &
-            "' cannot implement closed interface '" & implemented &
+          "class '" & declarationLocalName(sourceClass.name) &
+            "' cannot implement closed interface '" &
+            declarationLocalName(implemented) &
             "' outside its owning module family '" & owner & "'"
         )
 
@@ -174,19 +174,15 @@ proc validateProviders(
 ) =
   for _, moduleSpec in modules:
     for provision in moduleSpec.provides:
-      if provision.contract notin interfaces:
+      let contractKey = declarationKey(
+        moduleSpec.canonicalName,
+        provision.contract
+      )
+
+      if contractKey notin interfaces:
         failAt(
           moduleSpec.manifestPath, 1, 1,
           "provided contract '" & provision.contract & "' is not an interface"
-        )
-
-      let contract = interfaces[provision.contract]
-      if contract.moduleName != moduleSpec.canonicalName:
-        failAt(
-          moduleSpec.manifestPath, 1, 1,
-          "provided contract '" & provision.contract &
-            "' must be owned by parent module '" &
-            moduleSpec.canonicalName & "'"
         )
 
       var found = false
@@ -201,7 +197,7 @@ proc validateProviders(
           if interfaceExtends(
             interfaces,
             implemented,
-            provision.contract
+            contractKey
           ):
             found = true
             break
@@ -214,4 +210,3 @@ proc validateProviders(
           "child provider '" & provision.providerModule &
             "' does not implement contract '" & provision.contract & "'"
         )
-

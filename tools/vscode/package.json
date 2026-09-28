@@ -1,0 +1,75 @@
+{
+  "name": "eido-language-support",
+  "displayName": "Eido Language Support",
+  "description": "Language Server, diagnostics, hover, formatting, build and run support for Eido.",
+  "version": "0.0.1",
+  "publisher": "eido",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:eido",
+    "onCommand:eido.check",
+    "onCommand:eido.build",
+    "onCommand:eido.run"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "eido",
+        "aliases": ["Eido", "eido"],
+        "extensions": [".eido"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "eido",
+        "scopeName": "source.eido",
+        "path": "./syntaxes/eido.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "eido.check",
+        "title": "Eido: Check Project"
+      },
+      {
+        "command": "eido.build",
+        "title": "Eido: Build Project"
+      },
+      {
+        "command": "eido.run",
+        "title": "Eido: Build and Run Project"
+      }
+    ],
+    "configuration": {
+      "title": "Eido",
+      "properties": {
+        "eido.server.path": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path or command used to start the Eido language server. When empty, the extension looks for a workspace-local eido-lsp before PATH."
+        },
+        "eido.compiler.path": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path or command used for Eido check/build/run commands. When empty, the extension looks for a workspace-local eido binary before PATH."
+        },
+        "eido.build.output": {
+          "type": "string",
+          "default": ".eido/bin/app",
+          "description": "Workspace-relative native executable output path."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^10.1.2"
+  }
+}

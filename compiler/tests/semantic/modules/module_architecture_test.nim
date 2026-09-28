@@ -1,4 +1,4 @@
-import std/[os, unittest]
+import std/[os, strutils, unittest]
 import project/model
 import project/modules/loader
 import tooling/compiler_service
@@ -128,7 +128,7 @@ suite "Module architecture":
 
     check not checkModule(root).success
 
-  test "allows exporting a concrete instance class":
+  test "rejects exporting a concrete instance class":
     let root = freshModuleDir("instance_export")
     defer: removeDir(root)
 
@@ -152,7 +152,7 @@ suite "Module architecture":
       }
     """)
 
-    check checkModule(root).success
+    check not checkModule(root).success
 
   test "parent dependencies propagate downward to children":
     let root = freshModuleDir("dep_propagation")
@@ -454,7 +454,8 @@ suite "Module architecture":
     writeFile(root / "payments" / "processor" / "module.yaml", """
       module: processor
       sources:
-        - Processor.eido
+        - HiddenService.eido
+        - ProcessorFactory.eido
       children: []
       dependencies: []
       exports:
@@ -462,15 +463,13 @@ suite "Module architecture":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "payments" / "processor" / "Processor.eido", """
+    writeFile(root / "payments" / "processor" / "HiddenService.eido", """
       class HiddenService implements PaymentService {
         Int stored;
-
-        function value() returns Int {
-          return self.stored;
-        }
+        function value() returns Int { return self.stored; }
       }
-
+    """)
+    writeFile(root / "payments" / "processor" / "ProcessorFactory.eido", """
       class ProcessorFactory {
         function create() returns PaymentService {
           return HiddenService { stored = 42; };
@@ -597,28 +596,15 @@ suite "Module architecture":
     check not checkModule(root).success
 
 
-  test "stateful class may be exported directly with its complete surface":
+  test "stateful class cannot be an explicit export root":
     let root = freshModuleDir("public_class")
     defer: removeDir(root)
-    createDir(root / "model")
-    createDir(root / "app")
 
     writeFile(root / "module.yaml", """
-      module: shop
-      sources: []
-      children:
-        model: { path: model }
-        app: { path: app }
-      dependencies: []
-      exports: []
-      provides: {}
-      adopts: []
-    """)
-
-    writeFile(root / "model" / "module.yaml", """
       module: model
       sources:
         - Account.eido
+        - Main.eido
       children: []
       dependencies: []
       exports:
@@ -626,35 +612,15 @@ suite "Module architecture":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "model" / "Account.eido", """
+    writeFile(root / "Account.eido", """
       class Account {
         Int balance;
-
-        function doubled() returns Int {
-          return self.balance * 2;
-        }
+        function doubled() returns Int { return self.balance * 2; }
       }
     """)
+    writeFile(root / "Main.eido", "function main() {}")
 
-    writeFile(root / "app" / "module.yaml", """
-      module: app
-      sources:
-        - Main.eido
-      children: []
-      dependencies:
-        - model
-      exports: []
-      provides: {}
-      adopts: []
-    """)
-    writeFile(root / "app" / "Main.eido", """
-      function main() returns Int {
-        var account = Account { balance = 21; };
-        return account.doubled();
-      }
-    """)
-
-    check checkModule(root).success
+    check not checkModule(root).success
 
   test "exported interface makes class signature types public automatically":
     let root = freshModuleDir("interface_class_closure")
@@ -677,7 +643,9 @@ suite "Module architecture":
     writeFile(root / "payments" / "module.yaml", """
       module: payments
       sources:
-        - Api.eido
+        - PaymentRequest.eido
+        - PaymentResult.eido
+        - PaymentService.eido
       children: []
       dependencies: []
       exports:
@@ -685,19 +653,14 @@ suite "Module architecture":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "payments" / "Api.eido", """
+    writeFile(root / "payments" / "PaymentRequest.eido", """
       class PaymentRequest {
         Int amount;
-
-        function doubled() returns Int {
-          return self.amount * 2;
-        }
+        function doubled() returns Int { return self.amount * 2; }
       }
-
-      class PaymentResult {
-        Int code;
-      }
-
+    """)
+    writeFile(root / "payments" / "PaymentResult.eido", "class PaymentResult { Int code; }")
+    writeFile(root / "payments" / "PaymentService.eido", """
       interface PaymentService {
         function pay(PaymentRequest request) returns PaymentResult;
       }
@@ -723,7 +686,7 @@ suite "Module architecture":
 
     check checkModule(root).success
 
-  test "public class closure is transitive through fields and method signatures":
+  test "static export closure is transitive through stateful class surfaces":
     let root = freshModuleDir("transitive_class_closure")
     defer: removeDir(root)
     createDir(root / "api")
@@ -744,33 +707,39 @@ suite "Module architecture":
     writeFile(root / "api" / "module.yaml", """
       module: api
       sources:
-        - Models.eido
+        - Detail.eido
+        - Payload.eido
+        - Envelope.eido
+        - PublicApi.eido
       children: []
       dependencies: []
       exports:
-        - Envelope
+        - PublicApi
       provides: {}
       adopts: []
     """)
-    writeFile(root / "api" / "Models.eido", """
+    writeFile(root / "api" / "Detail.eido", """
       class Detail {
         Int value;
-
-        function read() returns Int {
-          return self.value;
-        }
+        function read() returns Int { return self.value; }
       }
-
+    """)
+    writeFile(root / "api" / "Payload.eido", """
       class Payload {
         Detail detail;
-
         function createDetail(Int value) returns Detail {
           return Detail { value = value; };
         }
       }
-
-      class Envelope {
-        Payload payload;
+    """)
+    writeFile(root / "api" / "Envelope.eido", "class Envelope { Payload payload; }")
+    writeFile(root / "api" / "PublicApi.eido", """
+      class PublicApi {
+        function envelope() returns Envelope {
+          return Envelope {
+            payload = Payload { detail = Detail { value = 42; }; };
+          };
+        }
       }
     """)
 
@@ -815,7 +784,8 @@ suite "Module architecture":
     writeFile(root / "api" / "module.yaml", """
       module: api
       sources:
-        - Api.eido
+        - PublicApi.eido
+        - InternalThing.eido
       children: []
       dependencies: []
       exports:
@@ -823,17 +793,12 @@ suite "Module architecture":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "api" / "Api.eido", """
+    writeFile(root / "api" / "PublicApi.eido", """
       class PublicApi {
-        function value() returns Int {
-          return 1;
-        }
-      }
-
-      class InternalThing {
-        Int value;
+        function value() returns Int { return 1; }
       }
     """)
+    writeFile(root / "api" / "InternalThing.eido", "class InternalThing { Int value; }")
 
     writeFile(root / "app" / "module.yaml", """
       module: app
@@ -855,8 +820,7 @@ suite "Module architecture":
 
     check not checkModule(root).success
 
-
-  test "exported class exposes its implemented interface through API closure":
+  test "static export exposes returned implementation and its interface through API closure":
     let root = freshModuleDir("implemented_interface_closure")
     defer: removeDir(root)
     createDir(root / "model")
@@ -877,24 +841,31 @@ suite "Module architecture":
     writeFile(root / "model" / "module.yaml", """
       module: model
       sources:
-        - Model.eido
+        - Readable.eido
+        - PublicValue.eido
+        - PublicApi.eido
       children: []
       dependencies: []
       exports:
-        - PublicValue
+        - PublicApi
       provides: {}
       adopts: []
     """)
-    writeFile(root / "model" / "Model.eido", """
+    writeFile(root / "model" / "Readable.eido", """
       interface Readable {
         function read() returns Int;
       }
-
+    """)
+    writeFile(root / "model" / "PublicValue.eido", """
       class PublicValue implements Readable {
         Int value;
-
-        function read() returns Int {
-          return self.value;
+        function read() returns Int { return self.value; }
+      }
+    """)
+    writeFile(root / "model" / "PublicApi.eido", """
+      class PublicApi {
+        function create() returns PublicValue {
+          return PublicValue { value = 42; };
         }
       }
     """)
@@ -916,7 +887,7 @@ suite "Module architecture":
       }
 
       function main() returns Int {
-        return readValue(PublicValue { value = 42; });
+        return readValue(PublicApi.create());
       }
     """)
 
@@ -946,7 +917,8 @@ suite "Module architecture":
     writeFile(root / "left" / "module.yaml", """
       module: left
       sources:
-        - Left.eido
+        - Detail.eido
+        - LeftApi.eido
       children: []
       dependencies: []
       exports:
@@ -954,11 +926,8 @@ suite "Module architecture":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "left" / "Left.eido", """
-      class Detail {
-        Int value;
-      }
-
+    writeFile(root / "left" / "Detail.eido", "class Detail { Int value; }")
+    writeFile(root / "left" / "LeftApi.eido", """
       class LeftApi {
         function makeDetail() returns Detail {
           return Detail { value = 42; };
@@ -987,7 +956,6 @@ suite "Module architecture":
 
     check checkModule(root).success
 
-
   test "public API closure follows nested generic type arguments":
     let root = freshModuleDir("generic_api_closure")
     defer: removeDir(root)
@@ -1009,7 +977,9 @@ suite "Module architecture":
     writeFile(root / "api" / "module.yaml", """
       module: api
       sources:
-        - Api.eido
+        - Detail.eido
+        - Box.eido
+        - PublicApi.eido
       children: []
       dependencies: []
       exports:
@@ -1017,20 +987,12 @@ suite "Module architecture":
       provides: {}
       adopts: []
     """)
-    writeFile(root / "api" / "Api.eido", """
-      class Detail {
-        Int value;
-      }
-
-      class Box<T> {
-        T value;
-      }
-
+    writeFile(root / "api" / "Detail.eido", "class Detail { Int value; }")
+    writeFile(root / "api" / "Box.eido", "class Box<T> { T value; }")
+    writeFile(root / "api" / "PublicApi.eido", """
       class PublicApi {
         function detailBox() returns Box<Detail> {
-          return Box<Detail> {
-            value = Detail { value = 42; };
-          };
+          return Box<Detail> { value = Detail { value = 42; }; };
         }
       }
     """)
@@ -1078,40 +1040,48 @@ suite "Module architecture":
     writeFile(root / "core" / "module.yaml", """
       module: core
       sources:
-        - Core.eido
+        - Money.eido
+        - InternalPublicCoreType.eido
+        - CoreApi.eido
       children: []
       dependencies: []
       exports:
-        - Money
-        - InternalPublicCoreType
+        - CoreApi
       provides: {}
       adopts: []
     """)
-    writeFile(root / "core" / "Core.eido", """
-      class Money {
-        Int cents;
-      }
-
-      class InternalPublicCoreType {
-        Int marker;
+    writeFile(root / "core" / "Money.eido", "class Money { Int cents; }")
+    writeFile(root / "core" / "InternalPublicCoreType.eido", "class InternalPublicCoreType { Int marker; }")
+    writeFile(root / "core" / "CoreApi.eido", """
+      class CoreApi {
+        function money(Int cents) returns Money {
+          return Money { cents = cents; };
+        }
+        function internal(Int marker) returns InternalPublicCoreType {
+          return InternalPublicCoreType { marker = marker; };
+        }
       }
     """)
 
     writeFile(root / "api" / "module.yaml", """
       module: api
       sources:
-        - Api.eido
+        - PaymentRequest.eido
+        - PaymentApi.eido
       children: []
       dependencies:
         - core
       exports:
-        - PaymentRequest
+        - PaymentApi
       provides: {}
       adopts: []
     """)
-    writeFile(root / "api" / "Api.eido", """
-      class PaymentRequest {
-        Money amount;
+    writeFile(root / "api" / "PaymentRequest.eido", "class PaymentRequest { Money amount; }")
+    writeFile(root / "api" / "PaymentApi.eido", """
+      class PaymentApi {
+        function request(Money amount) returns PaymentRequest {
+          return PaymentRequest { amount = ref amount; };
+        }
       }
     """)
 
@@ -1134,7 +1104,6 @@ suite "Module architecture":
     """)
 
     check checkModule(root).success
-
 
   test "dependency APIs not reachable through public closure remain non-transitive":
     let root = freshModuleDir("dependency_api_nontransitive")
@@ -1159,40 +1128,48 @@ suite "Module architecture":
     writeFile(root / "core" / "module.yaml", """
       module: core
       sources:
-        - Core.eido
+        - Money.eido
+        - Other.eido
+        - CoreApi.eido
       children: []
       dependencies: []
       exports:
-        - Money
-        - Other
+        - CoreApi
       provides: {}
       adopts: []
     """)
-    writeFile(root / "core" / "Core.eido", """
-      class Money {
-        Int cents;
-      }
-
-      class Other {
-        Int value;
+    writeFile(root / "core" / "Money.eido", "class Money { Int cents; }")
+    writeFile(root / "core" / "Other.eido", "class Other { Int value; }")
+    writeFile(root / "core" / "CoreApi.eido", """
+      class CoreApi {
+        function money(Int cents) returns Money {
+          return Money { cents = cents; };
+        }
+        function other(Int value) returns Other {
+          return Other { value = value; };
+        }
       }
     """)
 
     writeFile(root / "api" / "module.yaml", """
       module: api
       sources:
-        - Api.eido
+        - PaymentRequest.eido
+        - PaymentApi.eido
       children: []
       dependencies:
         - core
       exports:
-        - PaymentRequest
+        - PaymentApi
       provides: {}
       adopts: []
     """)
-    writeFile(root / "api" / "Api.eido", """
-      class PaymentRequest {
-        Money amount;
+    writeFile(root / "api" / "PaymentRequest.eido", "class PaymentRequest { Money amount; }")
+    writeFile(root / "api" / "PaymentApi.eido", """
+      class PaymentApi {
+        function request(Money amount) returns PaymentRequest {
+          return PaymentRequest { amount = ref amount; };
+        }
       }
     """)
 
@@ -1215,3 +1192,432 @@ suite "Module architecture":
     """)
 
     check not checkModule(root).success
+
+  test "duplicate local class names are legal in different modules":
+    let root = freshModuleDir("duplicate_local_names")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "users")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        users: { path: users }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "Result.eido", """
+      class Result {
+        function value() returns Int { return 42; }
+      }
+    """)
+
+    writeFile(root / "users" / "module.yaml", """
+      module: users
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "users" / "Result.eido", """
+      class Result {
+        function value() returns Int { return 7; }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        return Result.value();
+      }
+    """)
+
+    check checkModule(root).success
+
+  test "unqualified duplicate visible names are ambiguous":
+    let root = freshModuleDir("ambiguous_visible_name")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "users")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        users: { path: users }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "Result.eido", "class Result {}")
+
+    writeFile(root / "users" / "module.yaml", """
+      module: users
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "users" / "Result.eido", "class Result {}")
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+        - users
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() {
+        var result = Result {};
+      }
+    """)
+
+    check not checkModule(root).success
+
+  test "qualified duplicate visible names disambiguate":
+    let root = freshModuleDir("qualified_visible_name")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "users")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        users: { path: users }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "Result.eido", """
+      class Result {
+        function value() returns Int { return 20; }
+      }
+    """)
+
+    writeFile(root / "users" / "module.yaml", """
+      module: users
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "users" / "Result.eido", """
+      class Result {
+        function value() returns Int { return 22; }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+        - users
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        return payments.Result.value() + users.Result.value();
+      }
+    """)
+
+    check checkModule(root).success
+
+  test "qualified class path disambiguates static calls":
+    let root = freshModuleDir("qualified_static_call")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "users")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        users: { path: users }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Factory.eido
+      children: []
+      dependencies: []
+      exports:
+        - Factory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "Factory.eido", """
+      class Factory {
+        function value() returns Int { return 20; }
+      }
+    """)
+
+    writeFile(root / "users" / "module.yaml", """
+      module: users
+      sources:
+        - Factory.eido
+      children: []
+      dependencies: []
+      exports:
+        - Factory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "users" / "Factory.eido", """
+      class Factory {
+        function value() returns Int { return 22; }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+        - users
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        return payments.Factory.value() + users.Factory.value();
+      }
+    """)
+
+    check checkModule(root).success
+
+  test "same-module nominal shadows same-named dependency API":
+    let root = freshModuleDir("local_shadow")
+    defer: removeDir(root)
+    createDir(root / "payments")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        payments: { path: payments }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "payments" / "module.yaml", """
+      module: payments
+      sources:
+        - Result.eido
+      children: []
+      dependencies: []
+      exports:
+        - Result
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "payments" / "Result.eido", """
+      class Result {
+        function remote() returns Int { return 1; }
+      }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies:
+        - payments
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", """
+      class Result { Int local; }
+
+      function main() returns Int {
+        var result = Result { local = 42; };
+        return result.local;
+      }
+    """)
+
+    check checkModule(root).success
+
+  test "same top-level function name is legal in different modules":
+    let root = freshModuleDir("duplicate_function_names")
+    defer: removeDir(root)
+    createDir(root / "left")
+    createDir(root / "right")
+    createDir(root / "app")
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        left: { path: left }
+        right: { path: right }
+        app: { path: app }
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+
+    writeFile(root / "left" / "module.yaml", """
+      module: left
+      sources:
+        - Helpers.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "left" / "Helpers.eido", """
+      function helper() returns Int { return 1; }
+    """)
+
+    writeFile(root / "right" / "module.yaml", """
+      module: right
+      sources:
+        - Helpers.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "right" / "Helpers.eido", """
+      function helper() returns Int { return 2; }
+    """)
+
+    writeFile(root / "app" / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "app" / "Main.eido", "function main() {}")
+
+    check checkModule(root).success
+
+  test "normal module source allows only one outermost nominal declaration":
+    let root = freshModuleDir("one_nominal_per_file")
+    defer: removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Domain.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(
+      root / "Domain.eido",
+      "class Account {} interface Repository { function save(); }"
+    )
+
+    let result = checkModule(root)
+    check not result.success
+    check "only one top-level class or interface" in result.diagnostics[0].message

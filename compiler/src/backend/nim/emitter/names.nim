@@ -8,26 +8,44 @@ import ../../../semantic/symbols/ids
 ## Encodes specialized generic nominal names into valid backend identifiers.
 ## Ordinary source identifiers remain unchanged for readable generated code.
 proc nominalName(sourceName: string): string =
-  if '<' notin sourceName:
+  if '<' in sourceName:
+    result = "generic"
+    for character in sourceName:
+      result.add "_" & toHex(ord(character), 2)
+    return
+
+  var needsEncoding = false
+  for character in sourceName:
+    if not (character.isAlphaNumeric or character == '_'):
+      needsEncoding = true
+      break
+
+  if not needsEncoding:
     return sourceName
 
-  result = "generic"
+  result = "nominal"
   for character in sourceName:
     result.add "_" & toHex(ord(character), 2)
 
 ## Builds a collision-safe Nim function name from semantic identity.
 proc functionName*(id: FunctionId, sourceName: string): string =
-  "eido_fn_" & $id.value & "_" & sourceName
+  "eido_fn_" & $id.value & "_" & nominalName(sourceName)
+
+## Returns the source-local ABI name from a module-canonical semantic identity.
+## Native providers are SDK-facing and keep their declared names stable across consuming projects.
+proc nativeLocalName(sourceName: string): string =
+  let separator = sourceName.rfind('.')
+  if separator < 0: sourceName else: sourceName[separator + 1 .. ^1]
 
 ## Builds the backend ABI symbol used by a top-level native Eido function.
 ## Example: platformWriteLine maps to eido_native_platformWriteLine in the native support module.
 proc nativeFunctionName*(sourceName: string): string =
-  "eido_native_" & sourceName
+  "eido_native_" & nominalName(nativeLocalName(sourceName))
 
 ## Builds the backend ABI symbol used by a native Eido class method.
-## Example: Console.writeLine maps to eido_native_method_Console_writeLine.
+## Example: app.Console.writeLine still maps to eido_native_method_Console_writeLine.
 proc nativeMethodName*(ownerName, sourceName: string): string =
-  "eido_native_method_" & nominalName(ownerName) & "_" & sourceName
+  "eido_native_method_" & nominalName(nativeLocalName(ownerName)) & "_" & sourceName
 
 ## Builds a collision-safe Nim method name from semantic identity and owner.
 proc methodName*(

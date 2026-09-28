@@ -1,6 +1,7 @@
 ## Runs program-level semantic analysis in dependency-safe declaration passes.
 ## Interfaces and classes establish nominal identities before any signature or body is resolved.
 
+import std/strutils
 import ../../diagnostics/[codes, errors]
 import ../../frontend/ast/declarations as astDeclarations
 import ../../frontend/ast/program as astProgram
@@ -230,7 +231,14 @@ proc analyzeProgram*(
     )
     functions.add symbol
 
-    if target == ptExecutable and fn.name == "main":
+    let localFunctionName =
+      block:
+        let separator = fn.name.rfind('.')
+        if separator < 0: fn.name else: fn.name[separator + 1 .. ^1]
+
+    if target == ptExecutable and localFunctionName == "main":
+      if mainFound:
+        failAt(fn.span, "executable project must declare exactly one function main()")
       if fn.isNative:
         failAt(fn.span, "main function cannot be native")
       mainFound = true

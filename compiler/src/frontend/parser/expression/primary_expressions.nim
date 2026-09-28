@@ -36,19 +36,21 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
     )
 
   if parser.check(tkIdentifier):
-    if parser.checkNext(tkLess):
+    # Construction is the only expression form where a dotted nominal path is
+    # syntactically unambiguous before semantic resolution.
+    if parser.checkNext(tkLess) or parser.checkNext(tkDot):
       var candidate = parser
       try:
-        let genericType = typeRefParser.parseDeclaredTypeRef(candidate)
+        let qualifiedType = typeRefParser.parseDeclaredTypeRef(candidate)
         if candidate.check(tkLBrace):
           parser = candidate
-          return parser.parseConstruction(genericType)
-        if candidate.check(tkDot):
+          return parser.parseConstruction(qualifiedType)
+        if qualifiedType.arguments.len > 0 and candidate.check(tkDot):
           parser = candidate
           return Expr(
             kind: ekTypeReference,
-            span: genericType.span,
-            referencedTypeRef: genericType
+            span: qualifiedType.span,
+            referencedTypeRef: qualifiedType
           )
       except ValueError:
         discard

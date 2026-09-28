@@ -1,0 +1,67 @@
+{
+  "scopeName": "source.eido",
+  "patterns": [
+    {
+      "match": "\\b(class|interface)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.eido" },
+        "2": { "name": "entity.name.type.eido" }
+      }
+    },
+    {
+      "match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.eido" },
+        "2": { "name": "entity.name.function.eido" }
+      }
+    },
+    {
+      "name": "keyword.control.eido",
+      "match": "\\b(if|else|for|while|return|break|continue|exists)\\b"
+    },
+    {
+      "name": "keyword.declaration.eido",
+      "match": "\\b(implements|extends|native|returns|var|set)\\b"
+    },
+    {
+      "name": "keyword.operator.word.eido",
+      "match": "\\b(and|or|not|copy|ref)\\b"
+    },
+    {
+      "name": "constant.language.eido",
+      "match": "\\b(true|false|none|self)\\b"
+    },
+    {
+      "name": "storage.type.primitive.eido",
+      "match": "\\b(Bool|Byte|Short|Int|Float|Char|String)\\b"
+    },
+    {
+      "name": "string.quoted.double.eido",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.eido",
+          "match": "\\\\[nrt\\\\\"]"
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.eido",
+      "begin": "'",
+      "end": "'"
+    },
+    {
+      "name": "constant.numeric.eido",
+      "match": "\\b[0-9]+(?:\\.[0-9]+)?\\b"
+    },
+    {
+      "name": "entity.name.type.eido",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "entity.name.function.call.eido",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    }
+  ]
+}
