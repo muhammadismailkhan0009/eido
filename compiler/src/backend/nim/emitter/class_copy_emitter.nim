@@ -3,6 +3,7 @@
 
 import ../../../hir/declarations as hirDeclarations
 import ../../../types/model
+import ../../../types/storage
 import names
 
 ## Renders the heterogeneous per-class memo state used during one graph copy.
@@ -49,7 +50,10 @@ proc renderInternalCopier(classDecl: hirDeclarations.HirClass): string =
   for field in classDecl.fields:
     let target = "result." & fieldName(field.sourceName)
     let source = "source." & fieldName(field.sourceName)
-    if field.typ.kind == etkClass:
+    if field.typ.kind == etkClass and
+        isConcreteStorageTypeName(field.typ.className):
+      result.add "  " & target & " = " & source & "\n"
+    elif field.typ.kind == etkClass:
       if field.typ.isOptional:
         result.add "  if isSome(" & source & "):\n"
         result.add "    " & target & " = some(" &
@@ -79,12 +83,17 @@ proc renderPublicCopier(
 
 ## Renders all copy support needed by the program's nominal classes.
 proc renderClassCopiers*(classes: seq[hirDeclarations.HirClass]): string =
-  if classes.len == 0:
+  var copyableClasses: seq[hirDeclarations.HirClass]
+  for classDecl in classes:
+    if not isConcreteStorageTypeName(classDecl.sourceName):
+      copyableClasses.add classDecl
+
+  if copyableClasses.len == 0:
     return ""
 
-  result.add renderCopyContext(classes)
-  result.add renderCopyDeclarations(classes)
-  for classDecl in classes:
+  result.add renderCopyContext(copyableClasses)
+  result.add renderCopyDeclarations(copyableClasses)
+  for classDecl in copyableClasses:
     result.add renderInternalCopier(classDecl)
-  for classDecl in classes:
+  for classDecl in copyableClasses:
     result.add renderPublicCopier(classDecl)

@@ -4,6 +4,7 @@
 import ../../../hir/expressions as hirExpressions
 import ../../../types/model
 import ../../../types/method_kind
+import ../../../types/storage
 import names
 import type_emitter
 

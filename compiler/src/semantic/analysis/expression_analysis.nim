@@ -1,12 +1,14 @@
 ## Coordinates expression semantic analysis while semantic families live in focused modules.
 ## Example: `not count < 10 and ready` dispatches through comparison and Boolean analyzers.
 
+import std/sets
 import ../../diagnostics/errors
 import ../../frontend/ast/expressions as astExpressions
 import ../../hir/expressions as hirExpressions
 import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
+import ../../types/storage
 import ../symbols/model
 import ../symbols/ids
 import ../symbols/functions

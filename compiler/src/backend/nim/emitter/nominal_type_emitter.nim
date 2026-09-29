@@ -3,8 +3,10 @@
 
 import ../../../hir/declarations as hirDeclarations
 import ../../../types/function_result
+import ../../../types/storage
 import names
 import type_emitter
+import storage_support
 
 ## Renders one interface method closure type inside the unified nominal section.
 proc renderNominalInterfaceMethodType(
@@ -42,6 +44,11 @@ proc renderNominalTypes*(
         ) & ": " & renderNominalInterfaceMethodType(methodDecl) & "\n"
 
   for classDecl in classes:
+    if isConcreteStorageTypeName(classDecl.sourceName):
+      result.add "  " & className(classDecl.sourceName) & " = EidoStorage[" &
+        renderType(storageElementType(classDecl)) & "]\n"
+      continue
+
     result.add "  " & className(classDecl.sourceName) & " = ref object\n"
     if classDecl.invariants.len > 0:
       result.add "    " & invariantEvaluationDepthFieldName() & ": int\n"

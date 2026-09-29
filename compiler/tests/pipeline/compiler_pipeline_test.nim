@@ -207,3 +207,32 @@ suite "Compiler pipeline":
 
     # Then
     check output == "5"
+
+
+  test "manual Storage substrate compiles with Nim memory management disabled":
+    let source = """
+      function main() returns Int {
+        var raw = Storage<Byte>.allocate(32, 0);
+        var ints = Storage<Int>.view(raw, 0, 4);
+        Storage<Int>.write(ints, 1, 73);
+        var value = Storage<Int>.read(ints, 1);
+        Storage<Byte>.release(raw);
+        return value;
+      }
+    """
+    let outputPath =
+      getTempDir() / ("eido_storage_mmnone_" & $getCurrentProcessId())
+    let generatedPath = outputPath & "_generated.nim"
+
+    defer:
+      if fileExists(outputPath):
+        removeFile(outputPath)
+      if fileExists(generatedPath):
+        removeFile(generatedPath)
+
+    nimCompiler.compileWithNim(
+      compileToNim(source),
+      outputPath,
+      memoryMode = "none"
+    )
+    check execProcess(outputPath).strip() == "73"

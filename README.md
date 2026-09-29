@@ -153,6 +153,7 @@ eido --version
 - Explicit `self` receiver semantics.
 - Static/type-associated methods inferred when `self` is not required; no `static` keyword.
 - Generic classes with compiler specialization.
+- Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>` provides raw backing, typed `view`/`slice` capabilities are allocation-free, indexed access is bounds/alignment checked, and ownership/release is compiler/runtime enforced. Higher allocation strategies, objects, and collections are intended to build above this same substrate.
 - Explicit class graph `copy` / `ref` semantics and detached class-valued returns.
 - No class inheritance.
 

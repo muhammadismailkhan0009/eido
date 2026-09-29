@@ -150,7 +150,11 @@ proc parseStatement*(parser: var Parser): Stmt =
     return parser.parseCallStmt()
 
   if parser.check(tkIdentifier) and
-      (parser.checkNext(tkLParen) or parser.checkNext(tkDot)):
+      (
+        parser.checkNext(tkLParen) or
+        parser.checkNext(tkDot) or
+        parser.checkNext(tkLess)
+      ):
     return parser.parseCallStmt()
 
   failAt(

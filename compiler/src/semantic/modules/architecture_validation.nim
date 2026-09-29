@@ -8,6 +8,7 @@ import ../../source/span
 import ../../project/model as projectModel
 import ../../project/modules/model as moduleModel
 import ../../types/method_kind
+import ../../types/storage
 import ../analysis/method_classification
 
 type
@@ -67,6 +68,11 @@ proc collectModuleDeclarations(
     interfaces[key] = sourceInterface
 
   for sourceClass in source.classes:
+    if isStorageTypeConstructor(sourceClass.name):
+      failAt(
+        sourceClass.span,
+        "type name 'Storage' is reserved by the Eido toolchain"
+      )
     let key = declarationKey(
       sourceClass.moduleName,
       declarationLocalName(sourceClass.name)

@@ -4,6 +4,7 @@
 import std/[os, osproc, strutils]
 import pipeline/compiler
 import backend/nim/toolchain/native_support
+import backend/nim/toolchain/compiler as nimCompiler
 
 ## Runs a complete Eido program through all pure compiler phases, then executes
 ## the emitted Nim with `nim e`. Example: a main returning 30 produces "30".
@@ -39,3 +40,37 @@ proc runFeatureSource*(source: string, caseName: string): string =
     )
 
   lines.join("\n").strip()
+
+## Runs an Eido feature through real native Nim compilation.
+## Raw runtime features such as manual Storage allocation cannot execute in Nim's VM.
+proc runNativeFeatureSource*(source: string, caseName: string): string =
+  let outputPath =
+    getTempDir() / ("eido_feature_native_" & caseName & "_" & $getCurrentProcessId())
+  let generatedPath = outputPath & "_generated.nim"
+
+  defer:
+    if fileExists(outputPath):
+      removeFile(outputPath)
+    if fileExists(generatedPath):
+      removeFile(generatedPath)
+
+  nimCompiler.compileWithNim(compileToNim(source), outputPath)
+  execProcess(outputPath).strip()
+
+## Runs an Eido native feature expected to fail and returns its process result.
+proc runFailingNativeFeatureSource*(
+  source: string,
+  caseName: string
+): tuple[output: string, exitCode: int] =
+  let outputPath =
+    getTempDir() / ("eido_feature_native_" & caseName & "_" & $getCurrentProcessId())
+  let generatedPath = outputPath & "_generated.nim"
+
+  defer:
+    if fileExists(outputPath):
+      removeFile(outputPath)
+    if fileExists(generatedPath):
+      removeFile(generatedPath)
+
+  nimCompiler.compileWithNim(compileToNim(source), outputPath)
+  execCmdEx(outputPath)

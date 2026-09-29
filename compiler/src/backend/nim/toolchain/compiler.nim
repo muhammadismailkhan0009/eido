@@ -10,7 +10,8 @@ import native_support
 proc compileWithNim*(
   nimSource,
   outputPath: string,
-  generatedSourcePath: string = ""
+  generatedSourcePath: string = "",
+  memoryMode: string = ""
 ) =
   let outputDirectory = parentDir(outputPath)
   if outputDirectory.len > 0:
@@ -23,15 +24,16 @@ proc compileWithNim*(
       writeGeneratedNim(outputPath, nimSource)
 
   let nimCompiler = getEnv("NIM", "nim")
+  var compilerArgs = @["c", "-d:release"]
+  if memoryMode.len > 0:
+    compilerArgs.add "--mm:" & memoryMode
+  compilerArgs.add "--path:" & nativeSupportPath()
+  compilerArgs.add "-o:" & outputPath
+  compilerArgs.add nimPath
+
   let process = startProcess(
     nimCompiler,
-    args = [
-      "c",
-      "-d:release",
-      "--path:" & nativeSupportPath(),
-      "-o:" & outputPath,
-      nimPath
-    ],
+    args = compilerArgs,
     options = {poUsePath, poStdErrToStdOut}
   )
 

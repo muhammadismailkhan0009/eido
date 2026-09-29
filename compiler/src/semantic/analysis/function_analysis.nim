@@ -5,6 +5,7 @@ import ../../frontend/ast/declarations
 import ../../hir/declarations as hirDeclarations
 import ../../hir/statements
 import ../../types/model
+import ../../types/storage
 import ../../types/function_result
 import ../symbols/model
 import ../symbols/ids
@@ -37,7 +38,12 @@ proc analyzeFunction*(
       kind: bkParameter,
       span: parameter.span,
       classValueProvenance:
-        if typ.kind == etkClass: cvpExisting else: cvpNotClass
+        if typ.kind == etkClass: cvpExisting else: cvpNotClass,
+      storageValueProvenance:
+        if typ.kind == etkClass and isConcreteStorageTypeName(typ.className):
+          svpBorrowed
+        else:
+          svpNotStorage
     )
     locals.add(parameter.name, localSymbol)
 

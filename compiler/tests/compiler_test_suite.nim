@@ -51,6 +51,7 @@ import semantic/analysis/native_function_analysis_test
 import semantic/analysis/class_declaration_analysis_test
 import semantic/analysis/optional_analysis_test
 import semantic/analysis/generic_class_analysis_test
+import semantic/analysis/storage_analysis_test
 import semantic/analysis/class_method_analysis_test
 import semantic/analysis/class_static_method_analysis_test
 import semantic/analysis/interfaces/interface_conformance_test
@@ -84,6 +85,7 @@ import backend/nim/emitter/class_method_emitter_test
 import backend/nim/emitter/class_static_method_emitter_test
 import backend/nim/emitter/class_copy_emitter_test
 import backend/nim/emitter/generic_class_emitter_test
+import backend/nim/emitter/storage_emitter_test
 import backend/nim/emitter/expression/boolean_operator_emitter_test
 import backend/nim/emitter/expression/construction_expression_emitter_test
 import backend/nim/emitter/expression/field_access_expression_emitter_test
@@ -94,6 +96,7 @@ import backend/nim/emitter/statement/loop_control_statement_emitter_test
 import backend/nim/emitter/statement/set_statement_emitter_test
 import pipeline/compiler_pipeline_test
 import project/project_compilation_test
+import project/storage_project_test
 import project/project_discovery_test
 import project/module_manifest_parser_test
 import project/module_loader_test
@@ -120,6 +123,7 @@ import features/classes/class_method_variants_test
 import features/classes/class_static_method_variants_test
 import features/classes/self_receiver_variants_test
 import features/classes/class_copy_ref_variants_test
+import features/storage/storage_variants_test
 import features/interfaces/interface_variants_test
 import features/control_flow/conditional_variants_test
 import features/control_flow/else_if_variants_test

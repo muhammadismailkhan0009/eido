@@ -17,6 +17,7 @@ Files are broad navigation boundaries; suites inside them name the smallest usef
 - `control_flow/` — conditionals, `else if` chains, `while`/classic `for` loops, `break`/`continue`, structured scope isolation, and return-path coverage; start with `control_flow/README.md`
 - `function_variants_test.nim` — signature cardinality, zero-result returns, call resolution/arity, and result contracts
 - `native/` — top-level and class-owned `native function` execution through the bundled backend-support ABI; start with `native/README.md`
+- `storage/` — compiler-owned `Storage<T>` allocation, initialization, capacity, bounds-safe indexed read/write, release invalidation, and supported element types
 - `primitive_variants_test.nim` — supported primitive values, Byte bounds, numeric suffix rejection, and removed numeric type names
 - `string_variants_test.nim` — built-in immutable String literals, signatures, concatenation/equality, class storage, replacement through `set`, and binding/copy-ref boundaries
 - `variable_variants_test.nim` — initialization forms, `set` mutation forms, declaration ordering, and declaration uniqueness
@@ -55,7 +56,7 @@ over:
 
 `test function parser case 7`
 
-Successful variants should normally run through the full Eido compiler to generated Nim and execute with `nim e` when an observable result is available. Dedicated compiler-pipeline tests retain real native-compilation coverage. Rejection variants may stop at semantic analysis when execution is not meaningful.
+Successful variants should normally run through the full Eido compiler to generated Nim and execute with `nim e` when an observable result is available. Features that depend on native-only runtime facilities, such as raw `Storage<T>` allocation, execute through real native Nim compilation instead. Dedicated compiler-pipeline tests retain broader native-compilation coverage. Rejection variants may stop at semantic analysis when execution is not meaningful.
 
 Do not organize these tests by historical milestone number. Add a scenario to the file for the language feature it demonstrates.
 

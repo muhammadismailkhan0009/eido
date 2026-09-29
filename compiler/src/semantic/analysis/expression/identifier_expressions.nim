@@ -13,6 +13,19 @@ proc analyzeIdentifier(
     failAt(expr.span, "unknown local '" & expr.name & "'")
 
   let symbol = locals.get(expr.name)
+  if symbol.storageValueProvenance != svpNotStorage:
+    if symbol.storageReleased:
+      failAt(expr.span, "Storage value '" & expr.name & "' has already been released")
+    if symbol.storageValueProvenance == svpBorrowed and
+        symbol.storageBorrowOwner.len > 0 and
+        locals.contains(symbol.storageBorrowOwner) and
+        locals.get(symbol.storageBorrowOwner).storageReleased:
+      failAt(
+        expr.span,
+        "Storage view '" & expr.name & "' cannot be used after owner '" &
+          symbol.storageBorrowOwner & "' is released"
+      )
+
   var raw: HirExpr
 
   case symbol.kind

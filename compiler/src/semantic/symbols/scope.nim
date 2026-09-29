@@ -70,3 +70,11 @@ proc fork*(scope: LocalScope): LocalScope =
 proc synchronizeNextId*(scope: var LocalScope, branch: LocalScope) =
   if branch.nextId > scope.nextId:
     scope.nextId = branch.nextId
+
+## Marks one visible Storage owner as released for subsequent semantic uses.
+proc markStorageReleased*(scope: var LocalScope, name: string) =
+  if name notin scope.byName:
+    return
+  var symbol = scope.byName[name]
+  symbol.storageReleased = true
+  scope.byName[name] = symbol

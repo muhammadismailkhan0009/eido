@@ -7,6 +7,7 @@ import ../../hir/declarations as hirDeclarations
 import ../../hir/statements
 import ../../types/function_result
 import ../../types/model
+import ../../types/storage
 import ../../types/method_kind
 import ../symbols/[functions, ids, model, nominals, scope]
 import statement_analysis
@@ -73,7 +74,13 @@ proc analyzeMethod*(
         kind: bkParameter,
         id: localId,
         classValueProvenance:
-          if parameterType.kind == etkClass: cvpExisting else: cvpNotClass
+          if parameterType.kind == etkClass: cvpExisting else: cvpNotClass,
+        storageValueProvenance:
+          if parameterType.kind == etkClass and
+              isConcreteStorageTypeName(parameterType.className):
+            svpBorrowed
+          else:
+            svpNotStorage
       )
     )
 

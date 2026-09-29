@@ -11,6 +11,7 @@ import ../../project/model
 import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
+import ../../types/storage
 import ../effects/inference
 import ../effects/contract_validation
 import ../symbols/ids
@@ -178,7 +179,8 @@ proc analyzeProgram*(
         parameterTypes.add resolveDeclaredType(parameter.typeRef, symbols)
 
       let methodResult = resolveFunctionResult(sourceMethod.result, symbols)
-      if sourceMethod.isNative:
+      if sourceMethod.isNative and
+          not isConcreteStorageTypeName(sourceClass.name):
         validateNativeSignature(sourceMethod, parameterTypes, methodResult)
 
       classSymbol.methods.add MethodSymbol(

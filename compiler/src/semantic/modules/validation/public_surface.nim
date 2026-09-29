@@ -202,6 +202,14 @@ proc addTypeRefClosure(
   rootModule: string,
   seen: var HashSet[string]
 ) =
+  if isStorageTypeConstructor(source.name):
+    for argument in source.arguments:
+      addTypeRefClosure(
+        argument, ownerModule,
+        modules, classes, interfaces, publicSurfaces, rootModule, seen
+      )
+    return
+
   let resolved = resolveSurfaceReference(
     modules, classes, interfaces, publicSurfaces,
     rootModule, ownerModule, source.name, source.span

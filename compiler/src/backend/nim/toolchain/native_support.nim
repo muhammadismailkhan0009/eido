@@ -15,6 +15,11 @@ proc materializeEmbeddedNativeSupport(): string =
   let supportFile = directory / "eido_native.nim"
   if not fileExists(supportFile) or readFile(supportFile) != BuiltinNativeSupportSource:
     writeFile(supportFile, BuiltinNativeSupportSource)
+
+  let storageFile = directory / "eido_storage.nim"
+  if not fileExists(storageFile) or
+      readFile(storageFile) != BuiltinStorageSupportSource:
+    writeFile(storageFile, BuiltinStorageSupportSource)
   directory
 
 ## Returns the directory containing the Nim backend native-support module.

@@ -12,6 +12,11 @@ type
     cvpExisting,
     cvpDetached
 
+  StorageValueProvenance* = enum
+    svpNotStorage,
+    svpBorrowed,
+    svpOwned
+
   BindingKind* = enum
     bkReceiver,
     bkParameter,
@@ -23,6 +28,9 @@ type
     typ*: EidoType
     span*: SourceSpan
     classValueProvenance*: ClassValueProvenance
+    storageValueProvenance*: StorageValueProvenance
+    storageBorrowOwner*: string
+    storageReleased*: bool
     case kind*: BindingKind
     of bkReceiver, bkParameter, bkVariable:
       id*: LocalId

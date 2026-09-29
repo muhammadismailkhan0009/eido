@@ -3,6 +3,7 @@
 import ../../../hir/program as hirProgram
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
+import ../../../types/storage
 import names
 import interface_emitter
 import nominal_type_emitter
@@ -10,10 +11,19 @@ import class_copy_emitter
 import method_emitter
 import function_emitter
 import invariant_emitter
+import storage_support
 
 ## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
   result.add "import std/options\n"
+  var hasStorage = false
+  for classDecl in program.classes:
+    if isConcreteStorageTypeName(classDecl.sourceName):
+      hasStorage = true
+      break
+  if hasStorage:
+    result.add "import eido_storage\n"
+
   var hasNativeDeclarations = false
   for fn in program.functions:
     if fn.isNative:
@@ -23,7 +33,8 @@ proc emitNim*(program: hirProgram.HirProgram): string =
   if not hasNativeDeclarations:
     for classDecl in program.classes:
       for methodDecl in classDecl.methods:
-        if methodDecl.isNative:
+        if methodDecl.isNative and
+            not isConcreteStorageTypeName(classDecl.sourceName):
           hasNativeDeclarations = true
           break
       if hasNativeDeclarations:
@@ -34,6 +45,7 @@ proc emitNim*(program: hirProgram.HirProgram): string =
 
   result.add "\n"
   result.add renderNominalTypes(program.interfaces, program.classes)
+  result.add renderStorageSupport(program.classes)
   result.add renderClassCopiers(program.classes)
 
   # Forward declare every Eido-bodied method and function before adapters or callable bodies.

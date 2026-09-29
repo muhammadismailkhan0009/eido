@@ -50,6 +50,39 @@ proc analyzeInterfaceMethodArguments(
       classes
     )
 
+## Validates that Storage.release receives an owning mutable storage location.
+proc validateStorageReleaseOwner(
+  expr: astExpressions.Expr,
+  locals: LocalScope
+) =
+  if expr.methodArguments.len != 1:
+    return
+
+  let argument = expr.methodArguments[0]
+  case argument.kind
+  of astExpressions.ekIdentifier:
+    if not locals.contains(argument.name) or
+        locals.get(argument.name).kind != bkVariable or
+        locals.get(argument.name).storageValueProvenance != svpOwned:
+      failAt(
+        argument.span,
+        "Storage.release requires an owning Storage allocation; borrowed views and parameters cannot release backing memory"
+      )
+
+  of astExpressions.ekFieldAccess:
+    if argument.target.kind != astExpressions.ekIdentifier or
+        argument.target.name != "self":
+      failAt(
+        argument.span,
+        "Storage.release requires an owning local or self field"
+      )
+
+  else:
+    failAt(
+      argument.span,
+      "Storage.release requires an owning local or self field"
+    )
+
 ## Resolves a class-qualified call to an inferred static method.
 proc analyzeStaticMethodCall(
   expr: astExpressions.Expr,
@@ -66,6 +99,15 @@ proc analyzeStaticMethodCall(
     )
 
   let target = owner.getMethod(expr.methodName)
+  if isConcreteStorageTypeName(owner.name):
+    if target.name == "release":
+      validateStorageReleaseOwner(expr, locals)
+    if target.name == "view" and storageElementName(owner.name) == "String":
+      failAt(
+        expr.span,
+        "Storage<String>.view is unavailable until raw-view initialization tracking is defined"
+      )
+
   if target.kind != mkStatic:
     failAt(
       expr.span,

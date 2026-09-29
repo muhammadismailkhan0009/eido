@@ -19,6 +19,9 @@ const
   BuiltinNativeSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native.nim"
   )
+  BuiltinStorageSupportSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_storage.nim"
+  )
 
 ## Adds the embedded SDK stdlib module and makes it an implicit root dependency.
 ## Child modules inherit that dependency through the existing module visibility rules.

@@ -4,6 +4,8 @@
 import std/[sets, tables]
 import ../../diagnostics/errors
 import ../../frontend/ast/[declarations, expressions, program, statements, type_references]
+import ../../types/storage
+import storage_specialization
 
 type
   SpecializationRequest = object
@@ -88,6 +90,34 @@ proc specializeTypeRef(
       failAt(source.span, "built-in type '" & source.name &
         "' cannot receive type arguments")
     return flatTypeRef(source, source.name, source.isOptional)
+
+  if isStorageTypeConstructor(source.name):
+    if source.arguments.len != 1:
+      failAt(source.span, "Storage expects exactly one type argument")
+    let elementType = specializeTypeRef(context, source.arguments[0], bindings)
+    if not isBuiltInType(elementType.name):
+      failAt(
+        source.arguments[0].span,
+        "Storage currently supports primitive and String element types; got '" &
+          elementType.name & "'"
+      )
+    let name = concreteName(StorageTypeConstructorName, @[elementType])
+    context.queueInstantiation(
+      StorageTypeConstructorName, name, @[elementType]
+    )
+    if elementType.name != "Byte":
+      let byteType = TypeRef(
+        span: source.span,
+        name: "Byte",
+        arguments: @[],
+        isOptional: false
+      )
+      context.queueInstantiation(
+        StorageTypeConstructorName,
+        concreteName(StorageTypeConstructorName, @[byteType]),
+        @[byteType]
+      )
+    return flatTypeRef(source, name, source.isOptional)
 
   if source.name in context.interfaceNames:
     if source.arguments.len != 0:
@@ -370,6 +400,7 @@ proc specializeFunction(
     body: body
   )
 
+
 ## Materializes one concrete class AST from a generic class template.
 ## Example: Box<T> plus Int becomes the ordinary concrete class Box<Int>.
 proc specializeClass(
@@ -431,6 +462,12 @@ proc validateTypeRef(
     if source.arguments.len != 0:
       failAt(source.span, "built-in type '" & source.name &
         "' cannot receive type arguments")
+    return
+
+  if isStorageTypeConstructor(source.name):
+    if source.arguments.len != 1:
+      failAt(source.span, "Storage expects exactly one type argument")
+    validateTypeRef(context, source.arguments[0], typeParameters)
     return
 
   if source.name in context.interfaceNames:
@@ -625,6 +662,11 @@ proc specializeGenericClasses*(source: Program): Program =
     context.interfaceNames.incl interfaceDecl.name
 
   for classDecl in source.classes:
+    if isStorageTypeConstructor(classDecl.name):
+      failAt(
+        classDecl.span,
+        "type name 'Storage' is reserved by the Eido toolchain"
+      )
     if classDecl.name in context.templates:
       failAt(classDecl.span, "duplicate class '" & classDecl.name & "'")
     if classDecl.name in context.interfaceNames:
@@ -670,11 +712,16 @@ proc specializeGenericClasses*(source: Program): Program =
   var index = 0
   while index < context.queue.len:
     let request = context.queue[index]
-    let classTemplate = context.templates[request.templateName]
-    result.classes.add specializeClass(
-      context,
-      classTemplate,
-      request.arguments,
-      request.concreteName
-    )
+    if request.templateName == StorageTypeConstructorName:
+      result.classes.add specializeStorageClass(
+        request.concreteName, request.arguments[0]
+      )
+    else:
+      let classTemplate = context.templates[request.templateName]
+      result.classes.add specializeClass(
+        context,
+        classTemplate,
+        request.arguments,
+        request.concreteName
+      )
     inc index

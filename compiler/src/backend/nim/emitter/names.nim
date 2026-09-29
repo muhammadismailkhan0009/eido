@@ -47,6 +47,10 @@ proc nativeFunctionName*(sourceName: string): string =
 proc nativeMethodName*(ownerName, sourceName: string): string =
   "eido_native_method_" & nominalName(nativeLocalName(ownerName)) & "_" & sourceName
 
+## Builds the backend symbol for one compiler-owned Storage<T> operation.
+proc storageMethodName*(ownerName, sourceName: string): string =
+  "eido_storage_" & nominalName(ownerName) & "_" & sourceName
+
 ## Builds a collision-safe Nim method name from semantic identity and owner.
 proc methodName*(
   id: MethodId,

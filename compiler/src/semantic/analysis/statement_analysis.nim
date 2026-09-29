@@ -7,6 +7,7 @@ import ../../hir/statements as hirStatements
 import ../../hir/expressions
 import ../../types/model
 import ../../types/function_result
+import ../../types/storage
 import ../symbols/model
 import ../symbols/functions
 import ../symbols/nominals
@@ -31,6 +32,66 @@ include statement/while_statements
 include statement/for_statements
 include statement/loop_control_statements
 include statement/class_relationship_mutation
+
+## Classifies one Storage-valued initializer as an owning allocation or borrowed view.
+proc storageValueProvenance(
+  source: astExpressions.Expr,
+  analyzed: HirExpr,
+  locals: LocalScope
+): StorageValueProvenance =
+  if analyzed.typ.kind != etkClass or
+      not isConcreteStorageTypeName(analyzed.typ.className):
+    return svpNotStorage
+
+  case source.kind
+  of astExpressions.ekMethodCall:
+    if source.receiver.kind == astExpressions.ekIdentifier and
+        isConcreteStorageTypeName(source.receiver.name):
+      if source.methodName == "allocate":
+        return svpOwned
+      if source.methodName in ["view", "slice"]:
+        return svpBorrowed
+    # User callables returning Storage must transfer ownership; borrowed
+    # Storage returns are rejected at their return statement below.
+    svpOwned
+
+  of astExpressions.ekCall:
+    # Same transfer rule as user methods returning Storage.
+    svpOwned
+
+  of astExpressions.ekIdentifier:
+    if locals.contains(source.name):
+      locals.get(source.name).storageValueProvenance
+    else:
+      svpBorrowed
+
+  else:
+    svpBorrowed
+
+## Returns the root owner local borrowed by a Storage view/slice initializer.
+proc storageBorrowOwner(
+  source: astExpressions.Expr,
+  analyzed: HirExpr,
+  locals: LocalScope
+): string =
+  if analyzed.typ.kind != etkClass or
+      not isConcreteStorageTypeName(analyzed.typ.className) or
+      source.kind != astExpressions.ekMethodCall or
+      source.methodName notin ["view", "slice"] or
+      source.methodArguments.len == 0:
+    return ""
+
+  let origin = source.methodArguments[0]
+  if origin.kind != astExpressions.ekIdentifier or
+      not locals.contains(origin.name):
+    return ""
+
+  let originSymbol = locals.get(origin.name)
+  if originSymbol.storageValueProvenance == svpBorrowed and
+      originSymbol.storageBorrowOwner.len > 0:
+    return originSymbol.storageBorrowOwner
+  origin.name
+
 
 ## Checks one AST statement and lowers it to HIR. Example: `set b = a;` verifies `b` exists, checks types, and stores resolved mutation HIR.
 proc analyzeStmt*(
@@ -99,7 +160,12 @@ proc analyzeStmt*(
       kind: bkVariable,
       span: stmt.span,
       classValueProvenance:
-        classValueProvenance(stmt.initializer, initializer, locals)
+        classValueProvenance(stmt.initializer, initializer, locals),
+      storageValueProvenance:
+        storageValueProvenance(stmt.initializer, initializer, locals),
+      storageBorrowOwner:
+        storageBorrowOwner(stmt.initializer, initializer, locals),
+      storageReleased: false
     )
     locals.add(stmt.name, symbol)
 
@@ -132,6 +198,15 @@ proc analyzeStmt*(
             target.name
         )
       of bkVariable:
+        if target.typ.kind == etkClass and
+            isConcreteStorageTypeName(target.typ.className) and
+            target.storageValueProvenance == svpOwned and
+            not target.storageReleased:
+          failAt(
+            stmt.span,
+            "owning Storage must be released before its local binding can be replaced"
+          )
+
         let value =
           if target.typ.kind == etkClass:
             analyzeClassRelationshipMutationValue(
@@ -157,6 +232,17 @@ proc analyzeStmt*(
             value,
             locals
           )
+          updatedTarget.storageValueProvenance = storageValueProvenance(
+            stmt.assignedValue,
+            value,
+            locals
+          )
+          updatedTarget.storageBorrowOwner = storageBorrowOwner(
+            stmt.assignedValue,
+            value,
+            locals
+          )
+          updatedTarget.storageReleased = false
           locals.add(target.name, updatedTarget)
 
         HirStmt(
@@ -220,15 +306,22 @@ proc analyzeStmt*(
         call: analyzeCall(stmt.call, locals, functions, classes)
       )
     of astExpressions.ekMethodCall:
+      let methodCall = analyzeMethodCall(
+        stmt.call,
+        locals,
+        functions,
+        classes
+      )
+      if stmt.call.receiver.kind == astExpressions.ekIdentifier and
+          isConcreteStorageTypeName(stmt.call.receiver.name) and
+          stmt.call.methodName == "release" and
+          stmt.call.methodArguments.len == 1 and
+          stmt.call.methodArguments[0].kind == astExpressions.ekIdentifier:
+        locals.markStorageReleased(stmt.call.methodArguments[0].name)
       HirStmt(
         kind: hskMethodCall,
         span: stmt.span,
-        methodCall: analyzeMethodCall(
-          stmt.call,
-          locals,
-          functions,
-          classes
-        )
+        methodCall: methodCall
       )
     else:
       raise newException(
@@ -274,6 +367,14 @@ proc analyzeStmt*(
         failAt(
           stmt.value.span,
           "class return must produce a fresh/detached object"
+        )
+
+      if functionResult.typ.kind == etkClass and
+          isConcreteStorageTypeName(functionResult.typ.className) and
+          storageValueProvenance(stmt.value, returnValue, locals) != svpOwned:
+        failAt(
+          stmt.value.span,
+          "Storage return must transfer an owning allocation; borrowed Storage cannot escape"
         )
 
       HirStmt(

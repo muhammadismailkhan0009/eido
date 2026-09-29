@@ -17,7 +17,10 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
     return
 
   let renderedName =
-    if call.isNative:
+    if call.isNative and
+        isConcreteStorageTypeName(call.ownerType.className):
+      storageMethodName(call.ownerType.className, call.methodName)
+    elif call.isNative:
       nativeMethodName(call.ownerType.className, call.methodName)
     else:
       methodName(
