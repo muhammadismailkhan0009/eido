@@ -3,7 +3,9 @@
 
 ## Renders one construction expression using generated class/field identifiers.
 proc renderConstruction(expr: hirExpressions.HirExpr): string =
-  result = className(expr.constructedTypeName) & "("
+  if expr.checkInvariant:
+    result = classInvariantName(expr.constructedTypeName) & "("
+  result.add className(expr.constructedTypeName) & "("
 
   for index, field in expr.fields:
     if index > 0:
@@ -12,3 +14,5 @@ proc renderConstruction(expr: hirExpressions.HirExpr): string =
       renderExpr(field.value)
 
   result.add ")"
+  if expr.checkInvariant:
+    result.add ")"

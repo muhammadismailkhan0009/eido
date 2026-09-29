@@ -4,15 +4,23 @@
     {
       "match": "\\b(class|interface)\\s+([A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
-        "1": { "name": "keyword.declaration.eido" },
-        "2": { "name": "entity.name.type.eido" }
+        "1": {
+          "name": "keyword.declaration.eido"
+        },
+        "2": {
+          "name": "entity.name.type.eido"
+        }
       }
     },
     {
       "match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
-        "1": { "name": "keyword.declaration.eido" },
-        "2": { "name": "entity.name.function.eido" }
+        "1": {
+          "name": "keyword.declaration.eido"
+        },
+        "2": {
+          "name": "entity.name.function.eido"
+        }
       }
     },
     {
@@ -21,7 +29,7 @@
     },
     {
       "name": "keyword.declaration.eido",
-      "match": "\\b(implements|extends|native|returns|var|set)\\b"
+      "match": "\\b(implements|extends|native|returns|var|set|require|ensure|invariant|result)\\b"
     },
     {
       "name": "keyword.operator.word.eido",

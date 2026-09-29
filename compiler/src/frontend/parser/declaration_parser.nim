@@ -4,11 +4,15 @@ import ../../source/span
 import ../../diagnostics/errors
 import ../lexer/token
 import ../ast/declarations
+import ../ast/expressions
 import ../ast/type_references as astTypeRefs
 import ../ast/statements
 import core
 import type_references as typeRefParser
 import statement_parser
+import expression_parser
+
+include declaration/contracts
 
 ## Parses a field type using the shared declared-type grammar.
 proc parseFieldTypeRef(parser: var Parser): astTypeRefs.TypeRef =
@@ -53,13 +57,23 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
   let functionResult = parser.parseFunctionResult()
   discard parser.consume(tkLBrace, "expected '{' before function body")
 
+  var requires: seq[Expr]
+  if parser.check(tkRequire):
+    requires = parser.parseContractClauses(tkRequire, "require")
+
   var body: seq[Stmt]
-  while not parser.check(tkRBrace):
+  while not parser.check(tkRBrace) and not parser.check(tkEnsure):
     body.add parser.parseStatement()
 
-    # Preserve the existing rule that a direct return ends the function body.
-    if body[^1].kind == skReturn and not parser.check(tkRBrace):
-      failAt(parser.peek.span, "expected '}' after return")
+    # A direct return may be followed only by the final ensure section or closing brace.
+    if body[^1].kind == skReturn and
+        not parser.check(tkRBrace) and
+        not parser.check(tkEnsure):
+      failAt(parser.peek.span, "expected 'ensure' or '}' after return")
+
+  var ensures: seq[Expr]
+  if parser.check(tkEnsure):
+    ensures = parser.parseContractClauses(tkEnsure, "ensure")
 
   let closeBrace = parser.consume(tkRBrace, "expected '}' after function body")
 
@@ -69,6 +83,8 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
     isNative: false,
     parameters: parameters,
     result: functionResult,
+    requires: requires,
+    ensures: ensures,
     body: body
   )
 

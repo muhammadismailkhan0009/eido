@@ -71,17 +71,17 @@ suite "For loop control":
     # Given
     let source = """
       function main() returns Int {
-        var result = 0;
+        var count = 0;
 
         for (var i = 0; i < 10; set i = i + 1) {
           if (i == 3) {
             break;
           }
 
-          set result = result + 1;
+          set count = count + 1;
         }
 
-        return result;
+        return count;
       }
     """
 

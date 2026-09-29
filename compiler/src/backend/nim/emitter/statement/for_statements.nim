@@ -7,7 +7,8 @@ proc renderForBodyStmt(
   stmt: hirStatements.HirStmt,
   indent: int,
   breakLabel: string,
-  continueLabel: string
+  continueLabel: string,
+  exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
 
@@ -29,7 +30,8 @@ proc renderForBodyStmt(
           branchStmt,
           indent + 2,
           breakLabel,
-          continueLabel
+          continueLabel,
+          exitContext
         )
 
     if stmt.elseBranch.len > 0:
@@ -39,21 +41,23 @@ proc renderForBodyStmt(
           branchStmt,
           indent + 2,
           breakLabel,
-          continueLabel
+          continueLabel,
+          exitContext
         )
 
   of hskWhile, hskFor:
     # Nested loops own their break/continue semantics.
-    result.add renderStmtAt(stmt, indent)
+    result.add renderStmtAt(stmt, indent, exitContext)
 
   else:
-    result.add renderStmtAt(stmt, indent)
+    result.add renderStmtAt(stmt, indent, exitContext)
 
 ## Renders one classic for loop at the requested indentation level.
 ## Example: initializer runs once, body runs inside an update-path block, and update follows every non-breaking iteration.
 proc renderFor(
   stmt: hirStatements.HirStmt,
-  indent: int
+  indent: int,
+  exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
   let loopId = $int(stmt.forInitializer.localId)
@@ -61,7 +65,7 @@ proc renderFor(
   let continueLabel = "eido_for_continue_" & loopId
 
   result.add pad & "block " & breakLabel & ":\n"
-  result.add renderStmtAt(stmt.forInitializer, indent + 2)
+  result.add renderStmtAt(stmt.forInitializer, indent + 2, exitContext)
   result.add indentation(indent + 2) &
     "while " & renderExpr(stmt.forCondition) & ":\n"
   result.add indentation(indent + 4) &
@@ -75,7 +79,8 @@ proc renderFor(
         bodyStmt,
         indent + 6,
         breakLabel,
-        continueLabel
+        continueLabel,
+        exitContext
       )
 
-  result.add renderStmtAt(stmt.forUpdate, indent + 4)
+  result.add renderStmtAt(stmt.forUpdate, indent + 4, exitContext)

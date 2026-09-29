@@ -6,11 +6,11 @@ suite "Conditional branch selection":
     # Given
     let source = """
       function main() returns Int {
-        var result = 0;
+        var outcome = 0;
         if (2 > 1) {
-          set result = 7;
+          set outcome = 7;
         }
-        return result;
+        return outcome;
       }
     """
 
@@ -24,11 +24,11 @@ suite "Conditional branch selection":
     # Given
     let source = """
       function main() returns Int {
-        var result = 3;
+        var outcome = 3;
         if (false) {
-          set result = 9;
+          set outcome = 9;
         }
-        return result;
+        return outcome;
       }
     """
 

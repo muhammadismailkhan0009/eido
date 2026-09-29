@@ -337,8 +337,8 @@ suite "CLI project integration":
       function main() returns Int {
         var request = PaymentRequest { amount = 21; };
         var service = Payments.service();
-        var result = service.pay(request);
-        return result.code;
+        var outcome = service.pay(request);
+        return outcome.code;
       }
     """)
 

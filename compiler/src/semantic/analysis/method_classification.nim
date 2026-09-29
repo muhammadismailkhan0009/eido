@@ -87,6 +87,12 @@ proc statementUsesSelf(stmt: Stmt): bool =
 ## Infers the class-method kind from explicit self reachability.
 ## Example: `Money.fromCents` is static when its body never reaches self.
 proc inferMethodKind*(sourceMethod: FunctionDecl): MethodKind =
+  for clause in sourceMethod.requires:
+    if expressionUsesSelf(clause):
+      return mkInstance
+  for clause in sourceMethod.ensures:
+    if expressionUsesSelf(clause):
+      return mkInstance
   if blockUsesSelf(sourceMethod.body):
     mkInstance
   else:

@@ -378,6 +378,19 @@ proc validateCallable(
       providedSurfaces
     )
 
+  for clause in source.requires:
+    validateExpr(
+      clause, currentModule, locals, typeParameters,
+      classes, interfaces, functions, modules,
+      publicSurfaces, adoptedSurfaces, providedSurfaces
+    )
+  for clause in source.ensures:
+    validateExpr(
+      clause, currentModule, locals, typeParameters,
+      classes, interfaces, functions, modules,
+      publicSurfaces, adoptedSurfaces, providedSurfaces
+    )
+
   validateStmtBlock(
     source.body, currentModule, locals, typeParameters,
     classes, interfaces, functions, modules,

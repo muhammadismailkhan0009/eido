@@ -5,7 +5,8 @@
 ## Example: a function-level loop starts at two spaces and its body at four.
 proc renderWhile(
   stmt: hirStatements.HirStmt,
-  indent: int
+  indent: int,
+  exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
   result.add pad & "while " & renderExpr(stmt.whileCondition) & ":\n"
@@ -14,4 +15,4 @@ proc renderWhile(
     result.add indentation(indent + 2) & "discard\n"
   else:
     for bodyStmt in stmt.body:
-      result.add renderStmtAt(bodyStmt, indent + 2)
+      result.add renderStmtAt(bodyStmt, indent + 2, exitContext)

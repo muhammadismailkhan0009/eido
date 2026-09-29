@@ -11,6 +11,8 @@ import ../../project/model
 import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
+import ../effects/inference
+import ../effects/contract_validation
 import ../symbols/ids
 import ../generics/class_specialization
 import type_resolution
@@ -136,6 +138,7 @@ proc analyzeProgram*(
       moduleName: sourceClass.moduleName,
       typ: classType(sourceClass.name),
       implements: sourceClass.implements,
+      hasInvariant: sourceClass.invariants.len > 0,
       fields: @[],
       methods: @[],
       span: sourceClass.span
@@ -252,6 +255,13 @@ proc analyzeProgram*(
       "executable project must declare function main()"
     )
 
+  # Class invariants resolve after both method and top-level callable signatures exist.
+  for classIndex, sourceClass in specializedProgram.classes:
+    let owner = symbols.getClass(sourceClass.name)
+    analyzeClassInvariants(
+      sourceClass, analyzedClasses[classIndex], owner, functions, symbols
+    )
+
   # Pass 8: analyze class-owned method bodies.
   for classIndex, sourceClass in specializedProgram.classes:
     let owner = symbols.getClass(sourceClass.name)
@@ -274,10 +284,14 @@ proc analyzeProgram*(
       symbols
     )
 
-  hirProgram.HirProgram(
+  let analyzedProgram = hirProgram.HirProgram(
     interfaces: analyzedInterfaces,
     classes: analyzedClasses,
     functions: analyzedFunctions,
     hasMain: mainFound,
     mainFunctionId: mainId
   )
+
+  let contractSafety = inferContractSafety(analyzedProgram)
+  validateContractSafety(analyzedProgram, contractSafety)
+  analyzedProgram

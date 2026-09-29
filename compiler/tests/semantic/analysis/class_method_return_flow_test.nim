@@ -8,8 +8,8 @@ suite "Class-valued method return flow":
         Int balance;
 
         function snapshot() returns Account {
-          var result = copy self;
-          return result;
+          var detached = copy self;
+          return detached;
         }
       }
 
@@ -26,8 +26,8 @@ suite "Class-valued method return flow":
       class Account {
         Int balance;
         function snapshot() returns Account {
-          var result = copy self;
-          return result;
+          var detached = copy self;
+          return detached;
         }
       }
       function main() {
@@ -39,8 +39,8 @@ suite "Class-valued method return flow":
       class Account {
         Int balance;
         function snapshot() returns Account {
-          var result = copy self;
-          return result;
+          var detached = copy self;
+          return detached;
         }
       }
       function main() {

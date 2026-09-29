@@ -5,7 +5,8 @@
 ## Example: optional local user lowers to `if isSome(user):`.
 proc renderExists(
   stmt: hirStatements.HirStmt,
-  indent: int
+  indent: int,
+  exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
   result.add pad & "if isSome(" & renderExpr(stmt.existsValue) & "):\n"
@@ -14,4 +15,4 @@ proc renderExists(
     result.add indentation(indent + 2) & "discard\n"
   else:
     for bodyStmt in stmt.existsBody:
-      result.add renderStmtAt(bodyStmt, indent + 2)
+      result.add renderStmtAt(bodyStmt, indent + 2, exitContext)

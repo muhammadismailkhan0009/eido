@@ -103,5 +103,6 @@ proc analyzeConstruction(
     span: expr.span,
     typ: target.typ,
     constructedTypeName: target.name,
+    checkInvariant: target.hasInvariant,
     fields: fields
   )

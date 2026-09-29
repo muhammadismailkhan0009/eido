@@ -213,6 +213,15 @@ proc resolveModuleArchitecture*(
         providedSurfaces
       )
 
+    var invariantLocals = initHashSet[string]()
+    invariantLocals.incl "self"
+    for clause in sourceClass.invariants:
+      validateExpr(
+        clause, sourceClass.moduleName, invariantLocals, typeParameters,
+        classes, interfaces, functions, modules,
+        publicSurfaces, adoptedSurfaces, providedSurfaces
+      )
+
     for methodDecl in sourceClass.methods:
       validateCallable(
         methodDecl,

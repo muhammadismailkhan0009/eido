@@ -7,10 +7,12 @@ import ../../hir/statements
 import ../../types/model
 import ../../types/function_result
 import ../symbols/model
+import ../symbols/ids
 import ../symbols/functions
 import ../symbols/nominals
 import ../symbols/scope
 import statement_analysis
+import contracts
 
 ## Creates parameter scope and analyzes one function body into resolved HIR. Example: `add(Int a, Int b)` registers both parameters before analyzing `return a + b;`.
 proc analyzeFunction*(
@@ -46,6 +48,31 @@ proc analyzeFunction*(
       typ: typ
     )
 
+  let requires = analyzeContractClauses(
+    fn.requires, locals, functions, classes, "require"
+  )
+
+  var ensureResultLocalId = LocalId(-1)
+  var ensureLocals = locals.fork()
+  if fn.ensures.len > 0 and symbol.result.kind == frSingle:
+    ensureResultLocalId = locals.nextLocalId()
+    ensureLocals = locals.fork()
+    ensureLocals.add(
+      "result",
+      LocalSymbol(
+        id: ensureResultLocalId,
+        name: "result",
+        typ: symbol.result.typ,
+        kind: bkParameter,
+        span: fn.span,
+        classValueProvenance:
+          if symbol.result.typ.kind == etkClass: cvpDetached else: cvpNotClass
+      )
+    )
+  let ensures = analyzeContractClauses(
+    fn.ensures, ensureLocals, functions, classes, "ensure"
+  )
+
   var body: seq[HirStmt]
   for stmt in fn.body:
     body.add analyzeStmt(
@@ -70,5 +97,8 @@ proc analyzeFunction*(
     isNative: fn.isNative,
     parameters: parameters,
     result: symbol.result,
+    requires: requires,
+    ensures: ensures,
+    ensureResultLocalId: ensureResultLocalId,
     body: body
   )

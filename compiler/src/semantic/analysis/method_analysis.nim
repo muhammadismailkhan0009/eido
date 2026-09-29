@@ -10,6 +10,7 @@ import ../../types/model
 import ../../types/method_kind
 import ../symbols/[functions, ids, model, nominals, scope]
 import statement_analysis
+import contracts
 
 ## Creates the classified method scope and lowers one checked class function body.
 proc analyzeMethod*(
@@ -82,6 +83,31 @@ proc analyzeMethod*(
       typ: parameterType
     )
 
+  let requires = analyzeContractClauses(
+    sourceMethod.requires, locals, functions, classes, "require"
+  )
+
+  var ensureResultLocalId = LocalId(-1)
+  var ensureLocals = locals.fork()
+  if sourceMethod.ensures.len > 0 and symbol.result.kind == frSingle:
+    ensureResultLocalId = locals.nextLocalId()
+    ensureLocals = locals.fork()
+    ensureLocals.add(
+      "result",
+      LocalSymbol(
+        id: ensureResultLocalId,
+        name: "result",
+        typ: symbol.result.typ,
+        kind: bkParameter,
+        span: sourceMethod.span,
+        classValueProvenance:
+          if symbol.result.typ.kind == etkClass: cvpDetached else: cvpNotClass
+      )
+    )
+  let ensures = analyzeContractClauses(
+    sourceMethod.ensures, ensureLocals, functions, classes, "ensure"
+  )
+
   var body: seq[HirStmt]
   for statement in sourceMethod.body:
     body.add analyzeStmt(
@@ -109,6 +135,9 @@ proc analyzeMethod*(
     ownerType: owner.typ,
     parameters: parameters,
     result: symbol.result,
+    requires: requires,
+    ensures: ensures,
+    ensureResultLocalId: ensureResultLocalId,
     body: body,
     kind: symbol.kind
   )

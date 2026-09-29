@@ -10,6 +10,11 @@ proc analyzeIdentifier(
   if not locals.contains(expr.name):
     if expr.name == "self":
       failAt(expr.span, "'self' is only available inside instance methods")
+    if expr.name == "result":
+      failAt(
+        expr.span,
+        "'result' is only available inside ensure of a value-returning callable"
+      )
     failAt(expr.span, "unknown local '" & expr.name & "'")
 
   let symbol = locals.get(expr.name)

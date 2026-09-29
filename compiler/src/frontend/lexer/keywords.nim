@@ -10,6 +10,7 @@ include keywords/loop_control_statements
 include keywords/class_declarations
 include keywords/interface_declarations
 include keywords/native_functions
+include keywords/contracts
 
 ## Maps identifier text to its token kind.
 ## Example: `"true"` becomes `tkBoolean`, while `"Long"` stays `tkIdentifier`.
@@ -45,6 +46,10 @@ proc keywordKind*(text: string): TokenKind =
   let nativeKeyword = nativeFunctionKeywordKind(text)
   if nativeKeyword != tkIdentifier:
     return nativeKeyword
+
+  let contractKeyword = contractKeywordKind(text)
+  if contractKeyword != tkIdentifier:
+    return contractKeyword
 
   case text
   of "function": tkFunction

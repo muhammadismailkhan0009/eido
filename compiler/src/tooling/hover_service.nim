@@ -259,6 +259,9 @@ proc hoverInfoAt*(
         field.sourceName & ": " & toolingTypeName(field.typ)
       )
 
+    for clause in classDecl.invariants:
+      visitExpr(clause, sourcePath, byteOffset, result)
+
     for methodDecl in classDecl.methods:
       result.consider(
         methodDecl.span,
@@ -278,6 +281,10 @@ proc hoverInfoAt*(
           byteOffset,
           parameter.sourceName & ": " & toolingTypeName(parameter.typ)
         )
+      for clause in methodDecl.requires:
+        visitExpr(clause, sourcePath, byteOffset, result)
+      for clause in methodDecl.ensures:
+        visitExpr(clause, sourcePath, byteOffset, result)
       for stmt in methodDecl.body:
         visitStmt(stmt, sourcePath, byteOffset, result)
 
@@ -300,5 +307,9 @@ proc hoverInfoAt*(
         byteOffset,
         parameter.sourceName & ": " & toolingTypeName(parameter.typ)
       )
+    for clause in functionDecl.requires:
+      visitExpr(clause, sourcePath, byteOffset, result)
+    for clause in functionDecl.ensures:
+      visitExpr(clause, sourcePath, byteOffset, result)
     for stmt in functionDecl.body:
       visitStmt(stmt, sourcePath, byteOffset, result)

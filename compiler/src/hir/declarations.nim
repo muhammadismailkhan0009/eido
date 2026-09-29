@@ -6,6 +6,7 @@ import ../types/function_result
 import ../types/method_kind
 import ../semantic/symbols/ids
 import statements
+import expressions
 
 type
   HirField* = object
@@ -27,6 +28,9 @@ type
     ownerType*: EidoType
     parameters*: seq[HirParameter]
     result*: FunctionResult
+    requires*: seq[HirExpr]
+    ensures*: seq[HirExpr]
+    ensureResultLocalId*: LocalId
     body*: seq[HirStmt]
     case kind*: MethodKind
     of mkInstance:
@@ -52,6 +56,8 @@ type
     typ*: EidoType
     implements*: seq[string]
     fields*: seq[HirField]
+    invariants*: seq[HirExpr]
+    invariantReceiverLocalId*: LocalId
     methods*: seq[HirMethod]
 
   HirFunction* = object
@@ -61,4 +67,7 @@ type
     isNative*: bool
     parameters*: seq[HirParameter]
     result*: FunctionResult
+    requires*: seq[HirExpr]
+    ensures*: seq[HirExpr]
+    ensureResultLocalId*: LocalId
     body*: seq[HirStmt]

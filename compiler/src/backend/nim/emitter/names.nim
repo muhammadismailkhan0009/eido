@@ -100,3 +100,11 @@ proc copyContextName*(): string =
 ## Builds the generated Nim name for one Eido class field.
 proc fieldName*(sourceName: string): string =
   "eido_field_" & sourceName
+
+## Builds the generated runtime invariant-checker name for one class.
+proc classInvariantName*(sourceName: string): string =
+  "eido_invariant_" & nominalName(sourceName)
+
+## Builds the backend-only field used to suppress recursive invariant evaluation.
+proc invariantEvaluationDepthFieldName*(): string =
+  "eido_runtime_invariant_evaluation_depth"

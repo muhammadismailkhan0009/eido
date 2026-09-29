@@ -346,6 +346,14 @@ proc specializeFunction(
       )
     )
 
+  var requires: seq[Expr]
+  for clause in source.requires:
+    requires.add specializeExpr(context, clause, bindings)
+
+  var ensures: seq[Expr]
+  for clause in source.ensures:
+    ensures.add specializeExpr(context, clause, bindings)
+
   var body: seq[Stmt]
   for statement in source.body:
     body.add specializeStmt(context, statement, bindings)
@@ -357,6 +365,8 @@ proc specializeFunction(
     isNative: source.isNative,
     parameters: parameters,
     result: functionResult,
+    requires: requires,
+    ensures: ensures,
     body: body
   )
 
@@ -380,6 +390,10 @@ proc specializeClass(
       typeRef: specializeTypeRef(context, field.typeRef, bindings)
     )
 
+  var invariants: seq[Expr]
+  for clause in source.invariants:
+    invariants.add specializeExpr(context, clause, bindings)
+
   var methods: seq[FunctionDecl]
   for methodDecl in source.methods:
     if source.typeParameters.len > 0 and methodDecl.isNative:
@@ -396,6 +410,7 @@ proc specializeClass(
     typeParameters: @[],
     implements: source.implements,
     fields: fields,
+    invariants: invariants,
     methods: methods
   )
 
@@ -543,6 +558,11 @@ proc validateFunctionTypes(
   if source.result.kind == frrSingle:
     validateTypeRef(context, source.result.typeRef, typeParameters)
 
+  for clause in source.requires:
+    validateExprTypeRefs(context, clause, typeParameters)
+  for clause in source.ensures:
+    validateExprTypeRefs(context, clause, typeParameters)
+
   for statement in source.body:
     validateStmtTypeRefs(context, statement, typeParameters)
 
@@ -567,6 +587,9 @@ proc validateTemplateShape(
       failAt(field.span, "duplicate field '" & field.name & "'")
     fieldNames.incl field.name
     validateTypeRef(context, field.typeRef, parameterNames)
+
+  for clause in source.invariants:
+    validateExprTypeRefs(context, clause, parameterNames)
 
   var methodNames = initHashSet[string]()
   for methodDecl in source.methods:

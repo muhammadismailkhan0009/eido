@@ -169,9 +169,9 @@ suite "Class return detachment execution":
 
       function main() returns Int {
         var account = Account { balance = 100; };
-        var result = modify(account);
-        result.withdraw(20);
-        return account.value() * 1000 + result.value();
+        var outcome = modify(account);
+        outcome.withdraw(20);
+        return account.value() * 1000 + outcome.value();
       }
     """
 

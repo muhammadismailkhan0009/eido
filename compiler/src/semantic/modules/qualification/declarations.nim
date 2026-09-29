@@ -32,6 +32,21 @@ proc qualifyCallable(
       rootModule
     )
 
+  for clause in source.requires:
+    qualifyExpr(
+      clause, currentModule, locals, typeParameters,
+      modules, classes, interfaces, functions,
+      publicSurfaces, adoptedSurfaces, providedSurfaces,
+      rootModule
+    )
+  for clause in source.ensures:
+    qualifyExpr(
+      clause, currentModule, locals, typeParameters,
+      modules, classes, interfaces, functions,
+      publicSurfaces, adoptedSurfaces, providedSurfaces,
+      rootModule
+    )
+
   qualifyStatements(
     source.body, currentModule, locals, typeParameters,
     modules, classes, interfaces, functions,
@@ -92,6 +107,16 @@ proc qualifyModuleProgram(
       qualifyTypeRef(
         field.typeRef, sourceClass.moduleName, typeParameters,
         modules, classes, interfaces,
+        publicSurfaces, adoptedSurfaces, providedSurfaces,
+        rootModule
+      )
+
+    var invariantLocals = initHashSet[string]()
+    invariantLocals.incl "self"
+    for clause in sourceClass.invariants:
+      qualifyExpr(
+        clause, sourceClass.moduleName, invariantLocals, typeParameters,
+        modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
         rootModule
       )

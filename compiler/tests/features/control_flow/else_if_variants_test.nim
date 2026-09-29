@@ -80,13 +80,13 @@ suite "Else if chains":
     # Given
     let source = """
       function main() returns Int {
-        var result = 7;
+        var outcome = 7;
         if (false) {
-          set result = 1;
+          set outcome = 1;
         } else if (false) {
-          set result = 2;
+          set outcome = 2;
         }
-        return result;
+        return outcome;
       }
     """
 

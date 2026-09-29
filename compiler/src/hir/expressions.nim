@@ -106,6 +106,7 @@ type
       call*: HirCall
     of hekConstruct:
       constructedTypeName*: string
+      checkInvariant*: bool
       fields*: seq[HirConstructionField]
     of hekClassRelation:
       classRelationKind*: HirClassValueRelationKind

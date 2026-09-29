@@ -9,6 +9,7 @@ import nominal_type_emitter
 import class_copy_emitter
 import method_emitter
 import function_emitter
+import invariant_emitter
 
 ## Renders the full HIR program to compilable Nim source.
 proc emitNim*(program: hirProgram.HirProgram): string =
@@ -46,6 +47,7 @@ proc emitNim*(program: hirProgram.HirProgram): string =
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
+  result.add renderClassInvariantCheckers(program.classes)
   result.add renderInterfaceUpcasts(program.interfaces)
   result.add renderClassInterfaceAdapters(
     program.interfaces,
@@ -55,7 +57,7 @@ proc emitNim*(program: hirProgram.HirProgram): string =
   for classDecl in program.classes:
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
-        result.add renderMethod(methodDecl)
+        result.add renderMethod(methodDecl, classDecl.invariants.len > 0)
         result.add "\n"
 
   for fn in program.functions:

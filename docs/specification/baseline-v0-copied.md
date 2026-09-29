@@ -620,74 +620,75 @@ Constructor/lifecycle semantics beyond basic initialization are deliberately def
 
 # 18. Contracts
 
-Locked conceptual features:
+Locked v0 contract features:
 
 ```text
 require
 ensure
 invariant
-old
 ```
 
-Named contract clauses are also part of the design.
+Contracts are optional declaration-level specification sections containing one
+or more unnamed Boolean expressions. `old`, named contract clauses, `modifies`,
+and source-level purity annotations are not part of the v0 contract model.
 
 Example:
 
 ```text
 class Account {
-    balance: Money,
+    Int balance;
 
     invariant {
-        non_negative:
-            balance >= 0,
-    },
+        self.balance >= 0;
+    }
 
-    function withdraw(amount: Money) {
+    function withdraw(Int amount) {
         require {
-            positive:
-                amount > 0,
+            amount > 0;
+            amount <= self.balance;
+        }
 
-            sufficient:
-                amount <= balance,
-        },
-
-        set self.balance = self.balance - amount,
+        set self.balance = self.balance - amount;
 
         ensure {
-            decreased:
-                balance == old balance - amount,
-        },
-    },
-},
+            self.balance >= 0;
+        }
+    }
+}
 ```
 
-The exact internal representation will distinguish:
+`require` appears before executable callable statements. `ensure` is the final
+callable section. A class may declare at most one `invariant` section. Contract
+blocks are non-empty and every clause must type-check as `Bool`.
 
-```text
-preconditions
-postconditions
-type/class invariants
-old-state expressions
-```
+Contracts are first-class AST/HIR facts rather than ordinary statements. v0
+lowers them to runtime checks; formal proving is deliberately deferred.
+Postconditions execute only on normal callable exits after the returned
+expression has been evaluated. Class invariants are checked after construction,
+on every instance-method entry and normal exit including nested calls on the
+same object, and immediately after each own-field mutation through `set`.
+Temporary invariant violations are not permitted. Only invariant evaluation
+itself suppresses recursive invariant re-entry so observational helper methods
+may be used inside invariant expressions.
 
-even if syntax later changes.
+For value-returning callables, `result` is a reserved binding available only
+inside `ensure`. It has exactly the declared result type and denotes the value
+produced by whichever successful return path is taken. Each return expression is
+evaluated once, bound to `result`, checked against the function-level
+postcondition, and then returned. `result` is invalid in preconditions,
+invariants, ordinary bodies, and zero-result callables, and cannot be used as a
+parameter or local name.
 
-### v0 behavior
+### Observational contract expressions
 
-v0 does **not** need SMT proving.
-
-Initially the compiler can:
-
-```text
-parse contracts
-type-check contracts
-validate legal references
-lower them to runtime checks
-```
-
-Formal verification comes later.
-
-That prevents the proof system from blocking development of the actual language.
+Evaluating a contract must not cause observable program effects. Eido does not
+ask users to mark functions or methods `pure`. Instead, the compiler infers a
+transitive contract-safety property from resolved HIR. Own-field mutation makes
+a method unsafe; callers of unsafe concrete Eido callables become unsafe; local
+variable mutation remains safe because it is not externally observable. Native
+callables and dynamic interface dispatch are contract-unsafe in v0 because their
+effects cannot be proven. These restrictions apply only when a callable is used
+from `require`, `ensure`, or `invariant`; ordinary executable code is unchanged.
 
 ---
 
@@ -703,21 +704,10 @@ invariant
 
 should be convertible into **verification conditions**.
 
-Example:
-
-```text
-old_balance >= 0
-amount > 0
-amount <= old_balance
-
-new_balance = old_balance - amount
-```
-
-compiler generates:
-
-```text
-prove new_balance >= 0
-```
+Example: a future verifier may combine an explicit precondition such as
+`amount > 0` with an explicit postcondition such as `self.balance >= 0` and the
+operation body to generate verification obligations. Eido does not require a
+source-level old-state operator for this v0 contract model.
 
 Then an automated solver can discharge straightforward obligations.
 

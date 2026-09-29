@@ -57,6 +57,7 @@ type
     moduleName*: string
     typ*: EidoType
     implements*: seq[string]
+    hasInvariant*: bool
     fields*: seq[ClassFieldSymbol]
     methods*: seq[MethodSymbol]
     span*: SourceSpan

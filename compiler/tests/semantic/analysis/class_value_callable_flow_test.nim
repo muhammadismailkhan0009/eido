@@ -93,8 +93,8 @@ suite "Class-valued callable flow":
         Int balance;
 
         function snapshot() returns Account {
-          var result = copy self;
-          return result;
+          var detached = copy self;
+          return detached;
         }
       }
 

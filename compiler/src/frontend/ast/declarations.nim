@@ -5,6 +5,7 @@ import ../../source/span
 import type_references
 export type_references
 import statements
+import expressions
 
 type
   Parameter* = object
@@ -35,6 +36,8 @@ type
     isNative*: bool
     parameters*: seq[Parameter]
     result*: FunctionResultRef
+    requires*: seq[Expr]
+    ensures*: seq[Expr]
     body*: seq[Stmt]
 
   InterfaceDecl* = object
@@ -51,4 +54,5 @@ type
     typeParameters*: seq[TypeParameterDecl]
     implements*: seq[string]
     fields*: seq[FieldDecl]
+    invariants*: seq[Expr]
     methods*: seq[FunctionDecl]

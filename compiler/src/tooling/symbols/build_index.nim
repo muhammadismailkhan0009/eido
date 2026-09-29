@@ -199,6 +199,22 @@ proc buildSymbolIndex*(
         field.typ
       )
 
+    var invariantLocalDefinitions = initTable[int, ToolingSymbol]()
+    for clause in classDecl.invariants:
+      visitExpr(
+        clause,
+        result,
+        seen,
+        registry,
+        typeDefinitions,
+        fieldDefinitions,
+        methodDefinitions,
+        functionDefinitions,
+        interfaceMethodDefinitions,
+        interfaces,
+        invariantLocalDefinitions
+      )
+
     for methodDecl in classDecl.methods:
       var localDefinitions = initTable[int, ToolingSymbol]()
       methodDecl.parameters.addParameters(
@@ -227,6 +243,19 @@ proc buildSymbolIndex*(
             typeDefinitions[resultTypeName],
             false
           )
+
+      for clause in methodDecl.requires:
+        visitExpr(
+          clause, result, seen, registry, typeDefinitions, fieldDefinitions,
+          methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+          interfaces, localDefinitions
+        )
+      for clause in methodDecl.ensures:
+        visitExpr(
+          clause, result, seen, registry, typeDefinitions, fieldDefinitions,
+          methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+          interfaces, localDefinitions
+        )
 
       for stmt in methodDecl.body:
         visitStmt(
@@ -272,6 +301,19 @@ proc buildSymbolIndex*(
           typeDefinitions[resultTypeName],
           false
         )
+
+    for clause in functionDecl.requires:
+      visitExpr(
+        clause, result, seen, registry, typeDefinitions, fieldDefinitions,
+        methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+        interfaces, localDefinitions
+      )
+    for clause in functionDecl.ensures:
+      visitExpr(
+        clause, result, seen, registry, typeDefinitions, fieldDefinitions,
+        methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+        interfaces, localDefinitions
+      )
 
     for stmt in functionDecl.body:
       visitStmt(

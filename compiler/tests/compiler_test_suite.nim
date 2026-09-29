@@ -16,6 +16,7 @@ import frontend/lexer/keywords/loop_control_keyword_test
 import frontend/lexer/keywords/class_keyword_test
 import frontend/lexer/keywords/interface_keyword_test
 import frontend/lexer/keywords/native_function_keyword_test
+import frontend/lexer/keywords/contract_keyword_test
 import frontend/parser/expression/literal_expression_parser_test
 import frontend/parser/expression/call_expression_parser_test
 import frontend/parser/expression/construction_expression_parser_test
@@ -29,6 +30,7 @@ import frontend/parser/expression/arithmetic_operator_parser_test
 import frontend/parser/expression/comparison_operator_parser_test
 import frontend/parser/expression/boolean_operator_parser_test
 import frontend/parser/function_parser_test
+import frontend/parser/contract_parser_test
 import frontend/parser/native_function_parser_test
 import frontend/parser/class_value_signature_parser_test
 import frontend/parser/class_declaration_parser_test
@@ -43,6 +45,8 @@ import frontend/parser/statement/loop_control_statement_parser_test
 import frontend/parser/statement/set_statement_parser_test
 import semantic/analysis/local_binding_analysis_test
 import semantic/analysis/function_analysis_test
+import semantic/analysis/contract_analysis_test
+import semantic/analysis/contract_effect_analysis_test
 import semantic/analysis/native_function_analysis_test
 import semantic/analysis/class_declaration_analysis_test
 import semantic/analysis/optional_analysis_test
@@ -71,6 +75,7 @@ import semantic/analysis/expression/arithmetic_operator_analysis_test
 import semantic/analysis/expression/comparison_operator_analysis_test
 import semantic/analysis/expression/boolean_operator_analysis_test
 import backend/nim/emitter/nim_emitter_test
+import backend/nim/emitter/contract_emitter_test
 import backend/nim/emitter/native_function_emitter_test
 import backend/nim/emitter/native_class_method_emitter_test
 import backend/nim/emitter/class_method_emitter_test
@@ -101,6 +106,7 @@ import features/expression/unary_negation_variants_test
 import features/expression/comparison_variants_test
 import features/expression/boolean_operator_variants_test
 import features/function_variants_test
+import features/contracts_variants_test
 import features/native/native_function_variants_test
 import features/native/native_class_method_variants_test
 import features/classes/class_declaration_variants_test

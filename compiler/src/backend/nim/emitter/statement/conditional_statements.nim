@@ -5,7 +5,8 @@
 ## Example: a function-level if starts at two spaces and its branch body at four.
 proc renderConditional(
   stmt: hirStatements.HirStmt,
-  indent: int
+  indent: int,
+  exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
   result.add pad & "if " & renderExpr(stmt.condition) & ":\n"
@@ -14,9 +15,9 @@ proc renderConditional(
     result.add indentation(indent + 2) & "discard\n"
   else:
     for branchStmt in stmt.thenBranch:
-      result.add renderStmtAt(branchStmt, indent + 2)
+      result.add renderStmtAt(branchStmt, indent + 2, exitContext)
 
   if stmt.elseBranch.len > 0:
     result.add pad & "else:\n"
     for branchStmt in stmt.elseBranch:
-      result.add renderStmtAt(branchStmt, indent + 2)
+      result.add renderStmtAt(branchStmt, indent + 2, exitContext)

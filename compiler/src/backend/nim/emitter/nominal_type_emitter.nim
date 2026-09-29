@@ -43,7 +43,9 @@ proc renderNominalTypes*(
 
   for classDecl in classes:
     result.add "  " & className(classDecl.sourceName) & " = ref object\n"
-    if classDecl.fields.len == 0:
+    if classDecl.invariants.len > 0:
+      result.add "    " & invariantEvaluationDepthFieldName() & ": int\n"
+    if classDecl.fields.len == 0 and classDecl.invariants.len == 0:
       result.add "    discard\n"
     else:
       for field in classDecl.fields:

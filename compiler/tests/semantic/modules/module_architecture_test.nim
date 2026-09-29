@@ -1326,7 +1326,7 @@ suite "Module architecture":
     """)
     writeFile(root / "app" / "Main.eido", """
       function main() {
-        var result = Result {};
+        var outcome = Result {};
       }
     """)
 
@@ -1530,8 +1530,8 @@ suite "Module architecture":
       class Result { Int local; }
 
       function main() returns Int {
-        var result = Result { local = 42; };
-        return result.local;
+        var outcome = Result { local = 42; };
+        return outcome.local;
       }
     """)
 
@@ -1621,3 +1621,35 @@ suite "Module architecture":
     let result = checkModule(root)
     check not result.success
     check "only one top-level class or interface" in result.diagnostics[0].message
+
+test "module contracts resolve same-module helper functions":
+  # Given
+  let root = freshModuleDir("contract_helper")
+  defer: removeDir(root)
+  writeFile(root / "module.yaml", """
+    module: shop
+    sources:
+      - Main.eido
+    children: []
+    dependencies: []
+    exports: []
+    provides: {}
+    adopts: []
+  """)
+  writeFile(root / "Main.eido", """
+    function valid(Int value) returns Bool {
+      return value > 0;
+    }
+
+    function checked(Int value) {
+      require { valid(value); }
+    }
+
+    function main() { checked(1); }
+  """)
+
+  # When
+  let checked = checkModule(root)
+
+  # Then
+  check checked.success

@@ -62,12 +62,19 @@ proc parseClass*(parser: var Parser): ClassDecl =
   discard parser.consume(tkLBrace, "expected '{' before class body")
 
   var fields: seq[FieldDecl]
+  var invariants: seq[Expr]
+  var invariantSeen = false
   var methods: seq[FunctionDecl]
   while not parser.check(tkRBrace):
     if parser.check(tkEof):
       failAt(parser.peek.span, "expected '}' after class body")
 
-    if parser.check(tkNative):
+    if parser.check(tkInvariant):
+      if invariantSeen:
+        failAt(parser.peek.span, "class may declare only one invariant section")
+      invariantSeen = true
+      invariants = parser.parseContractClauses(tkInvariant, "invariant")
+    elif parser.check(tkNative):
       methods.add parser.parseNativeFunction()
     elif parser.check(tkFunction):
       methods.add parser.parseFunction()
@@ -82,5 +89,6 @@ proc parseClass*(parser: var Parser): ClassDecl =
     typeParameters: typeParameters,
     implements: implementedInterfaces,
     fields: fields,
+    invariants: invariants,
     methods: methods
   )
