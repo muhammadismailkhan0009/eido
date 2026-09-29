@@ -77,3 +77,31 @@ suite "Interface parsing":
     let initializer = program.functions[0].body[0].initializer
     check initializer.kind == ekConstruct
     check initializer.constructionTypeRef.name == "payments.Result"
+
+
+  test "parses interface require and ensure contracts without a body":
+    let program = parseProgram(lexAll("""
+      interface Account {
+        function withdraw(Int amount) returns Int {
+          require { amount > 0; }
+          ensure { result >= 0; }
+        }
+      }
+      function main() {}
+    """))
+
+    let methodDecl = program.interfaces[0].methods[0]
+    check methodDecl.requires.len == 1
+    check methodDecl.ensures.len == 1
+    check methodDecl.body.len == 0
+
+  test "rejects executable statements inside interface methods":
+    expect ValueError:
+      discard parseProgram(lexAll("""
+        interface Bad {
+          function value() returns Int {
+            return 1;
+          }
+        }
+        function main() {}
+      """))

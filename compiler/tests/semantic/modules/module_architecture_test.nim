@@ -1653,3 +1653,44 @@ test "module contracts resolve same-module helper functions":
 
   # Then
   check checked.success
+
+
+test "module interface contracts resolve self and propagate into provider implementation":
+  let root = freshModuleDir("interface_contracts")
+  defer: removeDir(root)
+
+  writeFile(root / "module.yaml", """
+    module: payments
+    sources:
+      - PaymentService.eido
+      - PaymentImpl.eido
+      - Main.eido
+    children: []
+    dependencies: []
+    exports:
+      - PaymentService
+    provides: {}
+    adopts: []
+  """)
+  writeFile(root / "PaymentService.eido", """
+    interface PaymentService {
+      function available() returns Int;
+      function pay(Int amount) returns Int {
+        require { amount > 0; amount <= self.available(); }
+        ensure { result >= 0; }
+      }
+    }
+  """)
+  writeFile(root / "PaymentImpl.eido", """
+    class PaymentImpl implements PaymentService {
+      Int balance;
+      function available() returns Int { return self.balance; }
+      function pay(Int amount) returns Int {
+        set self.balance = self.balance - amount;
+        return self.balance;
+      }
+    }
+  """)
+  writeFile(root / "Main.eido", "function main() {}")
+
+  check checkModule(root).success

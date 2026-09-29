@@ -243,6 +243,25 @@ proc hoverInfoAt*(
       "interface " & toolingTypeName(interfaceDecl.typ)
     )
 
+    for methodDecl in interfaceDecl.methods:
+      result.consider(
+        methodDecl.span,
+        sourcePath,
+        byteOffset,
+        "method " & methodDecl.sourceName & methodDecl.result.resultSuffix
+      )
+      for parameter in methodDecl.parameters:
+        result.consider(
+          parameter.span,
+          sourcePath,
+          byteOffset,
+          parameter.sourceName & ": " & toolingTypeName(parameter.typ)
+        )
+      for clause in methodDecl.requires:
+        visitExpr(clause, sourcePath, byteOffset, result)
+      for clause in methodDecl.ensures:
+        visitExpr(clause, sourcePath, byteOffset, result)
+
   for classDecl in program.classes:
     result.consider(
       classDecl.span,

@@ -18,7 +18,8 @@ proc analyzeMethod*(
   owner: ClassSymbol,
   symbol: MethodSymbol,
   functions: FunctionSymbols,
-  classes: NominalSymbols
+  classes: NominalSymbols,
+  inheritedContracts: seq[InterfaceMethodSymbol] = @[]
 ): hirDeclarations.HirMethod =
   var locals = initLocalScope()
   var receiverLocalId = LocalId(-1)
@@ -83,13 +84,63 @@ proc analyzeMethod*(
       typ: parameterType
     )
 
+  var inheritedRequires: seq[hirDeclarations.HirInheritedContractClause]
+  for contract in inheritedContracts:
+    var contractLocals = initLocalScope()
+    if symbol.kind == mkInstance:
+      contractLocals.add(
+        "self",
+        LocalSymbol(
+          name: "self",
+          typ: owner.typ,
+          span: contract.span,
+          kind: bkReceiver,
+          id: receiverLocalId,
+          classValueProvenance: cvpExisting
+        )
+      )
+    for index, parameter in contract.sourceDecl.parameters:
+      let implementationParameter = parameters[index]
+      contractLocals.add(
+        parameter.name,
+        LocalSymbol(
+          name: implementationParameter.sourceName,
+          typ: implementationParameter.typ,
+          span: parameter.span,
+          kind: bkParameter,
+          id: implementationParameter.localId,
+          classValueProvenance:
+            if implementationParameter.typ.kind == etkClass:
+              cvpExisting
+            else:
+              cvpNotClass
+        )
+      )
+    for clause in analyzeContractClauses(
+      contract.sourceDecl.requires,
+      contractLocals,
+      functions,
+      classes,
+      "require"
+    ):
+      inheritedRequires.add hirDeclarations.HirInheritedContractClause(
+        interfaceName: contract.declaringInterface,
+        expr: clause
+      )
+
   let requires = analyzeContractClauses(
     sourceMethod.requires, locals, functions, classes, "require"
   )
 
   var ensureResultLocalId = LocalId(-1)
+  var inheritedEnsures: seq[hirDeclarations.HirInheritedContractClause]
+  var inheritedEnsureCount = 0
+  for contract in inheritedContracts:
+    inheritedEnsureCount += contract.sourceDecl.ensures.len
+
+  let hasAnyEnsures = sourceMethod.ensures.len > 0 or inheritedEnsureCount > 0
   var ensureLocals = locals.fork()
-  if sourceMethod.ensures.len > 0 and symbol.result.kind == frSingle:
+  if hasAnyEnsures and symbol.result.kind == frSingle:
     ensureResultLocalId = locals.nextLocalId()
     ensureLocals = locals.fork()
     ensureLocals.add(
@@ -104,6 +155,66 @@ proc analyzeMethod*(
           if symbol.result.typ.kind == etkClass: cvpDetached else: cvpNotClass
       )
     )
+
+  for contract in inheritedContracts:
+    if contract.sourceDecl.ensures.len == 0:
+      continue
+    var contractLocals = initLocalScope()
+    if symbol.kind == mkInstance:
+      contractLocals.add(
+        "self",
+        LocalSymbol(
+          name: "self",
+          typ: owner.typ,
+          span: contract.span,
+          kind: bkReceiver,
+          id: receiverLocalId,
+          classValueProvenance: cvpExisting
+        )
+      )
+    for index, parameter in contract.sourceDecl.parameters:
+      let implementationParameter = parameters[index]
+      contractLocals.add(
+        parameter.name,
+        LocalSymbol(
+          name: implementationParameter.sourceName,
+          typ: implementationParameter.typ,
+          span: parameter.span,
+          kind: bkParameter,
+          id: implementationParameter.localId,
+          classValueProvenance:
+            if implementationParameter.typ.kind == etkClass:
+              cvpExisting
+            else:
+              cvpNotClass
+        )
+      )
+    if symbol.result.kind == frSingle:
+      contractLocals.add(
+        "result",
+        LocalSymbol(
+          id: ensureResultLocalId,
+          name: "result",
+          typ: symbol.result.typ,
+          kind: bkParameter,
+          span: contract.span,
+          classValueProvenance:
+            if symbol.result.typ.kind == etkClass: cvpDetached else: cvpNotClass
+        )
+      )
+    for clause in analyzeContractClauses(
+      contract.sourceDecl.ensures,
+      contractLocals,
+      functions,
+      classes,
+      "ensure",
+      symbol.result.kind == frSingle
+    ):
+      inheritedEnsures.add hirDeclarations.HirInheritedContractClause(
+        interfaceName: contract.declaringInterface,
+        expr: clause
+      )
+
   let ensures = analyzeContractClauses(
     sourceMethod.ensures, ensureLocals, functions, classes, "ensure",
     symbol.result.kind == frSingle
@@ -136,7 +247,9 @@ proc analyzeMethod*(
     ownerType: owner.typ,
     parameters: parameters,
     result: symbol.result,
+    inheritedRequires: inheritedRequires,
     requires: requires,
+    inheritedEnsures: inheritedEnsures,
     ensures: ensures,
     ensureResultLocalId: ensureResultLocalId,
     body: body,

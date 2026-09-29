@@ -3,12 +3,15 @@
 import std/tables
 import ../../source/span
 import ../../types/[function_result, model]
+import ../../frontend/ast/declarations
 
 type
   InterfaceMethodSymbol* = object
     name*: string
+    declaringInterface*: string
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
+    sourceDecl*: FunctionDecl
     span*: SourceSpan
 
   InterfaceSymbol* = object

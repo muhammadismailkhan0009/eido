@@ -7,7 +7,15 @@ boundaries, not as a default abstraction for ordinary same-module collaboration.
 
 ```eido
 interface PaymentService {
-    function pay(Int amount) returns Int;
+    function pay(Int amount) returns Int {
+        require {
+            amount > 0;
+        }
+
+        ensure {
+            result >= 0;
+        }
+    }
 }
 
 class StripeService implements PaymentService {
@@ -36,6 +44,55 @@ interface Child extends Parent {
 ```
 
 Multiple interface extension and generic interfaces are deferred.
+
+
+## Behavioral contracts
+
+Interface methods may be signature-only or may declare `require` and `ensure`
+sections. The contract block is not an executable method body: statements,
+mutation, control flow, and `return` are not legal there.
+
+```eido
+interface AccountService {
+    function available() returns Int;
+
+    function withdraw(Int amount) returns Int {
+        require {
+            amount > 0;
+            amount <= self.available();
+        }
+
+        ensure {
+            result >= 0;
+        }
+    }
+}
+```
+
+Interface contract scope contains the method parameters, contextual `result` in
+a value-returning `ensure`, and `self` as the interface abstraction. `self` may
+therefore call methods visible on that interface (including inherited methods),
+but interface contracts cannot inspect concrete implementation fields or call
+implementation-only methods. Ordinary top-level functions are not part of the
+interface contract scope.
+
+Interface contracts propagate into every concrete implementation. They are not
+replaced when the class declares its own contracts: inherited and class-declared
+clauses remain distinct semantic obligations and both execute at the concrete
+method boundary. This is true for calls through an interface value and for calls
+directly through the concrete class. Interface parameter names need not match
+implementation parameter names; inherited clauses bind parameters by signature
+position.
+
+An implementation may declare additional `require`/`ensure` clauses. Static
+compatibility reasoning between inherited and implementation-declared clauses is
+a separate verification layer; this section defines propagation/ownership rather
+than the proof algorithm.
+
+Contract calls through interface `self` must remain observational in each
+implementation. Eido rebinds inherited clauses to the concrete method and applies
+the existing compiler-inferred contract-safety analysis, so an effectful helper
+implementation cannot satisfy an interface contract that observes that helper.
 
 ## Explicit conformance
 
@@ -86,7 +143,10 @@ handles.
 
 ## Interface extension
 
-Implementing a child interface also requires every inherited parent contract.
+Implementing a child interface also requires every inherited parent method and
+behavioral contract. A child may redeclare an inherited method only with the same
+callable signature; its own contract clauses are additional obligations and the
+parent clauses remain inherited.
 
 ```eido
 interface Base {
@@ -111,6 +171,20 @@ class Impl implements Child {
 ```
 
 A `Child` value may be used where `Base` is expected.
+
+
+## Multiple interfaces and method identity
+
+A class may implement multiple interfaces when their required methods are
+distinct. Two independently declared interface methods with the same method name
+cannot be implemented by one class, even if their signatures happen to match.
+This avoids silently combining unrelated behavioral abstractions.
+
+The exception is one declaration inherited through multiple paths. If `Left` and
+`Right` both inherit `Base.value` without redeclaring it, a class may implement
+`Left, Right`; both paths refer to the same original method declaration. If a
+child redeclares that method, it becomes a distinct effective declaration for
+this ambiguity rule.
 
 ## Architectural ownership
 

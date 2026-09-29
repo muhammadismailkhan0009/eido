@@ -217,3 +217,117 @@ suite "Interface runtime dispatch":
     """, "generic_class_interface")
 
     check output == "42"
+
+
+suite "Interface contract propagation":
+  test "inherited interface require is enforced by the implementation":
+    expect OSError:
+      discard runFeatureSource("""
+        interface Service {
+          function process(Int value) returns Int {
+            require { value > 0; }
+          }
+        }
+        class Impl implements Service {
+          Int marker;
+          function process(Int value) returns Int {
+            return value + self.marker;
+          }
+          function create() returns Service { return Impl { marker = 0; }; }
+        }
+        function main() returns Int {
+          var service = Impl.create();
+          return service.process(0);
+        }
+      """, "interface_inherited_require")
+
+  test "inherited interface result ensure is enforced by the implementation":
+    expect OSError:
+      discard runFeatureSource("""
+        interface Service {
+          function process(Int value) returns Int {
+            ensure { result >= 0; }
+          }
+        }
+        class Impl implements Service {
+          Int marker;
+          function process(Int value) returns Int {
+            return -1 + self.marker;
+          }
+          function create() returns Service { return Impl { marker = 0; }; }
+        }
+        function main() returns Int {
+          var service = Impl.create();
+          return service.process(1);
+        }
+      """, "interface_inherited_ensure")
+
+
+  test "inherited contracts bind parameters by signature position":
+    let output = runFeatureSource("""
+      interface Service {
+        function process(Int amount) returns Int {
+          require { amount > 0; }
+          ensure { result == amount; }
+        }
+      }
+      class Impl implements Service {
+        Int offset;
+        function process(Int value) returns Int {
+          return value + self.offset;
+        }
+        function create() returns Service { return Impl { offset = 0; }; }
+      }
+      function main() returns Int {
+        var service = Impl.create();
+        return service.process(42);
+      }
+    """, "interface_contract_parameter_position")
+
+    check output == "42"
+
+
+  test "concrete calls also enforce inherited interface contracts":
+    expect OSError:
+      discard runFeatureSource("""
+        interface Service {
+          function process(Int value) returns Int {
+            require { value > 0; }
+          }
+        }
+        class Impl implements Service {
+          Int marker;
+          function process(Int value) returns Int {
+            return value + self.marker;
+          }
+        }
+        function main() returns Int {
+          var service = Impl { marker = 0; };
+          return service.process(0);
+        }
+      """, "interface_contract_concrete_call")
+
+
+  test "child interface contracts add to inherited parent contracts at runtime":
+    expect OSError:
+      discard runFeatureSource("""
+        interface Base {
+          function value() returns Int {
+            ensure { result >= 0; }
+          }
+        }
+        interface Child extends Base {
+          function value() returns Int {
+            ensure { result <= 100; }
+          }
+        }
+        class Impl implements Child {
+          Int stored;
+          function value() returns Int { return self.stored; }
+          function create() returns Child { return Impl { stored = -1; }; }
+        }
+        function main() returns Int {
+          var item = Impl.create();
+          return item.value();
+        }
+      """, "interface_parent_contract_preserved")

@@ -1,3 +1,14 @@
 interface OrderProcessor {
-    function process(Order order, String action) returns ProcessingResult;
+    function process(Order order, String action) returns ProcessingResult {
+        require {
+            order.isPending();
+            action == "approve" or action == "reject";
+        }
+
+        ensure {
+            result.orderReference == order.reference;
+            result.message != "";
+            result.approved == (action == "approve");
+        }
+    }
 }

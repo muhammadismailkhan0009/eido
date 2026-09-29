@@ -20,6 +20,10 @@ type
     sourceName*: string
     typ*: EidoType
 
+  HirInheritedContractClause* = object
+    interfaceName*: string
+    expr*: HirExpr
+
   HirMethod* = object
     span*: SourceSpan
     methodId*: MethodId
@@ -28,7 +32,9 @@ type
     ownerType*: EidoType
     parameters*: seq[HirParameter]
     result*: FunctionResult
+    inheritedRequires*: seq[HirInheritedContractClause]
     requires*: seq[HirExpr]
+    inheritedEnsures*: seq[HirInheritedContractClause]
     ensures*: seq[HirExpr]
     ensureResultLocalId*: LocalId
     body*: seq[HirStmt]
@@ -39,9 +45,16 @@ type
       discard
 
   HirInterfaceMethod* = object
+    span*: SourceSpan
     sourceName*: string
+    declaringInterface*: string
     parameterTypes*: seq[EidoType]
+    parameters*: seq[HirParameter]
     result*: FunctionResult
+    requires*: seq[HirExpr]
+    ensures*: seq[HirExpr]
+    receiverLocalId*: LocalId
+    ensureResultLocalId*: LocalId
 
   HirInterface* = object
     span*: SourceSpan

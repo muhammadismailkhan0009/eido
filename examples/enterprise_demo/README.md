@@ -195,8 +195,9 @@ The invalid aggregate never becomes a usable domain object.
 ```
 
 An internal fault-injection processor performs a valid approval but returns a
-`ProcessingResult` carrying the wrong order reference. Its function-level
-postcondition catches the implementation bug:
+`ProcessingResult` carrying the wrong order reference. It declares no duplicate
+postcondition of its own; the inherited `OrderProcessor` interface postcondition
+catches the implementation bug:
 
 ```text
 ensure contract failed in method 'process'

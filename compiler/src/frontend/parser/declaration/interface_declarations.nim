@@ -1,7 +1,7 @@
 ## Parses bodyless interface contracts.
-## Interface methods are instance behavioral signatures and never contain bodies.
+## Interface methods may declare require/ensure sections but never executable statements.
 
-## Parses one semicolon-terminated interface method signature.
+## Parses one interface method signature with optional behavioral contracts.
 proc parseInterfaceMethod(parser: var Parser): FunctionDecl =
   let start = parser.consume(tkFunction, "expected 'function'")
   let name = parser.consume(tkIdentifier, "expected interface method name")
@@ -9,17 +9,56 @@ proc parseInterfaceMethod(parser: var Parser): FunctionDecl =
   let parameters = parser.parseParameters()
   discard parser.consume(tkRParen, "expected ')' after interface method parameters")
   let functionResult = parser.parseFunctionResult()
-  let semicolon = parser.consume(
-    tkSemicolon,
-    "expected ';' after interface method declaration"
+
+  if parser.check(tkSemicolon):
+    let semicolon = parser.advance()
+    return FunctionDecl(
+      span: coverSpan(start.span, semicolon.span),
+      name: name.lexeme,
+      isNative: false,
+      parameters: parameters,
+      result: functionResult,
+      body: @[]
+    )
+
+  discard parser.consume(
+    tkLBrace,
+    "expected ';' or contract block after interface method declaration"
+  )
+
+  var requires: seq[Expr]
+  if parser.check(tkRequire):
+    requires = parser.parseContractClauses(tkRequire, "require")
+
+  var ensures: seq[Expr]
+  if parser.check(tkEnsure):
+    ensures = parser.parseContractClauses(tkEnsure, "ensure")
+
+  if requires.len == 0 and ensures.len == 0:
+    failAt(
+      parser.peek.span,
+      "interface method contract block must declare 'require' or 'ensure'"
+    )
+
+  if not parser.check(tkRBrace):
+    failAt(
+      parser.peek.span,
+      "interface method contract block may contain only 'require' and 'ensure' sections"
+    )
+
+  let closeBrace = parser.consume(
+    tkRBrace,
+    "expected '}' after interface method contract"
   )
 
   FunctionDecl(
-    span: coverSpan(start.span, semicolon.span),
+    span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
     isNative: false,
     parameters: parameters,
     result: functionResult,
+    requires: requires,
+    ensures: ensures,
     body: @[]
   )
 

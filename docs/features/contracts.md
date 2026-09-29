@@ -88,6 +88,23 @@ invalid even if an outer binding has that name, because that context has no
 logical returned value. For class-valued results, ordinary observational member
 access is available, for example `ensure { result.value >= 0; }`.
 
+
+## Interface contracts
+
+Interfaces may attach `require` and `ensure` to method signatures without
+providing executable bodies. Those clauses describe the abstraction and are
+propagated into concrete implementations rather than replaced by implementation
+contracts. Implementations may add their own clauses; inherited and declared
+clauses remain separately tracked and are both enforced.
+
+Inside an interface contract, parameters are visible, `result` has its normal
+contextual meaning in value-returning `ensure`, and `self` represents the
+interface abstraction. Calls such as `self.available()` are legal when the method
+is visible on the interface. When an implementation is analyzed, such inherited
+calls are rebound to the concrete methods and must satisfy the normal
+compiler-inferred observational-safety rules. Ordinary dynamic dispatch through
+an arbitrary interface-valued variable remains contract-unsafe in v0.
+
 ## Contract-safe calls
 
 Contract expressions are observational. Ordinary Eido callables remain free to

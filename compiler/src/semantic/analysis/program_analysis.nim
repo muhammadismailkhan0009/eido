@@ -86,11 +86,7 @@ proc lowerInterface(
 ): HirInterface =
   var methods: seq[HirInterfaceMethod]
   for contract in symbols.requiredInterfaceMethods(source.name):
-    methods.add HirInterfaceMethod(
-      sourceName: contract.name,
-      parameterTypes: contract.parameterTypes,
-      result: contract.result
-    )
+    methods.add analyzeInterfaceMethodContract(contract, symbols)
 
   HirInterface(
     span: source.span,
@@ -147,10 +143,7 @@ proc analyzeProgram*(
   # Pass 3: resolve interface inheritance and direct method contracts.
   validateInterfaceInheritance(specializedProgram.interfaces, symbols)
   resolveInterfaceMethods(specializedProgram.interfaces, symbols)
-
-  var analyzedInterfaces: seq[HirInterface]
-  for sourceInterface in specializedProgram.interfaces:
-    analyzedInterfaces.add lowerInterface(sourceInterface, symbols)
+  validateInterfaceRedeclarations(specializedProgram.interfaces, symbols)
 
   # Pass 4: resolve class field schemas against the complete nominal registry.
   var analyzedClasses: seq[HirClass]
@@ -202,6 +195,12 @@ proc analyzeProgram*(
       inc nextMethodId
 
     symbols.addClass classSymbol
+
+  # Interface contract expressions may observe class-valued parameters, so lower
+  # them only after every class method signature is available.
+  var analyzedInterfaces: seq[HirInterface]
+  for sourceInterface in specializedProgram.interfaces:
+    analyzedInterfaces.add lowerInterface(sourceInterface, symbols)
 
   # Pass 6: verify explicit class/interface architectural conformance.
   for sourceClass in specializedProgram.classes:
@@ -271,7 +270,12 @@ proc analyzeProgram*(
         owner,
         owner.getMethod(sourceMethod.name),
         functions,
-        symbols
+        symbols,
+        inheritedInterfaceContracts(
+          sourceClass,
+          sourceMethod.name,
+          symbols
+        )
       )
 
   # Pass 9: analyze top-level function bodies.

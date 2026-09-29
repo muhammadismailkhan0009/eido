@@ -2,6 +2,7 @@
 ## Instance methods receive a hidden receiver; inferred static methods do not.
 
 import ../../../hir/declarations as hirDeclarations
+import ../../../hir/expressions as hirExpressions
 import ../../../types/function_result
 import ../../../types/method_kind
 import names
@@ -53,12 +54,18 @@ proc renderMethod*(
     else:
       ""
 
+  var effectiveEnsures: seq[hirExpressions.HirExpr]
+  for inherited in methodDecl.inheritedEnsures:
+    effectiveEnsures.add inherited.expr
+  for clause in methodDecl.ensures:
+    effectiveEnsures.add clause
+
   let exitContext = NormalExitContext(
-    contractClauses: methodDecl.ensures,
+    contractClauses: effectiveEnsures,
     contractMessage: "ensure contract failed in method '" &
       methodDecl.sourceName & "'",
     resultBindingName:
-      if methodDecl.ensures.len > 0 and methodDecl.result.kind == frSingle:
+      if effectiveEnsures.len > 0 and methodDecl.result.kind == frSingle:
         localName(methodDecl.ensureResultLocalId, "result")
       else:
         "",
@@ -70,6 +77,15 @@ proc renderMethod*(
   if hasInvariant:
     result.add renderInvariantValidation(exitContext, 2)
 
+  for inherited in methodDecl.inheritedRequires:
+    result.add renderContractCheck(
+      inherited.expr,
+      "require contract inherited from interface '" &
+        inherited.interfaceName & "' failed in method '" &
+        methodDecl.sourceName & "'",
+      2
+    )
+
   for clause in methodDecl.requires:
     result.add renderContractCheck(
       clause,
@@ -80,7 +96,9 @@ proc renderMethod*(
   if methodDecl.body.len == 0:
     if exitContext.hasNormalExitChecks:
       result.add renderNormalExitChecks(exitContext, 2)
-    elif methodDecl.requires.len == 0 and not hasInvariant:
+    elif methodDecl.inheritedRequires.len == 0 and
+        methodDecl.requires.len == 0 and
+        not hasInvariant:
       result.add "  discard\n"
   else:
     for stmt in methodDecl.body:

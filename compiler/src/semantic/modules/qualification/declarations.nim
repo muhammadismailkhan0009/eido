@@ -81,7 +81,7 @@ proc qualifyModuleProgram(
       )
     for methodDecl in mitems(sourceInterface.methods):
       qualifyCallable(
-        methodDecl, sourceInterface.moduleName, noTypeParameters, false,
+        methodDecl, sourceInterface.moduleName, noTypeParameters, true,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
         rootModule

@@ -91,8 +91,12 @@ proc validateContractSafety*(
       validateContractExpr(invariant, summary)
 
     for methodDecl in classDecl.methods:
+      for inherited in methodDecl.inheritedRequires:
+        validateContractExpr(inherited.expr, summary)
       for clause in methodDecl.requires:
         validateContractExpr(clause, summary)
+      for inherited in methodDecl.inheritedEnsures:
+        validateContractExpr(inherited.expr, summary)
       for clause in methodDecl.ensures:
         validateContractExpr(clause, summary)
 

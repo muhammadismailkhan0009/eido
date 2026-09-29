@@ -192,7 +192,7 @@ proc resolveModuleArchitecture*(
         publicSurfaces,
         adoptedSurfaces,
         providedSurfaces,
-        false
+        true
       )
 
   for sourceClass in source.classes:

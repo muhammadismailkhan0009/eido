@@ -180,6 +180,28 @@ proc buildSymbolIndex*(
         parentType
       )
 
+    for methodDecl in interfaceDecl.methods:
+      var localDefinitions = initTable[int, ToolingSymbol]()
+      methodDecl.parameters.addParameters(
+        result,
+        seen,
+        registry,
+        typeDefinitions,
+        localDefinitions
+      )
+      for clause in methodDecl.requires:
+        visitExpr(
+          clause, result, seen, registry, typeDefinitions, fieldDefinitions,
+          methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+          interfaces, localDefinitions
+        )
+      for clause in methodDecl.ensures:
+        visitExpr(
+          clause, result, seen, registry, typeDefinitions, fieldDefinitions,
+          methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+          interfaces, localDefinitions
+        )
+
   for classDecl in program.classes:
     for implemented in classDecl.implements:
       result.addTypeUse(

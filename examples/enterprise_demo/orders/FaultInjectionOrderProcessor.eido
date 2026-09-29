@@ -6,11 +6,6 @@ class FaultInjectionOrderProcessor implements OrderProcessor {
     }
 
     function process(Order order, String action) returns ProcessingResult {
-        require {
-            order.isPending();
-            action == "approve";
-        }
-
         order.approve();
 
         return ProcessingResult {
@@ -19,9 +14,5 @@ class FaultInjectionOrderProcessor implements OrderProcessor {
             message = order.summary() + " via " + self.channel;
         };
 
-        ensure {
-            result.orderReference == order.reference;
-            result.message != "";
-        }
     }
 }

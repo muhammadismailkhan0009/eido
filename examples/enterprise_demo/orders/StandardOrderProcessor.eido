@@ -6,11 +6,6 @@ class StandardOrderProcessor implements OrderProcessor {
     }
 
     function process(Order order, String action) returns ProcessingResult {
-        require {
-            order.isPending();
-            action == "approve" or action == "reject";
-        }
-
         if (action == "approve") {
             order.approve();
             return ProcessingResult {
@@ -28,8 +23,7 @@ class StandardOrderProcessor implements OrderProcessor {
         };
 
         ensure {
-            result.orderReference == order.reference;
-            result.message != "";
+            result.message == order.summary() + " via " + self.channel;
         }
     }
 }

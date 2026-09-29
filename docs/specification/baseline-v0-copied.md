@@ -3582,6 +3582,27 @@ instance.
 
 Extra class methods remain implementation-local.
 
+
+### Interface behavioral contracts
+
+An interface method may remain semicolon-terminated or may use a bodyless
+contract block containing optional `require` and `ensure` sections. No executable
+statements are permitted in that block. Contract scope contains parameters,
+contextual `result` in a value-returning `ensure`, and `self` through methods
+visible on the interface abstraction.
+
+Interface contracts propagate into concrete implementations. Class-declared
+contracts are additional obligations rather than replacements; inherited and
+declared clauses remain separately attributable and both execute at the concrete
+method boundary. Parameter names may differ between interface and implementation
+because inherited clauses bind by signature position.
+
+A class cannot implement two independently declared interface methods with the
+same method name. One original declaration inherited through multiple interface
+paths is permitted. Static logical compatibility checking between inherited and
+implementation-declared clauses is specified separately from these ownership and
+propagation semantics.
+
 ## Interface types and values
 
 An interface is a real Eido semantic type. Interface values may appear as
@@ -3630,8 +3651,9 @@ A child-interface value is assignable to its ancestor interface.
 
 Interface extension cycles are rejected.
 
-Redeclaring an inherited interface method in the child is rejected in v0 rather
-than introducing override/refinement rules.
+A child interface may redeclare an inherited method only with the same callable
+signature. Parent contracts remain inherited and the child declaration may add
+its own `require`/`ensure` obligations; it does not replace the parent contract.
 
 ## Contract boundary types
 

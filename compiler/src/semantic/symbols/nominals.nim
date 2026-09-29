@@ -102,7 +102,8 @@ proc isAssignable*(symbols: NominalSymbols, actual, expected: EidoType): bool =
 
   false
 
-## Collects inherited and direct interface methods in stable parent-first order.
+## Collects effective interface methods in stable parent-first order.
+## A child redeclaration replaces the inherited dispatch signature while preserving its contract chain separately.
 proc requiredInterfaceMethods*(
   symbols: NominalSymbols,
   interfaceName: string
@@ -114,14 +115,28 @@ proc requiredInterfaceMethods*(
       result.add inherited
 
   for own in sourceInterface.methods:
-    for inherited in result:
-      if inherited.name == own.name:
-        failAt(
-          own.span,
-          "interface '" & interfaceName &
-            "' redeclares inherited method '" & own.name & "'"
-        )
-    result.add own
+    var replaced = false
+    for index in 0 ..< result.len:
+      if result[index].name == own.name:
+        result[index] = own
+        replaced = true
+        break
+    if not replaced:
+      result.add own
+
+## Collects every declaration contributing contracts to one effective interface method.
+proc interfaceMethodContractChain*(
+  symbols: NominalSymbols,
+  interfaceName, methodName: string
+): seq[InterfaceMethodSymbol] =
+  let sourceInterface = symbols.getInterface(interfaceName)
+  for parent in sourceInterface.extends:
+    for inherited in symbols.interfaceMethodContractChain(parent, methodName):
+      result.add inherited
+
+  for own in sourceInterface.methods:
+    if own.name == methodName:
+      result.add own
 
 ## Retrieves one direct or inherited interface method contract.
 proc getInterfaceMethod*(

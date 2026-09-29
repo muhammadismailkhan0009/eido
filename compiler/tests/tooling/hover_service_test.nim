@@ -53,3 +53,22 @@ suite "Semantic hover tooling":
 
     check hover.found
     check hover.contents == "result: Int"
+
+
+  test "returns contextual result type inside interface ensure":
+    let source = """
+      interface Checked {
+        function value(Int input) returns Int {
+          require { input >= 0; }
+          ensure { result >= input; }
+        }
+      }
+      function main() {}
+    """
+    let program = analyzeSource(source)
+    let offset = source.rfind("result >=")
+
+    let hover = hoverInfoAt(program, "", offset)
+
+    check hover.found
+    check hover.contents == "result: Int"
