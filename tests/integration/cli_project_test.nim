@@ -9,6 +9,13 @@ proc freshProject(name: string): string =
 
 suite "CLI project integration":
 
+  test "parses help and version commands":
+    check parseArgs(@[]).command == ccHelp
+    check parseArgs(@["--help"]).command == ccHelp
+    check parseArgs(@["help"]).command == ccHelp
+    check parseArgs(@["--version"]).command == ccVersion
+    check parseArgs(@["version"]).command == ccVersion
+
   test "parses project commands without an explicit manifest":
     check parseArgs(@["build"]).command == ccBuild
     check parseArgs(@["check"]).command == ccCheck
@@ -74,15 +81,11 @@ suite "CLI project integration":
       module: app
       sources:
         - Main.eido
-        - Process.eido
       children: []
       dependencies: []
       exports: []
       provides: {}
       adopts: []
-    """)
-    writeFile(root / "Process.eido", """
-      class Process { native function argument(Int index) returns String; }
     """)
     writeFile(root / "Main.eido", """
       function main() returns String { return Process.argument(0); }

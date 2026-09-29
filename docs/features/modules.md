@@ -140,6 +140,13 @@ The qualifier is resolved through the module graph; it does not grant access to 
 
 Top-level functions stay module-internal. Same-named top-level functions in different modules are legal internally, but cross-module function calls are not introduced.
 
+
+### Implicit SDK standard library
+
+Normal module projects automatically receive an exported compiler-owned module named `eido.stdlib` as a root dependency. Its current public classes are `Process` and `Console`, and ordinary child modules inherit visibility through the same dependency rules used for user modules. Projects must not add repository-relative stdlib source paths to their manifests.
+
+The bootstrap compiler embeds these declarations so an Eido installation created with `nimble install` can compile projects outside the compiler repository. This is an SDK-provided dependency, not source-language magic; the module/dependency visibility machinery remains authoritative.
+
 ## Project and build tooling
 
 `module.yaml` remains the architecture root consumed by the compiler project model. The official `eido` project tool discovers the outermost ancestor manifest, so normal commands can run from the project root or one of its child-module directories:

@@ -1,9 +1,10 @@
 version       = "0.0.1"
 author        = "Eido contributors"
-description   = "Temporary v0 compiler for the Eido language"
+description   = "Experimental compiler and project tool for the Eido language"
 license       = "MIT"
 srcDir        = "tools/cli/src"
 bin           = @["eido"]
+requires      "nim >= 2.2.0"
 
 task buildLsp, "Build the editor-neutral Eido language server":
   exec "nim c --hints:off --path:compiler/src --path:tools/lsp/src -o:eido-lsp tools/lsp/src/eido_lsp.nim"

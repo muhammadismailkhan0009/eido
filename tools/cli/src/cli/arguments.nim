@@ -5,6 +5,8 @@ import std/os
 
 type
   CliCommand* = enum
+    ccHelp,
+    ccVersion,
     ccBuild,
     ccCheck,
     ccRun,
@@ -20,12 +22,15 @@ type
 
 ## Returns the default Eido project-tool and standalone compiler usage.
 proc usage*(): string =
+  "Eido compiler and project tool\n\n" &
   "Usage:\n" &
   "  eido build [module.yaml] [-o <output>]\n" &
   "  eido check [module.yaml]\n" &
   "  eido run [module.yaml] [-- <application args...>]\n" &
   "  eido clean [module.yaml]\n" &
-  "  eido compile <source.eido>... -o <output>"
+  "  eido compile <source.eido>... -o <output>\n" &
+  "  eido --help\n" &
+  "  eido --version"
 
 ## Rejects explicit project entrypoints that are not module.yaml.
 proc requireModuleManifest(path: string) =
@@ -108,9 +113,17 @@ proc parseCompile(args: seq[string]): CliOptions =
 ## Parses all supported project-tool and standalone compiler commands.
 proc parseArgs*(args: seq[string]): CliOptions =
   if args.len == 0:
-    raise newException(ValueError, usage())
+    return CliOptions(command: ccHelp)
 
   case args[0]
+  of "help", "--help", "-h":
+    if args.len != 1:
+      raise newException(ValueError, usage())
+    CliOptions(command: ccHelp)
+  of "version", "--version", "-V":
+    if args.len != 1:
+      raise newException(ValueError, usage())
+    CliOptions(command: ccVersion)
   of "build": parseBuild(args)
   of "check": parseManifestOnly(args, ccCheck)
   of "run": parseRun(args)

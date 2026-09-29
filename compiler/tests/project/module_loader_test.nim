@@ -51,12 +51,16 @@ suite "Module project loading":
     let project = loadModuleProject(root / "module.yaml", ptExecutable)
 
     check project.rootModule == "shop"
-    check project.modules.len == 2
+    check project.modules.len == 3
     check project.modules[0].canonicalName == "shop"
     check project.modules[1].canonicalName == "shop.payments"
-    check project.sources.len == 2
+    check project.modules[2].canonicalName == "eido.stdlib"
+    check "eido.stdlib" in project.modules[0].dependencies
+    check project.sources.len == 4
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
+    check project.sources[2].moduleName == "eido.stdlib"
+    check project.sources[3].moduleName == "eido.stdlib"
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

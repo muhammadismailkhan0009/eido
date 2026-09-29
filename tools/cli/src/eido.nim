@@ -5,7 +5,7 @@ import ../../../compiler/src/diagnostics/[errors, formatting]
 import ../../../compiler/src/project/discovery
 import cli/[
   arguments, build_command, check_command, clean_command,
-  project_layout, run_command
+  project_layout, run_command, version
 ]
 
 ## Resolves the explicit or discovered project manifest for project-oriented commands.
@@ -17,6 +17,12 @@ when isMainModule:
     let options = parseArgs(commandLineParams())
 
     case options.command
+    of ccHelp:
+      echo usage()
+
+    of ccVersion:
+      echo "Eido " & EidoVersion
+
     of ccBuild:
       let manifestPath = resolvedManifest(options)
       let layout = projectLayout(manifestPath)

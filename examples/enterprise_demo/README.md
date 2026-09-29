@@ -126,17 +126,22 @@ ordinary binding. Elsewhere, `result` is an ordinary identifier.
 
 ## Build
 
+With Eido installed on `PATH`:
+
 ```text
-./eido check examples/enterprise_demo/module.yaml
-./eido build examples/enterprise_demo/module.yaml -o /tmp/enterprise_demo_app
+cd examples/enterprise_demo
+eido check
+eido build
 ```
+
+The executable is written to `build/bin/enterprise_demo`. From a compiler-development checkout, the equivalent local binary invocation is `../../eido ...` from this directory.
 
 ## Scenarios
 
 ### Normal approval
 
 ```text
-/tmp/enterprise_demo_app approve "Acme GmbH"
+eido run -- approve "Acme GmbH"
 ```
 
 Expected:
@@ -153,7 +158,7 @@ succeed.
 ### Normal rejection
 
 ```text
-/tmp/enterprise_demo_app reject "Acme GmbH"
+eido run -- reject "Acme GmbH"
 ```
 
 Expected final state is `REJECTED`, with all contracts satisfied.
@@ -161,7 +166,7 @@ Expected final state is `REJECTED`, with all contracts satisfied.
 ### Precondition failure
 
 ```text
-/tmp/enterprise_demo_app require-failure "Acme GmbH"
+eido run -- require-failure "Acme GmbH"
 ```
 
 The application deliberately submits unsupported action `ship`. Expected
@@ -176,7 +181,7 @@ The invalid operation never enters the processor body.
 ### Invariant failure
 
 ```text
-/tmp/enterprise_demo_app invariant-failure "Acme GmbH"
+eido run -- invariant-failure "Acme GmbH"
 ```
 
 The demo deliberately constructs an `Order` with status `CORRUPT`. Expected
@@ -191,7 +196,7 @@ The invalid aggregate never becomes a usable domain object.
 ### Returned-result postcondition failure
 
 ```text
-/tmp/enterprise_demo_app ensure-failure "Acme GmbH"
+eido run -- ensure-failure "Acme GmbH"
 ```
 
 An internal fault-injection processor performs a valid approval but returns a
@@ -208,7 +213,7 @@ This scenario exercises contextual `result`.
 ### Side-effect postcondition failure with no returned value
 
 ```text
-/tmp/enterprise_demo_app side-effect-ensure-failure "Acme GmbH"
+eido run -- side-effect-ensure-failure "Acme GmbH"
 ```
 
 The fault-injection workflow legally changes the order to `REJECTED` but falsely

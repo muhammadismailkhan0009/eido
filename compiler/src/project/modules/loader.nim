@@ -5,6 +5,7 @@ import std/[os, sets, strutils, tables]
 import ../../diagnostics/errors
 import ../../source/source_unit
 import ../model as projectModel
+import ../../stdlib/builtin_sources
 import manifest_parser
 import model
 
@@ -242,6 +243,7 @@ proc loadModuleProject*(
     canonical
 
   let rootModule = loadOne(rootManifest, "", "")
+  addBuiltinStdlib(sources, modules, rootModule)
 
   # Resolve explicit dependency references only after the complete child tree is known.
   for index in 0 ..< modules.len:

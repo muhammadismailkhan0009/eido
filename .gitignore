@@ -1,6 +1,7 @@
 # Eido / Nim build outputs
 /bin/
 /eido
+/eido-lsp
 /nimcache/
 /.nimcache/
 

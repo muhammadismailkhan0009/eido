@@ -1,10 +1,24 @@
 ## Resolves the backend support module path used by Eido native functions.
-## Example: development builds find stdlib/native/nim while installed SDKs may override it with EIDO_NATIVE_NIM_PATH.
+## Installed compilers carry an embedded fallback, while development SDK layouts may provide the file beside the executable.
 
 import std/os
+import ../../../stdlib/builtin_sources
+
+## Materializes the compiler-embedded native support into a temporary SDK cache.
+proc materializeEmbeddedNativeSupport(): string =
+  let sdkCache = getCacheDir("eido")
+  let directory = sdkCache / "native" / "nim"
+  createDir(sdkCache)
+  createDir(sdkCache / "native")
+  createDir(directory)
+
+  let supportFile = directory / "eido_native.nim"
+  if not fileExists(supportFile) or readFile(supportFile) != BuiltinNativeSupportSource:
+    writeFile(supportFile, BuiltinNativeSupportSource)
+  directory
 
 ## Returns the directory containing the Nim backend native-support module.
-## Example: repository builds resolve <repo>/stdlib/native/nim without depending on the caller's current directory when the eido binary lives at repo root.
+## `EIDO_NATIVE_NIM_PATH` remains an explicit SDK/development override.
 proc nativeSupportPath*(): string =
   let configured = getEnv("EIDO_NATIVE_NIM_PATH")
   if configured.len > 0:
@@ -14,11 +28,4 @@ proc nativeSupportPath*(): string =
   if dirExists(appCandidate):
     return appCandidate
 
-  let currentCandidate = getCurrentDir() / "stdlib" / "native" / "nim"
-  if dirExists(currentCandidate):
-    return currentCandidate
-
-  raise newException(
-    OSError,
-    "Eido Nim native support was not found; set EIDO_NATIVE_NIM_PATH"
-  )
+  materializeEmbeddedNativeSupport()

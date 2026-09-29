@@ -75,6 +75,7 @@ import semantic/analysis/expression/arithmetic_operator_analysis_test
 import semantic/analysis/expression/comparison_operator_analysis_test
 import semantic/analysis/expression/boolean_operator_analysis_test
 import backend/nim/toolchain/artifacts_test
+import backend/nim/toolchain/native_support_test
 import backend/nim/emitter/nim_emitter_test
 import backend/nim/emitter/contract_emitter_test
 import backend/nim/emitter/native_function_emitter_test
