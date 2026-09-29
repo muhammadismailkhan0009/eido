@@ -1,0 +1,27 @@
+class FaultInjectionOrderProcessor implements OrderProcessor {
+    String channel;
+
+    invariant {
+        self.channel != "";
+    }
+
+    function process(Order order, String action) returns ProcessingResult {
+        require {
+            order.isPending();
+            action == "approve";
+        }
+
+        order.approve();
+
+        return ProcessingResult {
+            orderReference = "WRONG-ORDER-REFERENCE";
+            approved = true;
+            message = order.summary() + " via " + self.channel;
+        };
+
+        ensure {
+            result.orderReference == order.reference;
+            result.message != "";
+        }
+    }
+}

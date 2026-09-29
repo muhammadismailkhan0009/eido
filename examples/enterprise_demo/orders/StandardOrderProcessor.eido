@@ -1,0 +1,35 @@
+class StandardOrderProcessor implements OrderProcessor {
+    String channel;
+
+    invariant {
+        self.channel != "";
+    }
+
+    function process(Order order, String action) returns ProcessingResult {
+        require {
+            order.isPending();
+            action == "approve" or action == "reject";
+        }
+
+        if (action == "approve") {
+            order.approve();
+            return ProcessingResult {
+                orderReference = order.reference;
+                approved = true;
+                message = order.summary() + " via " + self.channel;
+            };
+        }
+
+        order.reject();
+        return ProcessingResult {
+            orderReference = order.reference;
+            approved = false;
+            message = order.summary() + " via " + self.channel;
+        };
+
+        ensure {
+            result.orderReference == order.reference;
+            result.message != "";
+        }
+    }
+}

@@ -18,10 +18,14 @@ proc buildFiles*(sourcePaths: seq[string], outputPath: string) =
   nimCompiler.compileWithNim(nimSource, outputPath)
 
 ## Builds a normal Eido project from its mandatory module.yaml architecture root.
-proc buildModuleFile*(manifestPath, outputPath: string) =
+proc buildModuleFile*(
+  manifestPath,
+  outputPath: string,
+  generatedSourcePath: string = ""
+) =
   let project = loadModuleProject(manifestPath, ptExecutable)
   let nimSource = compileProject(project)
-  nimCompiler.compileWithNim(nimSource, outputPath)
+  nimCompiler.compileWithNim(nimSource, outputPath, generatedSourcePath)
 
 ## Preserves the one-file bootstrap convenience API for compiler/internal tests.
 proc buildFile*(sourcePath, outputPath: string) =

@@ -1,0 +1,22 @@
+class ProcessingResult {
+    String orderReference;
+    Bool approved;
+    String message;
+
+    invariant {
+        self.orderReference != "";
+        self.message != "";
+    }
+
+    function summary() returns String {
+        if (self.approved) {
+            return "APPROVED | " + self.message;
+        }
+
+        return "REJECTED | " + self.message;
+
+        ensure {
+            result != "";
+        }
+    }
+}

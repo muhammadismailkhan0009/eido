@@ -1,0 +1,11 @@
+module: app
+sources:
+  - Main.eido
+  - ../../../stdlib/src/process.eido
+  - ../../../stdlib/src/console.eido
+children: []
+dependencies:
+  - orders
+exports: []
+provides: {}
+adopts: []

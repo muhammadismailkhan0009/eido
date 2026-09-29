@@ -1,0 +1,9 @@
+module: enterprise_demo
+sources: []
+children:
+  orders: { path: orders }
+  app: { path: app }
+dependencies: []
+exports: []
+provides: {}
+adopts: []

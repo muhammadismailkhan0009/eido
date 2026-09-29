@@ -1,0 +1,13 @@
+class FaultInjectionOrderWorkflow {
+    function violateSideEffectPostcondition(Order order) {
+        require {
+            order.isPending();
+        }
+
+        order.reject();
+
+        ensure {
+            order.status == "APPROVED";
+        }
+    }
+}

@@ -1,5 +1,5 @@
 import std/[os, osproc, strutils, unittest]
-import cli/[arguments, build_command, check_command]
+import cli/[arguments, build_command, check_command, project_layout, run_command]
 
 proc freshProject(name: string): string =
   result = getTempDir() / ("eido_cli_" & name & "_" & $getCurrentProcessId())
@@ -8,6 +8,95 @@ proc freshProject(name: string): string =
   createDir(result)
 
 suite "CLI project integration":
+
+  test "parses project commands without an explicit manifest":
+    check parseArgs(@["build"]).command == ccBuild
+    check parseArgs(@["check"]).command == ccCheck
+    check parseArgs(@["run", "--", "approve", "Acme"]).command == ccRun
+    check parseArgs(@["clean"]).command == ccClean
+
+  test "parses standalone compilation independently of module projects":
+    let options = parseArgs(@["compile", "Main.eido", "Helper.eido", "-o", "app"])
+    check options.command == ccCompile
+    check options.sourcePaths == @["Main.eido", "Helper.eido"]
+    check options.outputPath == "app"
+
+  test "uses a conventional project build layout":
+    let root = freshProject("layout")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", "module: shop\nsources: []\nchildren: []\ndependencies: []\nexports: []\nprovides: {}\nadopts: []\n")
+    let layout = projectLayout(root / "module.yaml")
+
+    check layout.buildDirectory == root / "build"
+    check layout.executablePath == root / "build" / "bin" / "shop"
+    check layout.generatedSourcePath == root / "build" / "generated" / "nim" / "shop_generated.nim"
+
+  test "preserves executable project names while sanitizing backend artifacts":
+    let root = freshProject("hyphen_layout")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", "module: customer-orders\nsources: []\nchildren: []\ndependencies: []\nexports: []\nprovides: {}\nadopts: []\n")
+    let layout = projectLayout(root / "module.yaml")
+
+    check layout.executablePath == root / "build" / "bin" / "customer-orders"
+    check layout.generatedSourcePath ==
+      root / "build" / "generated" / "nim" / "customer_orders_generated.nim"
+
+  test "clean removes only the default project build tree":
+    let root = freshProject("clean")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", "module: shop\nsources: []\nchildren: []\ndependencies: []\nexports: []\nprovides: {}\nadopts: []\n")
+    let layout = projectLayout(root / "module.yaml")
+    layout.prepareProjectLayout()
+    writeFile(layout.executablePath, "artifact")
+    writeFile(root / "keep.txt", "source-owned")
+
+    layout.cleanProjectLayout()
+
+    check not dirExists(layout.buildDirectory)
+    check fileExists(root / "keep.txt")
+
+  test "run builds and forwards application arguments":
+    let root = freshProject("run")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+        - Process.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Process.eido", """
+      class Process { native function argument(Int index) returns String; }
+    """)
+    writeFile(root / "Main.eido", """
+      function main() returns String { return Process.argument(0); }
+    """)
+
+    let layout = projectLayout(root / "module.yaml")
+    let exitCode = runModuleProject(
+      root / "module.yaml",
+      @["forwarded"],
+      layout
+    )
+
+    check exitCode == 0
+    check fileExists(layout.executablePath)
   test "parses manifest-driven build with output option":
     let options = parseArgs(@[
       "build", "shop/module.yaml", "-o", "bin/app"

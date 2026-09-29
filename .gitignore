@@ -25,5 +25,6 @@
 .DS_Store
 Thumbs.db
 
-/examples
+# Versioned examples may produce project-tool build output locally.
+/examples/**/build/
 .serena

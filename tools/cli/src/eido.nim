@@ -1,8 +1,16 @@
-## Executable entrypoint connecting project-aware CLI commands to compiler tooling.
+## Executable entrypoint connecting the default Eido project tool to reusable compiler APIs.
 
 import std/os
 import ../../../compiler/src/diagnostics/[errors, formatting]
-import cli/[arguments, build_command, check_command]
+import ../../../compiler/src/project/discovery
+import cli/[
+  arguments, build_command, check_command, clean_command,
+  project_layout, run_command
+]
+
+## Resolves the explicit or discovered project manifest for project-oriented commands.
+proc resolvedManifest(options: CliOptions): string =
+  resolveProjectManifest(options.modulePath)
 
 when isMainModule:
   try:
@@ -10,11 +18,23 @@ when isMainModule:
 
     case options.command
     of ccBuild:
-      buildModuleFile(options.modulePath, options.outputPath)
-      echo "Built " & options.outputPath
+      let manifestPath = resolvedManifest(options)
+      let layout = projectLayout(manifestPath)
+      if options.outputPath.len > 0:
+        buildModuleFile(manifestPath, options.outputPath)
+        echo "Built " & options.outputPath
+      else:
+        layout.prepareProjectLayout()
+        buildModuleFile(
+          manifestPath,
+          layout.executablePath,
+          layout.generatedSourcePath
+        )
+        echo "Built " & layout.executablePath
 
     of ccCheck:
-      let checkResult = checkModuleFile(options.modulePath)
+      let manifestPath = resolvedManifest(options)
+      let checkResult = checkModuleFile(manifestPath)
       for diagnostic in checkResult.diagnostics:
         stderr.writeLine(formatDiagnostic(diagnostic))
 
@@ -22,6 +42,26 @@ when isMainModule:
         quit(1)
 
       echo "Check passed"
+
+    of ccRun:
+      let manifestPath = resolvedManifest(options)
+      let layout = projectLayout(manifestPath)
+      let exitCode = runModuleProject(
+        manifestPath,
+        options.applicationArgs,
+        layout
+      )
+      if exitCode != 0:
+        quit(exitCode)
+
+    of ccClean:
+      let manifestPath = resolvedManifest(options)
+      cleanModuleProject(manifestPath)
+      echo "Cleaned " & projectLayout(manifestPath).buildDirectory
+
+    of ccCompile:
+      buildFiles(options.sourcePaths, options.outputPath)
+      echo "Built " & options.outputPath
 
   except CompilerError as error:
     stderr.writeLine(formatDiagnostic(error.diagnostic))

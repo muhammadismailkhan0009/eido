@@ -74,6 +74,7 @@ import semantic/analysis/expression/unary_negation_analysis_test
 import semantic/analysis/expression/arithmetic_operator_analysis_test
 import semantic/analysis/expression/comparison_operator_analysis_test
 import semantic/analysis/expression/boolean_operator_analysis_test
+import backend/nim/toolchain/artifacts_test
 import backend/nim/emitter/nim_emitter_test
 import backend/nim/emitter/contract_emitter_test
 import backend/nim/emitter/native_function_emitter_test
@@ -92,6 +93,7 @@ import backend/nim/emitter/statement/loop_control_statement_emitter_test
 import backend/nim/emitter/statement/set_statement_emitter_test
 import pipeline/compiler_pipeline_test
 import project/project_compilation_test
+import project/project_discovery_test
 import project/module_manifest_parser_test
 import project/module_loader_test
 import semantic/modules/module_architecture_test

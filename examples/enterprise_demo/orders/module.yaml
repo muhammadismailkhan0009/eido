@@ -1,0 +1,16 @@
+module: orders
+sources:
+  - Order.eido
+  - ProcessingResult.eido
+  - OrderProcessor.eido
+  - StandardOrderProcessor.eido
+  - FaultInjectionOrderProcessor.eido
+  - FaultInjectionOrderWorkflow.eido
+  - OrderApplication.eido
+children: []
+dependencies: []
+exports:
+  - OrderProcessor
+  - OrderApplication
+provides: {}
+adopts: []

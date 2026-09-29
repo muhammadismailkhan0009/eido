@@ -1,0 +1,65 @@
+class OrderApplication {
+    function order(
+        String reference,
+        String customer,
+        Int amountCents
+    ) returns Order {
+        require {
+            reference != "";
+            customer != "";
+            amountCents > 0;
+        }
+
+        return Order {
+            reference = reference;
+            customer = customer;
+            amountCents = amountCents;
+            status = "PENDING";
+        };
+
+        ensure {
+            result.isPending();
+            result.reference == reference;
+            result.customer == customer;
+            result.amountCents == amountCents;
+        }
+    }
+
+    function processor(String channel) returns OrderProcessor {
+        require {
+            channel != "";
+        }
+
+        return StandardOrderProcessor {
+            channel = channel;
+        };
+    }
+
+
+    function faultyProcessor(String channel) returns OrderProcessor {
+        require {
+            channel != "";
+        }
+
+        return FaultInjectionOrderProcessor {
+            channel = channel;
+        };
+    }
+
+    function demonstrateSideEffectEnsure(Order order) {
+        FaultInjectionOrderWorkflow.violateSideEffectPostcondition(order);
+    }
+
+    function run(
+        OrderProcessor processor,
+        Order order,
+        String action
+    ) returns ProcessingResult {
+        return processor.process(order, action);
+
+        ensure {
+            result.orderReference == order.reference;
+            result.message != "";
+        }
+    }
+}

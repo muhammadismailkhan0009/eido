@@ -1,0 +1,51 @@
+class Order {
+    String reference;
+    String customer;
+    Int amountCents;
+    String status;
+
+    invariant {
+        self.reference != "";
+        self.customer != "";
+        self.amountCents > 0;
+        self.status == "PENDING" or
+            self.status == "APPROVED" or
+            self.status == "REJECTED";
+    }
+
+    function isPending() returns Bool {
+        return self.status == "PENDING";
+    }
+
+    function approve() {
+        require {
+            self.isPending();
+        }
+
+        set self.status = "APPROVED";
+
+        ensure {
+            self.status == "APPROVED";
+        }
+    }
+
+    function reject() {
+        require {
+            self.isPending();
+        }
+
+        set self.status = "REJECTED";
+
+        ensure {
+            self.status == "REJECTED";
+        }
+    }
+
+    function summary() returns String {
+        return self.reference + " | " + self.customer + " | " + self.status;
+
+        ensure {
+            result != "";
+        }
+    }
+}

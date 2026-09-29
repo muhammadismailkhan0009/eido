@@ -1,0 +1,3 @@
+interface OrderProcessor {
+    function process(Order order, String action) returns ProcessingResult;
+}

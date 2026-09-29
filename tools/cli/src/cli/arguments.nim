@@ -1,60 +1,119 @@
 ## Parses the user-facing Eido command line.
-## Normal project commands are manifest-driven: module.yaml is mandatory.
+## Project commands may discover module.yaml, while standalone compile remains manifest-free.
 
 import std/os
 
 type
   CliCommand* = enum
     ccBuild,
-    ccCheck
+    ccCheck,
+    ccRun,
+    ccClean,
+    ccCompile
 
   CliOptions* = object
     command*: CliCommand
     modulePath*: string
     outputPath*: string
+    sourcePaths*: seq[string]
+    applicationArgs*: seq[string]
 
-## Returns manifest-driven CLI usage for normal Eido projects.
+## Returns the default Eido project-tool and standalone compiler usage.
 proc usage*(): string =
   "Usage:\n" &
-  "  eido build <module.yaml> [-o <output>]\n" &
-  "  eido check <module.yaml>"
+  "  eido build [module.yaml] [-o <output>]\n" &
+  "  eido check [module.yaml]\n" &
+  "  eido run [module.yaml] [-- <application args...>]\n" &
+  "  eido clean [module.yaml]\n" &
+  "  eido compile <source.eido>... -o <output>"
 
-## Rejects user project entrypoints that are not named module.yaml.
+## Rejects explicit project entrypoints that are not module.yaml.
 proc requireModuleManifest(path: string) =
   if path.extractFilename != "module.yaml":
     raise newException(
       ValueError,
-      "Eido projects must be built or checked through module.yaml\n" & usage()
+      "Eido projects use module.yaml as their architecture root\n" & usage()
     )
 
-## Parses build/check commands rooted at one mandatory module.yaml.
-proc parseArgs*(args: seq[string]): CliOptions =
-  if args.len < 2:
+## Parses an optional explicit manifest at the current argument index.
+proc parseOptionalManifest(
+  args: seq[string],
+  index: var int,
+  options: var CliOptions
+) =
+  if index < args.len and args[index] notin ["-o", "--"]:
+    options.modulePath = args[index]
+    requireModuleManifest(options.modulePath)
+    inc index
+
+## Parses the project build command with optional output override.
+proc parseBuild(args: seq[string]): CliOptions =
+  result.command = ccBuild
+  var index = 1
+  parseOptionalManifest(args, index, result)
+
+  if index == args.len:
+    return
+  if index + 2 == args.len and args[index] == "-o":
+    result.outputPath = args[index + 1]
+    return
+  raise newException(ValueError, usage())
+
+## Parses one project command that accepts only an optional explicit manifest.
+proc parseManifestOnly(args: seq[string], command: CliCommand): CliOptions =
+  result.command = command
+  var index = 1
+  parseOptionalManifest(args, index, result)
+  if index != args.len:
     raise newException(ValueError, usage())
 
-  result.modulePath = args[1]
-  requireModuleManifest(result.modulePath)
+## Parses project execution with application arguments after an explicit separator.
+proc parseRun(args: seq[string]): CliOptions =
+  result.command = ccRun
+  var index = 1
+  parseOptionalManifest(args, index, result)
+
+  if index == args.len:
+    return
+  if args[index] != "--":
+    raise newException(ValueError, usage())
+  inc index
+  if index < args.len:
+    result.applicationArgs = args[index .. ^1]
+
+## Parses standalone source compilation without the project/module loader.
+proc parseCompile(args: seq[string]): CliOptions =
+  result.command = ccCompile
+  if args.len < 4:
+    raise newException(ValueError, usage())
+
+  var outputIndex = -1
+  for index in 1 ..< args.len:
+    if args[index] == "-o":
+      outputIndex = index
+      break
+
+  if outputIndex <= 1 or outputIndex + 1 != args.high:
+    raise newException(ValueError, usage())
+
+  result.sourcePaths = args[1 ..< outputIndex]
+  result.outputPath = args[outputIndex + 1]
+  for sourcePath in result.sourcePaths:
+    if sourcePath.splitFile.ext != ".eido":
+      raise newException(
+        ValueError,
+        "standalone compilation accepts only .eido source files\n" & usage()
+      )
+
+## Parses all supported project-tool and standalone compiler commands.
+proc parseArgs*(args: seq[string]): CliOptions =
+  if args.len == 0:
+    raise newException(ValueError, usage())
 
   case args[0]
-  of "build":
-    result.command = ccBuild
-    if args.len == 2:
-      let projectDir = parentDir(result.modulePath)
-      let projectName =
-        if projectDir.len == 0: "eido-app"
-        else: projectDir.extractFilename
-      result.outputPath =
-        if projectDir.len == 0: projectName
-        else: projectDir / projectName
-    elif args.len == 4 and args[2] == "-o":
-      result.outputPath = args[3]
-    else:
-      raise newException(ValueError, usage())
-
-  of "check":
-    result.command = ccCheck
-    if args.len != 2:
-      raise newException(ValueError, usage())
-
-  else:
-    raise newException(ValueError, usage())
+  of "build": parseBuild(args)
+  of "check": parseManifestOnly(args, ccCheck)
+  of "run": parseRun(args)
+  of "clean": parseManifestOnly(args, ccClean)
+  of "compile": parseCompile(args)
+  else: raise newException(ValueError, usage())

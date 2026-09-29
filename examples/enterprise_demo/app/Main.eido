@@ -1,0 +1,70 @@
+function main() {
+    var count = Process.argumentCount();
+
+    if (count < 1) {
+        Console.errorLine("Usage: enterprise_demo <scenario> [customer]");
+        Console.errorLine("Scenarios: approve, reject, require-failure, invariant-failure, ensure-failure, side-effect-ensure-failure");
+        Process.exit(2);
+        return;
+    }
+
+    var scenario = Process.argument(0);
+    var customer = "Acme GmbH";
+
+    if (count > 1) {
+        set customer = Process.argument(1);
+    }
+
+    if (scenario == "invariant-failure") {
+        Console.writeLine("[demo] Triggering invariant failure during malformed Order construction...");
+        var brokenOrder = Order {
+            reference = "ORD-2026-BROKEN";
+            customer = customer;
+            amountCents = 12500;
+            status = "CORRUPT";
+        };
+        Console.writeLine(brokenOrder.summary());
+        return;
+    }
+
+    var order = OrderApplication.order(
+        "ORD-2026-0001",
+        customer,
+        12500
+    );
+
+    if (scenario == "require-failure") {
+        Console.writeLine("[demo] Triggering processor require failure with unsupported action...");
+        var processor = OrderApplication.processor("CLI");
+        var result = OrderApplication.run(processor, order, "ship");
+        Console.writeLine(result.summary());
+        return;
+    }
+
+    if (scenario == "ensure-failure") {
+        Console.writeLine("[demo] Triggering result-based ensure failure from a faulty processor...");
+        var processor = OrderApplication.faultyProcessor("FAULT-INJECTION");
+        var result = OrderApplication.run(processor, order, "approve");
+        Console.writeLine(result.summary());
+        return;
+    }
+
+    if (scenario == "side-effect-ensure-failure") {
+        Console.writeLine("[demo] Triggering void side-effect ensure failure after order mutation...");
+        OrderApplication.demonstrateSideEffectEnsure(order);
+        Console.writeLine(order.summary());
+        return;
+    }
+
+    if (scenario == "approve" or scenario == "reject") {
+        var processor = OrderApplication.processor("CLI");
+        var result = OrderApplication.run(processor, order, scenario);
+
+        Console.writeLine("Processing result: " + result.summary());
+        Console.writeLine("Final order: " + order.summary());
+        return;
+    }
+
+    Console.errorLine("Unknown scenario: " + scenario);
+    Process.exit(2);
+}

@@ -140,14 +140,25 @@ The qualifier is resolved through the module graph; it does not grant access to 
 
 Top-level functions stay module-internal. Same-named top-level functions in different modules are legal internally, but cross-module function calls are not introduced.
 
-## CLI
+## Project and build tooling
 
-Normal project commands require the manifest:
+`module.yaml` remains the architecture root consumed by the compiler project model. The official `eido` project tool discovers the outermost ancestor manifest, so normal commands can run from the project root or one of its child-module directories:
+
+```text
+eido check
+eido build
+eido run -- <application arguments...>
+eido clean
+```
+
+The default tool writes its artifacts under `<project>/build/`, with the native executable in `build/bin/` and generated Nim backend source in `build/generated/nim/`. These locations are tooling policy rather than language semantics.
+
+Explicit manifests and custom output paths remain supported for CI and external orchestration:
 
 ```text
 eido check module.yaml
 eido build module.yaml -o app
+eido run module.yaml -- <application arguments...>
 ```
 
-Raw multi-source compiler helpers remain for bootstrap/compiler tests, but they
-are not the normal user project model.
+Standalone source compilation remains available independently through `eido compile <source.eido>... -o <output>`. Future build systems may bypass the default CLI workflow and consume the same project/compiler APIs directly.
