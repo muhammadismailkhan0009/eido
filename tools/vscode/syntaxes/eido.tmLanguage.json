@@ -29,7 +29,7 @@
     },
     {
       "name": "keyword.declaration.eido",
-      "match": "\\b(implements|extends|native|returns|var|set|require|ensure|invariant|result)\\b"
+      "match": "\\b(implements|extends|native|returns|var|set|require|ensure|invariant)\\b"
     },
     {
       "name": "keyword.operator.word.eido",

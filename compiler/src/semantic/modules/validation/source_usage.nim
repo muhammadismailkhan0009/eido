@@ -384,9 +384,12 @@ proc validateCallable(
       classes, interfaces, functions, modules,
       publicSurfaces, adoptedSurfaces, providedSurfaces
     )
+  var ensureLocals = locals
+  if source.result.kind == frrSingle:
+    ensureLocals.incl "result"
   for clause in source.ensures:
     validateExpr(
-      clause, currentModule, locals, typeParameters,
+      clause, currentModule, ensureLocals, typeParameters,
       classes, interfaces, functions, modules,
       publicSurfaces, adoptedSurfaces, providedSurfaces
     )

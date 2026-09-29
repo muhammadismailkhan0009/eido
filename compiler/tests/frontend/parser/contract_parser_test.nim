@@ -68,9 +68,13 @@ suite "Contract parsing":
     check clause.left.name == "result"
 
 
-  test "reserves result outside contract result expressions":
-    expect ValueError:
-      discard parseSource("function bad(Int result) returns Int { return 1; } function main() {}")
+  test "allows result as an ordinary name outside ensure":
+    let parameterProgram = parseSource(
+      "function read(Int result) returns Int { return result; } function main() {}"
+    )
+    check parameterProgram.functions[0].parameters[0].name == "result"
 
-    expect ValueError:
-      discard parseSource("function bad() { var result = 1; } function main() {}")
+    let localProgram = parseSource(
+      "function read() returns Int { var result = 1; return result; } function main() {}"
+    )
+    check localProgram.functions[0].body.len == 2

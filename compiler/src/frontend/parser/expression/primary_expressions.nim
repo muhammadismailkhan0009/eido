@@ -35,14 +35,6 @@ proc parsePrimaryAtom(parser: var Parser): Expr =
       name: token.lexeme
     )
 
-  if parser.check(tkResult):
-    let token = parser.advance()
-    return Expr(
-      kind: ekIdentifier,
-      span: token.span,
-      name: token.lexeme
-    )
-
   if parser.check(tkIdentifier):
     # Construction is the only expression form where a dotted nominal path is
     # syntactically unambiguous before semantic resolution.

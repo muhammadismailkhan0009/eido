@@ -671,13 +671,16 @@ Temporary invariant violations are not permitted. Only invariant evaluation
 itself suppresses recursive invariant re-entry so observational helper methods
 may be used inside invariant expressions.
 
-For value-returning callables, `result` is a reserved binding available only
-inside `ensure`. It has exactly the declared result type and denotes the value
-produced by whichever successful return path is taken. Each return expression is
-evaluated once, bound to `result`, checked against the function-level
-postcondition, and then returned. `result` is invalid in preconditions,
-invariants, ordinary bodies, and zero-result callables, and cannot be used as a
-parameter or local name.
+For value-returning callables, `result` is a contextual binding available inside
+`ensure`. It has exactly the declared result type and denotes the value produced
+by whichever successful return path is taken. Each return expression is
+evaluated once, bound to contextual `result`, checked against the function-level
+postcondition, and then returned. `result` is not globally reserved: parameters
+and locals may use that name normally outside `ensure`. Inside a value-returning
+`ensure`, the contextual binding shadows any ordinary binding of the same name;
+inside a zero-result `ensure`, `result` is invalid because no logical result
+exists. `ensure` may also constrain any observable post-state produced by the
+callable, including state mutation; it is not limited to returned values.
 
 ### Observational contract expressions
 

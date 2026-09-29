@@ -1,5 +1,6 @@
 import std/unittest
 import hir/expressions
+import semantic/symbols/ids
 import support/compiler_test_support
 import types/[method_kind, model]
 
@@ -66,23 +67,22 @@ suite "Contract semantics":
     check clause.typ == etBool
     check clause.left.typ == etInt
 
-  test "rejects result outside ensure":
-    expect ValueError:
-      discard analyzeSource("""
-        function bad(Int value) returns Int {
-          require { result > 0; }
-          return value;
-        }
-        function main() {}
-      """)
+  test "uses ordinary result bindings outside ensure and shadows them inside ensure":
+    let source = """
+      function positive(Int result) returns Int {
+        require { result < 0; }
+        return -result;
+        ensure { result > 0; }
+      }
+      function main() {}
+    """
 
-    expect ValueError:
-      discard analyzeSource("""
-        function bad(Int value) returns Int {
-          return result;
-        }
-        function main() {}
-      """)
+    let fn = analyzeSource(source).functions[0]
+    check fn.requires[0].left.sourceName == "result"
+    check fn.requires[0].left.localId.value == fn.parameters[0].localId.value
+    check fn.ensures[0].left.sourceName == "result"
+    check fn.ensures[0].left.localId.value == fn.ensureResultLocalId.value
+    check fn.ensureResultLocalId.value != fn.parameters[0].localId.value
 
   test "rejects result in ensure of a zero-result callable":
     expect ValueError:

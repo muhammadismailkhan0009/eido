@@ -19,7 +19,6 @@ type
     tkRequire,
     tkEnsure,
     tkInvariant,
-    tkResult,
     tkClass,
     tkInterface,
     tkImplements,

@@ -39,9 +39,12 @@ proc qualifyCallable(
       publicSurfaces, adoptedSurfaces, providedSurfaces,
       rootModule
     )
+  var ensureLocals = locals
+  if source.result.kind == frrSingle:
+    ensureLocals.incl "result"
   for clause in source.ensures:
     qualifyExpr(
-      clause, currentModule, locals, typeParameters,
+      clause, currentModule, ensureLocals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
       rootModule

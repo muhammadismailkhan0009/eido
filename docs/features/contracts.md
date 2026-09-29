@@ -27,10 +27,12 @@ class Account {
 
 `require` narrows the legal invocation domain, `ensure` states conditions that
 must hold after successful callable execution, and `invariant` defines valid
-stable class state. Contract sections are optional, unnamed, non-empty, and
-every clause must have type `Bool`. `require` appears before executable function
-statements, `ensure` is the final function section, and a class may declare at
-most one `invariant` section.
+class state. `ensure` describes the complete observable post-state, not only a
+returned value: it may constrain mutated `self` fields, observable state reached
+through parameters, and the logical returned value when one exists. Contract
+sections are optional, unnamed, non-empty, and every clause must have type
+`Bool`. `require` appears before executable function statements, `ensure` is the
+final function section, and a class may declare at most one `invariant` section.
 
 Contracts are compiler-owned semantic data rather than ordinary statements.
 They survive into HIR and are available to tooling. v0 lowers them to
@@ -59,11 +61,11 @@ changing the basic source model.
 
 ## Postcondition result binding
 
-Value-returning callables expose reserved `result` only inside `ensure`. Its type
-is exactly the callable's declared return type and it denotes the value produced
-by whichever successful `return` path was taken. The return expression is
-evaluated once, bound to `result`, then the postcondition is checked, and only
-then is the value returned.
+Value-returning callables expose contextual `result` only inside `ensure`. Its
+type is exactly the callable's declared return type and it denotes the value
+produced by whichever successful `return` path was taken. The return expression
+is evaluated once, bound to this contextual `result`, then the postcondition is
+checked, and only then is the value returned.
 
 ```eido
 function absolute(Int value) returns Int {
@@ -78,10 +80,13 @@ function absolute(Int value) returns Int {
 }
 ```
 
-`result` is unavailable in `require`, `invariant`, ordinary callable bodies, and
-zero-result callables. It is a reserved language keyword, so parameters and
-locals cannot be named `result`. For class-valued results, ordinary observational
-member access is available, for example `ensure { result.value >= 0; }`.
+`result` is not a globally reserved keyword. Parameters and locals may be named
+`result` normally, and ordinary name resolution applies outside `ensure`. Inside
+`ensure` of a value-returning callable, contextual `result` shadows any ordinary
+binding of the same name. Inside `ensure` of a zero-result callable, `result` is
+invalid even if an outer binding has that name, because that context has no
+logical returned value. For class-valued results, ordinary observational member
+access is available, for example `ensure { result.value >= 0; }`.
 
 ## Contract-safe calls
 

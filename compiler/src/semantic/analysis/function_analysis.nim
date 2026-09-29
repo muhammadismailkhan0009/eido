@@ -70,7 +70,8 @@ proc analyzeFunction*(
       )
     )
   let ensures = analyzeContractClauses(
-    fn.ensures, ensureLocals, functions, classes, "ensure"
+    fn.ensures, ensureLocals, functions, classes, "ensure",
+    symbol.result.kind == frSingle
   )
 
   var body: seq[HirStmt]

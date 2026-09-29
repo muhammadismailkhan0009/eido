@@ -7,5 +7,4 @@ proc contractKeywordKind(text: string): TokenKind =
   of "require": tkRequire
   of "ensure": tkEnsure
   of "invariant": tkInvariant
-  of "result": tkResult
   else: tkIdentifier

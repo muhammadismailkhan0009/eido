@@ -271,3 +271,40 @@ suite "Postcondition result binding":
     """
 
     check runFeatureSource(source, "ensure_method_result") == ""
+
+
+suite "Post-state guarantees":
+  test "ensure constrains side effects in a zero-result method":
+    let source = """
+      class Account {
+        Int balance;
+
+        invariant { self.balance >= 0; }
+
+        function deposit(Int amount) {
+          require { amount > 0; }
+          set self.balance = self.balance + amount;
+          ensure { self.balance >= amount; }
+        }
+      }
+
+      function main() {
+        var account = Account { balance = 10; };
+        account.deposit(5);
+      }
+    """
+
+    check runFeatureSource(source, "ensure_side_effect_state") == ""
+
+  test "ordinary result parameter is shadowed only inside ensure":
+    let source = """
+      function absolute(Int result) returns Int {
+        require { result < 0; }
+        return -result;
+        ensure { result > 0; }
+      }
+
+      function main() { absolute(-5); }
+    """
+
+    check runFeatureSource(source, "contextual_result_shadowing") == ""
