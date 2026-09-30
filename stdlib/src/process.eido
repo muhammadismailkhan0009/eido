@@ -1,5 +1,11 @@
+// Process-wide operations supplied by the active Eido backend/runtime.
 class Process {
+    // Returns the number of command-line arguments visible to the program.
     native function argumentCount() returns Int;
+
+    // Returns one command-line argument by zero-based index.
     native function argument(Int index) returns String;
+
+    // Terminates the current process with the requested exit code.
     native function exit(Int code);
 }

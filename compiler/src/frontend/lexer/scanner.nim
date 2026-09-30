@@ -106,10 +106,17 @@ proc makeToken(
     )
   )
 
-## Consumes spaces, tabs, carriage returns, and newlines before the next token. Example: indentation before `return` is ignored lexically.
-proc skipWhitespace(lexer: var Lexer) =
-  while not lexer.atEnd and lexer.peek in {' ', '\t', '\r', '\n'}:
-    discard lexer.advance()
+## Consumes lexically insignificant trivia before the next token.
+## Whitespace and // line comments are ignored, while a single / remains the division operator.
+proc skipTrivia(lexer: var Lexer) =
+  while not lexer.atEnd:
+    if lexer.peek in {' ', '\t', '\r', '\n'}:
+      discard lexer.advance()
+    elif lexer.peek == '/' and lexer.peekAt(1) == '/':
+      while not lexer.atEnd and lexer.peek notin {'\r', '\n'}:
+        discard lexer.advance()
+    else:
+      break
 
 ## Scans an Int or Float literal after its first digit was consumed.
 ## Example: `2147483648` is still Int and `2.5` is Float; width suffixes are rejected.
@@ -220,7 +227,7 @@ proc scanChar(
 
 ## Scans and returns the next token from source text. Example: at `+ 5`, the first call returns `tkPlus`.
 proc nextToken*(lexer: var Lexer): Token =
-  lexer.skipWhitespace()
+  lexer.skipTrivia()
 
   if lexer.atEnd:
     return lexer.makeToken(

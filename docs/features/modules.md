@@ -143,9 +143,9 @@ Top-level functions stay module-internal. Same-named top-level functions in diff
 
 ### Implicit SDK standard library
 
-Normal module projects automatically receive an exported compiler-owned module named `eido.stdlib` as a root dependency. Its current public classes are `Process` and `Console`, and ordinary child modules inherit visibility through the same dependency rules used for user modules. Projects must not add repository-relative stdlib source paths to their manifests.
+Normal module projects automatically receive the SDK module `eido.stdlib` as a root dependency, and ordinary child modules inherit visibility through the same dependency rules used for user modules. The stdlib itself is declared by the real `stdlib/module.yaml`; its source ownership and export roots therefore come from the same manifest schema used by ordinary Eido modules. Projects must not add repository-relative stdlib source paths to their manifests.
 
-The bootstrap compiler embeds these declarations so an Eido installation created with `nimble install` can compile projects outside the compiler repository. This is an SDK-provided dependency, not source-language magic; the module/dependency visibility machinery remains authoritative.
+The bootstrap compiler embeds the stdlib manifest plus the source payloads named by that manifest so an installation created with `nimble install` can compile projects outside the compiler repository. Bootstrap loading parses the embedded manifest with the normal module-manifest parser rather than maintaining a separate handwritten module definition. The reserved canonical identity `eido.stdlib` is SDK namespace policy; module/dependency visibility machinery remains authoritative.
 
 ## Project and build tooling
 

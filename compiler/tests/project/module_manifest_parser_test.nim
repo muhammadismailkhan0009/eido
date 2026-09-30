@@ -1,5 +1,6 @@
 import std/unittest
 import project/modules/manifest_parser
+import stdlib/builtin_sources
 
 suite "Module manifest parsing":
   test "parses the complete v0 YAML module schema":
@@ -73,3 +74,22 @@ suite "Module manifest parsing":
           - Main.eido
         magic: true
       """, "module.yaml")
+
+  test "parses the embedded standard library manifest through the normal schema":
+    let manifest = parseModuleManifest(
+      BuiltinStdlibManifestSource,
+      BuiltinStdlibManifestPath
+    )
+
+    check manifest.name == "stdlib"
+    check manifest.sources == @[
+      "src/process.eido",
+      "src/console.eido",
+      "src/arena.eido",
+      "src/memory.eido"
+    ]
+    check manifest.children.len == 0
+    check manifest.dependencies.len == 0
+    check manifest.exports == @["Process", "Console", "Memory"]
+    check manifest.provides.len == 0
+    check manifest.adopts.len == 0

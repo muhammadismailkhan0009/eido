@@ -1,4 +1,8 @@
+// Minimal text output surface shared by ordinary Eido programs.
 class Console {
+    // Writes one line to standard output.
     native function writeLine(String value);
+
+    // Writes one line to standard error.
     native function errorLine(String value);
 }

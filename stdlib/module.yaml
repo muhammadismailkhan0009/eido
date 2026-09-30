@@ -1,0 +1,18 @@
+module: stdlib
+
+sources:
+  - src/process.eido
+  - src/console.eido
+  - src/arena.eido
+  - src/memory.eido
+
+children: []
+dependencies: []
+
+exports:
+  - Process
+  - Console
+  - Memory
+
+provides: {}
+adopts: []

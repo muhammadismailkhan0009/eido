@@ -1,6 +1,7 @@
 import std/[os, sequtils, strutils, unittest]
 import project/model
 import project/modules/loader
+import stdlib/builtin_sources
 
 ## Documents the freshDir module helper behavior.
 proc freshDir(name: string): string =
@@ -54,8 +55,17 @@ suite "Module project loading":
     check project.modules.len == 3
     check project.modules[0].canonicalName == "shop"
     check project.modules[1].canonicalName == "shop.payments"
-    check project.modules[2].canonicalName == "eido.stdlib"
-    check "eido.stdlib" in project.modules[0].dependencies
+    check project.modules[2].canonicalName == BuiltinStdlibModuleName
+    check project.modules[2].name == "stdlib"
+    check project.modules[2].manifestPath == BuiltinStdlibManifestPath
+    check project.modules[2].sourcePaths == @[
+      BuiltinProcessSourcePath,
+      BuiltinConsoleSourcePath,
+      BuiltinArenaSourcePath,
+      BuiltinMemorySourcePath
+    ]
+    check project.modules[2].exports == @["Process", "Console", "Memory"]
+    check BuiltinStdlibModuleName in project.modules[0].dependencies
     check project.sources.len == 6
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"

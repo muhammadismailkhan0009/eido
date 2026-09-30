@@ -1,4 +1,7 @@
+// Public entry point for explicit memory policies exposed by the standard library.
+// This surface is separate from any future automatic Eido memory management.
 class Memory<T> {
+    // Creates a typed arena backed by Storage<T>.
     function arena(Int capacity) returns Arena<T> {
         return Arena<T>.create(capacity);
     }

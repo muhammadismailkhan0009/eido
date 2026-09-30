@@ -1,7 +1,12 @@
+// Explicit bump-allocation policy backed by one owning Storage<T> root.
 class Arena<T> {
+    // Backing storage remains owned by the arena for its complete lifetime.
     Storage<T> storage;
+
+    // Index of the first unused element in the backing storage.
     Int next;
 
+    // Creates an empty arena with capacity for the requested number of T values.
     function create(Int capacity) returns Arena<T> {
         return Arena<T> {
             storage = Storage<T>.allocate(capacity);
@@ -9,6 +14,7 @@ class Arena<T> {
         };
     }
 
+    // Reserves the next contiguous range and returns it as borrowed Storage<T>.
     function allocate(Int count) returns Storage<T> {
         require {
             count > 0;
@@ -20,14 +26,17 @@ class Arena<T> {
         return Storage<T>.slice(self.storage, start, count);
     }
 
+    // Reports how many values may still be allocated before the arena is full.
     function remaining() returns Int {
         return Storage<T>.capacity(self.storage) - self.next;
     }
 
+    // Makes all arena capacity reusable without releasing the backing storage.
     function reset() {
         set self.next = 0;
     }
 
+    // Releases the arena owning backing storage.
     function release() {
         Storage<T>.release(self.storage);
     }

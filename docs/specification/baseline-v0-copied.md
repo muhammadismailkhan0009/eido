@@ -1625,6 +1625,20 @@ account.withdraw(10);
 Braces terminate blocks. Older comma-terminated examples above are historical
 and are not the current parser grammar.
 
+## Source comments
+
+Current v0 source comments use `//` and continue through the next newline or
+end-of-file. They are lexer trivia and do not enter the parser, AST, or HIR.
+
+```eido
+// Whole-line comment.
+var value = 12; // Trailing comment.
+var half = value / 2; // A single slash remains division.
+```
+
+A `//` sequence inside a String literal is ordinary String content. Block
+comments are not part of the current v0 source surface.
+
 ## Explicit current-instance receiver and mutation
 
 Inside an instance method, `self` explicitly denotes the current logical

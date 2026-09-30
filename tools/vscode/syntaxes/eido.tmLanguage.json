@@ -44,6 +44,10 @@
       "match": "\\b(Bool|Byte|Short|Int|Float|Char|String)\\b"
     },
     {
+      "name": "comment.line.double-slash.eido",
+      "match": "//.*$"
+    },
+    {
       "name": "string.quoted.double.eido",
       "begin": "\"",
       "end": "\"",
@@ -55,9 +59,8 @@
       ]
     },
     {
-      "name": "string.quoted.single.eido",
-      "begin": "'",
-      "end": "'"
+      "name": "constant.character.eido",
+      "match": "'(?:[^'\\\\\\r\\n]|\\\\(?:[nrtbf\\\\']|u[0-9A-Fa-f]{4}))'"
     },
     {
       "name": "constant.numeric.eido",

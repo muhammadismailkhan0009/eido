@@ -66,7 +66,8 @@ proc initializeResult(): JsonNode =
             "method",
             "property",
             "parameter",
-            "variable"
+            "variable",
+            "comment"
           ],
           "tokenModifiers": [
             "declaration",
@@ -230,15 +231,24 @@ proc semanticTokensResponse(
   if path.len == 0:
     return %*{"data": []}
 
+  let sourceText = server.documents.effectiveSourceText(path)
   let context = server.checkedSymbolIndex(path)
-  if not context.success:
-    return %*{"data": []}
+  if context.success:
+    return semanticTokensResult(
+      context.index,
+      path,
+      sourceText
+    )
 
-  semanticTokensResult(
-    context.index,
-    path,
-    server.documents.effectiveSourceText(path)
-  )
+  # Lexical comment highlighting does not require a semantically valid project.
+  try:
+    semanticTokensResult(
+      SymbolIndex(),
+      path,
+      sourceText
+    )
+  except CatchableError:
+    %*{"data": []}
 
 ## Builds an LSP location for the compiler-resolved definition at one source position.
 proc definitionResponse(

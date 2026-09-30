@@ -1,6 +1,6 @@
 import std/[json, os, unittest]
 import server
-import protocol/jsonrpc
+import protocol/[jsonrpc, positions]
 import workspace/documents
 
 ## Creates an isolated module project for LSP integration tests.
@@ -18,6 +18,35 @@ proc diagnosticsFor(messages: seq[JsonNode], uri: string): JsonNode =
         message["params"]["uri"].getStr == uri:
       return message
   nil
+
+type
+  DecodedSemanticToken = tuple[
+    line, character, length, tokenType, modifiers: int
+  ]
+
+## Expands LSP delta-encoded semantic tokens for assertions.
+proc decodeSemanticTokens(data: JsonNode): seq[DecodedSemanticToken] =
+  var line = 0
+  var character = 0
+  var index = 0
+
+  while index + 4 < data.len:
+    let deltaLine = data[index].getInt
+    let deltaStart = data[index + 1].getInt
+    if deltaLine == 0:
+      character += deltaStart
+    else:
+      line += deltaLine
+      character = deltaStart
+
+    result.add (
+      line: line,
+      character: character,
+      length: data[index + 2].getInt,
+      tokenType: data[index + 3].getInt,
+      modifiers: data[index + 4].getInt
+    )
+    index += 5
 
 suite "Eido LSP integration":
   test "initialize advertises full sync diagnostics and hover":
@@ -39,6 +68,7 @@ suite "Eido LSP integration":
     check messages[0]["result"]["capabilities"]["documentFormattingProvider"].getBool
     check messages[0]["result"]["capabilities"]["definitionProvider"].getBool
     check messages[0]["result"]["capabilities"]["semanticTokensProvider"]["full"].getBool
+    check messages[0]["result"]["capabilities"]["semanticTokensProvider"]["legend"]["tokenTypes"][7].getStr == "comment"
     check messages[0]["result"]["capabilities"]["textDocumentSync"]["change"].getInt == 1
 
   test "didOpen checks unsaved editor text through the real compiler":
@@ -275,6 +305,143 @@ function main() returns Int {
     check 4 in tokenTypes # property
     check 5 in tokenTypes # parameter
     check 6 in tokenTypes # variable
+
+  test "semantic tokens expose line comments without matching string content":
+    let root = freshLspProject("comment_tokens")
+    defer: removeDir(root)
+
+    let source = """// it's a heading
+function main() returns Int {
+    var value = 8; // value's trailing note
+    var text = "https://eido.dev//docs";
+    return value / 2;
+}
+"""
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    let path = root / "Main.eido"
+    writeFile(path, source)
+    let uri = pathToFileUri(path)
+
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {"rootUri": pathToFileUri(root)}
+    })
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "method": "textDocument/didOpen",
+      "params": {
+        "textDocument": {
+          "uri": uri,
+          "languageId": "eido",
+          "version": 1,
+          "text": source
+        }
+      }
+    })
+
+    let messages = server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 4,
+      "method": "textDocument/semanticTokens/full",
+      "params": {
+        "textDocument": {"uri": uri}
+      }
+    })
+
+    check messages.len == 1
+    var comments: seq[string]
+    for token in decodeSemanticTokens(messages[0]["result"]["data"]):
+      if token.tokenType != 7:
+        continue
+      let startOffset = byteOffsetAt(source, token.line, token.character)
+      let endOffset = byteOffsetAt(
+        source,
+        token.line,
+        token.character + token.length
+      )
+      comments.add source[startOffset ..< endOffset]
+
+    check comments == @[
+      "// it's a heading",
+      "// value's trailing note"
+    ]
+
+  test "comment semantic tokens remain available when semantic checking fails":
+    let root = freshLspProject("comment_tokens_error")
+    defer: removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    let source = """// still a comment
+function main() {
+    broken();
+}
+"""
+    let path = root / "Main.eido"
+    writeFile(path, source)
+    let uri = pathToFileUri(path)
+
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {"rootUri": pathToFileUri(root)}
+    })
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "method": "textDocument/didOpen",
+      "params": {
+        "textDocument": {
+          "uri": uri,
+          "languageId": "eido",
+          "version": 1,
+          "text": source
+        }
+      }
+    })
+
+    let messages = server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 5,
+      "method": "textDocument/semanticTokens/full",
+      "params": {
+        "textDocument": {"uri": uri}
+      }
+    })
+
+    var comments: seq[string]
+    for token in decodeSemanticTokens(messages[0]["result"]["data"]):
+      if token.tokenType == 7:
+        let startOffset = byteOffsetAt(source, token.line, token.character)
+        let endOffset = byteOffsetAt(
+          source,
+          token.line,
+          token.character + token.length
+        )
+        comments.add source[startOffset ..< endOffset]
+
+    check comments == @["// still a comment"]
 
   test "definition navigates across module files":
     let root = freshLspProject("definition")

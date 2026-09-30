@@ -17,6 +17,6 @@ Backend-specific implementation support lives under `stdlib/native/`. The Nim ba
 
 ## SDK/project integration
 
-Normal module projects receive this foundational stdlib implicitly through the compiler-owned `eido.stdlib` module. User `module.yaml` files therefore do not list repository-relative paths to `process.eido`, `console.eido`, `arena.eido`, or `memory.eido`. These source declarations are embedded into the installed bootstrap compiler so source-installed Eido projects remain portable outside the Eido repository.
+Normal module projects receive this foundational stdlib implicitly as `eido.stdlib`. The stdlib's own architecture is declared by the real `stdlib/module.yaml`; that manifest owns the Eido source list and public export roots just like an ordinary module manifest. The bootstrap compiler embeds both the manifest and its declared source payloads, then parses the manifest through the normal module-manifest parser so installed compilers remain repository-independent without maintaining a second handwritten stdlib module definition. User `module.yaml` files therefore do not list repository-relative paths to `process.eido`, `console.eido`, `arena.eido`, or `memory.eido`.
 
 The current Nim backend support source is embedded as an installation fallback as well. `EIDO_NATIVE_NIM_PATH` remains available as an explicit development/SDK override. Standalone `eido compile` remains a lower-level source compilation route; normal applications should use `module.yaml` projects for the SDK stdlib and architecture model.

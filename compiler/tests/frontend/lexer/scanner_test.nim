@@ -138,3 +138,35 @@ suite "Lexer scanner":
     check tokens[4].kind == tkLBrace
     check tokens[5].kind == tkRBrace
     check tokens[6].kind == tkEof
+
+  test "ignores whole-line and trailing line comments":
+    let source = "// heading\nInt value // trailing\nString"
+
+    let tokens = lexAll(source)
+
+    check tokens[0].kind == tkPrimitiveType
+    check tokens[0].lexeme == "Int"
+    check tokens[1].kind == tkIdentifier
+    check tokens[1].lexeme == "value"
+    check tokens[2].kind == tkStringType
+    check tokens[3].kind == tkEof
+
+  test "line comments at end of file terminate cleanly":
+    let tokens = lexAll("Int // no newline")
+
+    check tokens[0].kind == tkPrimitiveType
+    check tokens[1].kind == tkEof
+
+  test "single slash remains the division operator":
+    let tokens = lexAll("8 / 2 // division")
+
+    check tokens[0].kind == tkInteger
+    check tokens[1].kind == tkSlash
+    check tokens[2].kind == tkInteger
+    check tokens[3].kind == tkEof
+
+  test "comment markers inside String literals remain String content":
+    let tokens = lexAll("\"https://eido.dev//docs\"")
+
+    check tokens[0].kind == tkStringLiteral
+    check tokens[0].lexeme == "\"https://eido.dev//docs\""

@@ -1,7 +1,7 @@
 ## Translates compiler-owned semantic symbol facts into LSP semantic-token data.
 
-import std/[json, sets]
-import ../../../../compiler/src/tooling/symbol_service
+import std/[algorithm, json, sets]
+import ../../../../compiler/src/tooling/[comment_service, symbol_service]
 import positions
 
 const
@@ -12,7 +12,8 @@ const
     "method",
     "property",
     "parameter",
-    "variable"
+    "variable",
+    "comment"
   ]
   SemanticTokenModifiers* = [
     "declaration",
@@ -38,49 +39,103 @@ proc tokenModifierBits(symbol: ToolingSymbol): int =
   if symbol.isStatic:
     result = result or 2
 
-## Encodes one document's compiler semantic symbols using LSP delta-token encoding.
+type
+  SemanticToken = object
+    line: int
+    character: int
+    length: int
+    tokenType: int
+    modifiers: int
+
+## Adds one single-line byte span as an LSP semantic token.
+proc addSemanticToken(
+  tokens: var seq[SemanticToken],
+  sourceText: string,
+  startOffset, endOffset, tokenType, modifiers: int
+) =
+  let startPos = lspPositionAt(sourceText, startOffset)
+  let endPos = lspPositionAt(sourceText, endOffset)
+  let line = startPos["line"].getInt
+  let character = startPos["character"].getInt
+  let endLine = endPos["line"].getInt
+  let endCharacter = endPos["character"].getInt
+
+  if endLine == line and endCharacter > character:
+    tokens.add SemanticToken(
+      line: line,
+      character: character,
+      length: endCharacter - character,
+      tokenType: tokenType,
+      modifiers: modifiers
+    )
+
+## Orders tokens exactly as required before LSP delta encoding.
+proc compareSemanticTokens(left, right: SemanticToken): int =
+  result = cmp(left.line, right.line)
+  if result == 0:
+    result = cmp(left.character, right.character)
+  if result == 0:
+    result = cmp(left.length, right.length)
+  if result == 0:
+    result = cmp(left.tokenType, right.tokenType)
+
+## Encodes semantic symbols plus lexical comments using LSP delta-token encoding.
 proc semanticTokensResult*(
   index: SymbolIndex,
   sourcePath: string,
   sourceText: string
 ): JsonNode =
+  var tokens: seq[SemanticToken]
+  var seen = initHashSet[string]()
+
+  for symbol in index.semanticSymbolsIn(sourcePath):
+    let key =
+      $symbol.span.startOffset & ":" &
+      $symbol.span.endOffset
+    if key in seen:
+      continue
+    seen.incl key
+    tokens.addSemanticToken(
+      sourceText,
+      symbol.span.startOffset,
+      symbol.span.endOffset,
+      tokenTypeIndex(symbol.kind),
+      tokenModifierBits(symbol)
+    )
+
+  let commentType = SemanticTokenTypes.len - 1
+  for comment in lineCommentRanges(sourceText):
+    tokens.addSemanticToken(
+      sourceText,
+      comment.startOffset,
+      comment.endOffset,
+      commentType,
+      0
+    )
+
+  tokens.sort(compareSemanticTokens)
+
   var data = newJArray()
   var previousLine = 0
   var previousCharacter = 0
   var first = true
-  var seen = initHashSet[string]()
 
-  for symbol in index.semanticSymbolsIn(sourcePath):
-    let startPos = lspPositionAt(sourceText, symbol.span.startOffset)
-    let endPos = lspPositionAt(sourceText, symbol.span.endOffset)
-    let line = startPos["line"].getInt
-    let character = startPos["character"].getInt
-    let endLine = endPos["line"].getInt
-    let endCharacter = endPos["character"].getInt
-
-    if endLine != line or endCharacter <= character:
-      continue
-
-    let key = $line & ":" & $character & ":" & $endCharacter
-    if key in seen:
-      continue
-    seen.incl key
-
+  for token in tokens:
     let deltaLine =
-      if first: line
-      else: line - previousLine
+      if first: token.line
+      else: token.line - previousLine
     let deltaStart =
-      if first or deltaLine != 0: character
-      else: character - previousCharacter
+      if first or deltaLine != 0: token.character
+      else: token.character - previousCharacter
 
     data.add %deltaLine
     data.add %deltaStart
-    data.add %(endCharacter - character)
-    data.add %tokenTypeIndex(symbol.kind)
-    data.add %tokenModifierBits(symbol)
+    data.add %token.length
+    data.add %token.tokenType
+    data.add %token.modifiers
 
-    previousLine = line
-    previousCharacter = character
+    previousLine = token.line
+    previousCharacter = token.character
     first = false
 
   %*{"data": data}

@@ -12,6 +12,7 @@ They complement `compiler/tests/`, which tests lexer/parser/semantic/backend res
 
 Files are broad navigation boundaries; suites inside them name the smallest useful semantic group.
 
+- `comments/` — source-level `//` comment behavior, including whole-line/trailing comments, EOF termination, and coexistence with division
 - `expression/` — expression-family catalogs split into arithmetic, grouping, unary negation, comparisons, and Boolean operators; start with `expression/README.md` for the coverage matrix and known gaps
 - `classes/` — nominal class declarations, class-type resolution, and named construction; start with `classes/README.md`
 - `control_flow/` — conditionals, `else if` chains, `while`/classic `for` loops, `break`/`continue`, structured scope isolation, and return-path coverage; start with `control_flow/README.md`
