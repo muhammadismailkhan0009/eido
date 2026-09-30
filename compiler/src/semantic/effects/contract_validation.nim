@@ -5,6 +5,7 @@ import ../../diagnostics/errors
 import ../../hir/[expressions, program]
 import ../../types/method_kind
 import model
+import native_observation
 
 ## Validates one contract expression recursively against inferred callable effects.
 proc validateContractExpr(
@@ -38,13 +39,16 @@ proc validateContractExpr(
         "contract expression cannot use dynamic interface method '" &
           expr.methodCall.methodName & "' because its effects cannot be proven"
       )
-    if expr.methodCall.isNative:
+    let verifiedNative =
+      isVerifiedObservationalNativeMethod(expr.methodCall)
+    if expr.methodCall.isNative and not verifiedNative:
       failAt(
         expr.methodCall.span,
         "contract expression cannot call native method '" &
           expr.methodCall.methodName & "' because its effects cannot be verified"
       )
-    if not summary.isMethodSafe(expr.methodCall.methodId):
+    if not verifiedNative and
+        not summary.isMethodSafe(expr.methodCall.methodId):
       failAt(
         expr.methodCall.span,
         "contract expression cannot call effectful method '" &

@@ -6,6 +6,7 @@ import ../../hir/[declarations, expressions, program, statements]
 import ../../types/method_kind
 import ../symbols/ids
 import model
+import native_observation
 
 ## Collects observable-effect facts from one HIR expression.
 proc collectExprEffects(
@@ -25,9 +26,11 @@ proc collectExprEffects(
       collectExprEffects(argument, facts)
 
   of hekMethodCall:
-    if expr.methodCall.dispatchKind == hmdInterface or expr.methodCall.isNative:
+    if expr.methodCall.dispatchKind == hmdInterface or
+        (expr.methodCall.isNative and
+          not isVerifiedObservationalNativeMethod(expr.methodCall)):
       facts.directEffect = true
-    else:
+    elif not expr.methodCall.isNative:
       facts.methodDependencies.add expr.methodCall.methodId
     if expr.methodCall.kind == mkInstance:
       collectExprEffects(expr.methodCall.receiver, facts)
@@ -88,9 +91,11 @@ proc collectStmtEffects(
       collectExprEffects(argument, facts)
 
   of hskMethodCall:
-    if stmt.methodCall.dispatchKind == hmdInterface or stmt.methodCall.isNative:
+    if stmt.methodCall.dispatchKind == hmdInterface or
+        (stmt.methodCall.isNative and
+          not isVerifiedObservationalNativeMethod(stmt.methodCall)):
       facts.directEffect = true
-    else:
+    elif not stmt.methodCall.isNative:
       facts.methodDependencies.add stmt.methodCall.methodId
     if stmt.methodCall.kind == mkInstance:
       collectExprEffects(stmt.methodCall.receiver, facts)

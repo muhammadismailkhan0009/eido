@@ -101,7 +101,29 @@ var count = Storage<Int>.capacity(middle);
 
 `allocate` and `allocateRaw` create owning roots whose backing memory is returned on `release`. `fromAddress` creates a releasable external root whose backing is not freed. `view` and `slice` create borrowed capabilities and cannot release the backing region.
 
-Storage parameters are borrowed. Straight-line semantic analysis rejects obvious owner use after release, borrowed-view use after tracked owner release, borrowed Storage return escape, and replacement of a live owning Storage local without release. Complete control-flow/escape-aware lifetime analysis remains follow-on work.
+Storage parameters are borrowed. Borrowed Storage may cross a callable result boundary when the callable's result provenance is statically inferable; callers retain the borrowed/non-releasable status. Straight-line semantic analysis rejects obvious owner use after release, borrowed-view use after a tracked owner release, releasing a borrowed callable result, and replacement of a live owning Storage local without release. Complete control-flow/escape-aware lifetime analysis remains follow-on work.
+
+## Arena memory policy
+
+The first memory-management policy implemented above Storage is ordinary Eido source in `stdlib/src/arena.eido`:
+
+```eido
+var arena = Arena<Int>.create(100);
+var first = arena.allocate(10);
+var second = arena.allocate(20);
+
+Storage<Int>.write(first, 0, 5);
+var free = arena.remaining();
+
+arena.reset();
+arena.release();
+```
+
+`Arena<T>` owns one `Storage<T>` root and a sequential cursor. `allocate(count)` returns a borrowed `Storage<T>.slice`, `remaining()` reports unused slots, `reset()` rewinds the cursor without reallocating, and `release()` releases the single backing root. Sizing, alignment, addresses, and physical allocation remain Storage responsibilities.
+
+The Arena capacity precondition may query `Storage.capacity` because that compiler-owned native operation is observational and explicitly recognized as contract-safe. Other native Storage operations are not made contract-safe by this exception.
+
+Allocations returned by an Arena become logically invalid after `reset()` or `release()`; full compiler lifetime invalidation for that relationship is intentionally deferred to the future borrow/lifetime analysis.
 
 ## Current implementation boundary
 

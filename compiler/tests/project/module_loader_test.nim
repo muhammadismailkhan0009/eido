@@ -56,11 +56,11 @@ suite "Module project loading":
     check project.modules[1].canonicalName == "shop.payments"
     check project.modules[2].canonicalName == "eido.stdlib"
     check "eido.stdlib" in project.modules[0].dependencies
-    check project.sources.len == 4
+    check project.sources.len == 6
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
-    check project.sources[2].moduleName == "eido.stdlib"
-    check project.sources[3].moduleName == "eido.stdlib"
+    for index in 2 .. 5:
+      check project.sources[index].moduleName == "eido.stdlib"
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

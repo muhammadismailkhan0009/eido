@@ -1,0 +1,34 @@
+class Arena<T> {
+    Storage<T> storage;
+    Int next;
+
+    function create(Int capacity) returns Arena<T> {
+        return Arena<T> {
+            storage = Storage<T>.allocate(capacity);
+            next = 0;
+        };
+    }
+
+    function allocate(Int count) returns Storage<T> {
+        require {
+            count > 0;
+            self.next + count <= Storage<T>.capacity(self.storage);
+        }
+
+        var start = self.next;
+        set self.next = self.next + count;
+        return Storage<T>.slice(self.storage, start, count);
+    }
+
+    function remaining() returns Int {
+        return Storage<T>.capacity(self.storage) - self.next;
+    }
+
+    function reset() {
+        set self.next = 0;
+    }
+
+    function release() {
+        Storage<T>.release(self.storage);
+    }
+}

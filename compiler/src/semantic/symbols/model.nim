@@ -44,6 +44,7 @@ type
     isNative*: bool
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
+    storageResultProvenance*: StorageValueProvenance
     span*: SourceSpan
 
   MethodSymbol* = object
@@ -53,6 +54,7 @@ type
     kind*: MethodKind
     parameterTypes*: seq[EidoType]
     result*: FunctionResult
+    storageResultProvenance*: StorageValueProvenance
     span*: SourceSpan
 
   ClassFieldSymbol* = object

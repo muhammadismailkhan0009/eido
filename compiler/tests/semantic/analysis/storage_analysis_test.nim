@@ -239,17 +239,34 @@ suite "Storage semantics":
 
     discard analyzeSource(source)
 
-  test "borrowed Storage cannot escape through a function result":
-    let source = """
+  test "borrowed Storage may return but remains borrowed at the caller":
+    let validSource = """
       function borrow(Storage<Int> storage) returns Storage<Int> {
         return storage;
       }
 
-      function main() {}
+      function main() {
+        var storage = Storage<Int>.allocate(1);
+        var borrowed = borrow(storage);
+        Storage<Int>.write(borrowed, 0, 7);
+        Storage<Int>.release(storage);
+      }
+    """
+    let invalidReleaseSource = """
+      function borrow(Storage<Int> storage) returns Storage<Int> {
+        return storage;
+      }
+
+      function main() {
+        var storage = Storage<Int>.allocate(1);
+        var borrowed = borrow(storage);
+        Storage<Int>.release(borrowed);
+      }
     """
 
+    discard analyzeSource(validSource)
     expect ValueError:
-      discard analyzeSource(source)
+      discard analyzeSource(invalidReleaseSource)
 
   test "borrowed Storage views cannot escape into owning class fields":
     let source = """
@@ -261,6 +278,27 @@ suite "Storage semantics":
         var raw = Storage<Byte>.allocateRaw(2, 8);
         var buffer = Buffer {
           storage = Storage<Int>.view(raw, 0);
+        };
+      }
+    """
+
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "borrowed Storage callable results cannot escape into owning class fields":
+    let source = """
+      class Buffer {
+        Storage<Int> storage;
+      }
+
+      function borrow(Storage<Int> storage) returns Storage<Int> {
+        return storage;
+      }
+
+      function main() {
+        var root = Storage<Int>.allocate(1);
+        var buffer = Buffer {
+          storage = borrow(root);
         };
       }
     """

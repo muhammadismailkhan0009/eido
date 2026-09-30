@@ -25,6 +25,7 @@ import interface_analysis
 import method_classification
 import method_analysis
 import function_analysis
+import storage_result_provenance
 
 ## Rejects unsupported nominal/optional values at the initial native ABI boundary.
 proc validateNativeSignature(
@@ -183,6 +184,18 @@ proc analyzeProgram*(
           not isConcreteStorageTypeName(sourceClass.name):
         validateNativeSignature(sourceMethod, parameterTypes, methodResult)
 
+      let storageResultProvenance =
+        if isConcreteStorageTypeName(sourceClass.name):
+          case sourceMethod.name
+          of "allocate", "allocateRaw", "fromAddress":
+            svpOwned
+          of "view", "slice":
+            svpBorrowed
+          else:
+            svpNotStorage
+        else:
+          inferStorageResultProvenance(sourceMethod)
+
       classSymbol.methods.add MethodSymbol(
         id: MethodId(nextMethodId),
         name: sourceMethod.name,
@@ -192,6 +205,7 @@ proc analyzeProgram*(
           else: inferMethodKind(sourceMethod),
         parameterTypes: parameterTypes,
         result: methodResult,
+        storageResultProvenance: storageResultProvenance,
         span: sourceMethod.span
       )
       inc nextMethodId
@@ -231,6 +245,7 @@ proc analyzeProgram*(
       isNative: fn.isNative,
       parameterTypes: parameterTypes,
       result: functionResult,
+      storageResultProvenance: inferStorageResultProvenance(fn),
       span: fn.span
     )
     functions.add symbol

@@ -2,17 +2,21 @@
 
 The standard library contains foundational APIs guaranteed to ship with the Eido SDK. It is library functionality, not additional language syntax.
 
-Current first Eido-facing APIs live under `stdlib/src/` as direct class-owned native methods:
+Current foundational Eido-facing APIs live under `stdlib/src/`:
 
 - `Process.argumentCount()`, `Process.argument(index)`, and `Process.exit(code)`.
 - `Console.writeLine(value)` and `Console.errorLine(value)`.
+- `Arena<T>`, the first memory-management policy implemented entirely in Eido above `Storage<T>`.
+- `Memory<T>`, a stateless stdlib export root that exposes the stateful Arena API transitively without weakening normal module export rules.
 
-These classes require no utility instances, no `static` keyword, and no Eido wrapper functions. Their bodyless `native function` members are type-associated/static by definition in v0 and bind directly to backend support.
+`Process` and `Console` require no utility instances, no `static` keyword, and no Eido wrapper functions. Their bodyless `native function` members are type-associated/static by definition in v0 and bind directly to backend support.
 
-Backend-specific implementation support lives under `stdlib/native/`. The Nim backend currently supplies `stdlib/native/nim/eido_native.nim`; Eido source never names Nim modules or symbols.
+`Arena<T>` is ordinary Eido code, not a native wrapper. It owns one `Storage<T>`, advances a sequential allocation cursor, returns borrowed Storage slices, supports bulk reset, and delegates all physical allocation/alignment/address mechanics to Storage.
+
+Backend-specific implementation support lives under `stdlib/native/`. The Nim backend currently supplies `stdlib/native/nim/eido_native.nim` for host APIs and `stdlib/native/nim/eido_storage.nim` for the physical Storage substrate; Eido source never names Nim modules or symbols.
 
 ## SDK/project integration
 
-Normal module projects receive this foundational stdlib implicitly through the compiler-owned `eido.stdlib` module. User `module.yaml` files therefore do not list repository-relative paths to `process.eido` or `console.eido`. The source declarations are embedded into the installed bootstrap compiler so source-installed Eido projects remain portable outside the Eido repository.
+Normal module projects receive this foundational stdlib implicitly through the compiler-owned `eido.stdlib` module. User `module.yaml` files therefore do not list repository-relative paths to `process.eido`, `console.eido`, `arena.eido`, or `memory.eido`. These source declarations are embedded into the installed bootstrap compiler so source-installed Eido projects remain portable outside the Eido repository.
 
 The current Nim backend support source is embedded as an installation fallback as well. `EIDO_NATIVE_NIM_PATH` remains available as an explicit development/SDK override. Standalone `eido compile` remains a lower-level source compilation route; normal applications should use `module.yaml` projects for the SDK stdlib and architecture model.

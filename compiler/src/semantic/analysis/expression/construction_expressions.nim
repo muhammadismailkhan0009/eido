@@ -1,13 +1,6 @@
 ## Validates named class construction and lowers it to typed HIR.
 ## Every declared field must appear exactly once; source field order is semantically irrelevant.
 
-## Reports whether source directly creates a borrowed Storage view/slice.
-proc isBorrowedStorageExpression(source: astExpressions.Expr): bool =
-  source.kind == astExpressions.ekMethodCall and
-    source.receiver.kind == astExpressions.ekIdentifier and
-    isConcreteStorageTypeName(source.receiver.name) and
-    source.methodName in ["view", "slice"]
-
 ## Analyzes one complete class construction expression.
 proc analyzeConstruction(
   expr: astExpressions.Expr,
@@ -99,10 +92,16 @@ proc analyzeConstruction(
 
     if expectedType.kind == etkClass and
         isConcreteStorageTypeName(expectedType.className) and
-        isBorrowedStorageExpression(sourceField.value):
+        classifyStorageValue(
+          sourceField.value,
+          analyzedValue,
+          locals,
+          functions,
+          classes
+        ) == svpBorrowed:
       failAt(
         sourceField.value.span,
-        "borrowed Storage view cannot escape into an owning class field"
+        "borrowed Storage cannot escape into an owning class field"
       )
 
     fields.add hirExpressions.HirConstructionField(

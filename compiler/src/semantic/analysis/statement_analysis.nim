@@ -13,6 +13,7 @@ import ../symbols/functions
 import ../symbols/nominals
 import ../symbols/scope
 import expression_analysis
+import storage_value_provenance
 import optional_paths
 
 ## Checks one AST statement and lowers it to HIR.
@@ -32,41 +33,6 @@ include statement/while_statements
 include statement/for_statements
 include statement/loop_control_statements
 include statement/class_relationship_mutation
-
-## Classifies one Storage-valued initializer as an owning allocation or borrowed view.
-proc storageValueProvenance(
-  source: astExpressions.Expr,
-  analyzed: HirExpr,
-  locals: LocalScope
-): StorageValueProvenance =
-  if analyzed.typ.kind != etkClass or
-      not isConcreteStorageTypeName(analyzed.typ.className):
-    return svpNotStorage
-
-  case source.kind
-  of astExpressions.ekMethodCall:
-    if source.receiver.kind == astExpressions.ekIdentifier and
-        isConcreteStorageTypeName(source.receiver.name):
-      if source.methodName in ["allocate", "allocateRaw", "fromAddress"]:
-        return svpOwned
-      if source.methodName in ["view", "slice"]:
-        return svpBorrowed
-    # User callables returning Storage must transfer ownership; borrowed
-    # Storage returns are rejected at their return statement below.
-    svpOwned
-
-  of astExpressions.ekCall:
-    # Same transfer rule as user methods returning Storage.
-    svpOwned
-
-  of astExpressions.ekIdentifier:
-    if locals.contains(source.name):
-      locals.get(source.name).storageValueProvenance
-    else:
-      svpBorrowed
-
-  else:
-    svpBorrowed
 
 ## Returns the root owner local borrowed by a Storage view/slice initializer.
 proc storageBorrowOwner(
@@ -162,7 +128,9 @@ proc analyzeStmt*(
       classValueProvenance:
         classValueProvenance(stmt.initializer, initializer, locals),
       storageValueProvenance:
-        storageValueProvenance(stmt.initializer, initializer, locals),
+        classifyStorageValue(
+          stmt.initializer, initializer, locals, functions, classes
+        ),
       storageBorrowOwner:
         storageBorrowOwner(stmt.initializer, initializer, locals),
       storageReleased: false
@@ -232,10 +200,12 @@ proc analyzeStmt*(
             value,
             locals
           )
-          updatedTarget.storageValueProvenance = storageValueProvenance(
+          updatedTarget.storageValueProvenance = classifyStorageValue(
             stmt.assignedValue,
             value,
-            locals
+            locals,
+            functions,
+            classes
           )
           updatedTarget.storageBorrowOwner = storageBorrowOwner(
             stmt.assignedValue,
@@ -362,19 +332,12 @@ proc analyzeStmt*(
       )
 
       if functionResult.typ.kind == etkClass and
+          not isConcreteStorageTypeName(functionResult.typ.className) and
           stmt.value.kind != astExpressions.ekNone and
           classValueProvenance(stmt.value, returnValue, locals) != cvpDetached:
         failAt(
           stmt.value.span,
           "class return must produce a fresh/detached object"
-        )
-
-      if functionResult.typ.kind == etkClass and
-          isConcreteStorageTypeName(functionResult.typ.className) and
-          storageValueProvenance(stmt.value, returnValue, locals) != svpOwned:
-        failAt(
-          stmt.value.span,
-          "Storage return must transfer an owning allocation; borrowed Storage cannot escape"
         )
 
       HirStmt(

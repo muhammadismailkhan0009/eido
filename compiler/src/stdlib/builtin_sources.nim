@@ -10,11 +10,19 @@ const
   BuiltinStdlibManifestPath* = "<eido-sdk>/stdlib/module.yaml"
   BuiltinProcessSourcePath* = "eido://stdlib/process.eido"
   BuiltinConsoleSourcePath* = "eido://stdlib/console.eido"
+  BuiltinArenaSourcePath* = "eido://stdlib/arena.eido"
+  BuiltinMemorySourcePath* = "eido://stdlib/memory.eido"
   BuiltinProcessSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/src/process.eido"
   )
   BuiltinConsoleSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/src/console.eido"
+  )
+  BuiltinArenaSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/src/arena.eido"
+  )
+  BuiltinMemorySource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/src/memory.eido"
   )
   BuiltinNativeSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native.nim"
@@ -49,6 +57,18 @@ proc addBuiltinStdlib*(
     BuiltinConsoleSource,
     BuiltinStdlibModuleName
   )
+  sources.add initSourceUnit(
+    sources.len,
+    BuiltinArenaSourcePath,
+    BuiltinArenaSource,
+    BuiltinStdlibModuleName
+  )
+  sources.add initSourceUnit(
+    sources.len,
+    BuiltinMemorySourcePath,
+    BuiltinMemorySource,
+    BuiltinStdlibModuleName
+  )
 
   modules.add ModuleSpec(
     name: "stdlib",
@@ -56,10 +76,15 @@ proc addBuiltinStdlib*(
     parentName: "",
     manifestPath: BuiltinStdlibManifestPath,
     directory: "",
-    sourcePaths: @[BuiltinProcessSourcePath, BuiltinConsoleSourcePath],
+    sourcePaths: @[
+      BuiltinProcessSourcePath,
+      BuiltinConsoleSourcePath,
+      BuiltinArenaSourcePath,
+      BuiltinMemorySourcePath
+    ],
     children: @[],
     dependencies: @[],
-    exports: @["Process", "Console"],
+    exports: @["Process", "Console", "Memory"],
     provides: @[],
     adopts: @[]
   )

@@ -1,0 +1,5 @@
+class Memory<T> {
+    function arena(Int capacity) returns Arena<T> {
+        return Arena<T>.create(capacity);
+    }
+}

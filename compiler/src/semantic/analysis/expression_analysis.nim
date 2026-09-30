@@ -15,6 +15,7 @@ import ../symbols/functions
 import ../symbols/nominals
 import ../symbols/scope
 import optional_paths
+import storage_value_provenance
 
 ## Resolves names and types in an AST expression and produces HIR.
 ## Example: source `a + 5` becomes a typed binary HIR node referencing `a` by LocalId.

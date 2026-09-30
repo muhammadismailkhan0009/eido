@@ -17,7 +17,7 @@ Files are broad navigation boundaries; suites inside them name the smallest usef
 - `control_flow/` — conditionals, `else if` chains, `while`/classic `for` loops, `break`/`continue`, structured scope isolation, and return-path coverage; start with `control_flow/README.md`
 - `function_variants_test.nim` — signature cardinality, zero-result returns, call resolution/arity, and result contracts
 - `native/` — top-level and class-owned `native function` execution through the bundled backend-support ABI; start with `native/README.md`
-- `storage/` — compiler-owned typed allocation, raw fixed-stride blocks, typed views, capacity, bounds-safe indexed read/write, slicing, explicit-address roots, and release invalidation
+- `storage/` — compiler-owned typed/raw Storage mechanics plus the Eido-written generic `Arena<T>` policy: sequential borrowed slices, remaining capacity, bulk reset, and root release
 - `primitive_variants_test.nim` — supported primitive values, Byte bounds, numeric suffix rejection, and removed numeric type names
 - `string_variants_test.nim` — built-in immutable String literals, signatures, concatenation/equality, class storage, replacement through `set`, and binding/copy-ref boundaries
 - `variable_variants_test.nim` — initialization forms, `set` mutation forms, declaration ordering, and declaration uniqueness
