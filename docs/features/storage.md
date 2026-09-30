@@ -1,63 +1,118 @@
 # Storage
 
-`Storage<T>` is Eido's single compiler-owned low-level memory capability. It represents bounded typed access over one underlying memory region; arrays, objects, strings, arenas, pools, pages, vectors, and other policies are intended to build above this same substrate rather than introduce separate memory systems.
+`Storage<T>` is Eido's single compiler-owned low-level memory capability. It models a consecutive sequence of allocation slots. Typed storage derives each slot's size and alignment from `T`; raw byte storage receives an explicit bytes-per-allocation stride.
 
-`Storage<Byte>` is the universal raw backing form when a heterogeneous or reinterpreted region is required. Ordinary Eido code never receives a forgeable physical address.
+The API is static/type-associated so the capability value itself remains allocation-free. Higher-level objects, arrays, strings, arenas, pools, pages, vectors, and other policies are intended to build above this same substrate.
 
-## Implemented API
+## API surface
 
 ```eido
-var raw = Storage<Byte>.allocate(32, 0);
-var ints = Storage<Int>.view(raw, 0, 4);
+Storage<T>.allocate(Int allocations) returns Storage<T>;
 
-Storage<Int>.write(ints, 1, 42);
+Storage<Byte>.allocateRaw(
+    Int allocations,
+    Int bytesPerAllocation
+) returns Storage<Byte>;
+
+Storage<Byte>.fromAddress(
+    Int startingAddress,
+    Int allocations,
+    Int bytesPerAllocation
+) returns Storage<Byte>;
+
+Storage<T>.view(
+    Storage<Byte> raw,
+    Int start
+) returns Storage<T>;
+
+Storage<T>.write(Storage<T> storage, Int index, T value);
+Storage<T>.read(Storage<T> storage, Int index) returns T;
+Storage<T>.capacity(Storage<T> storage) returns Int;
+
+Storage<T>.slice(
+    Storage<T> storage,
+    Int start,
+    Int count
+) returns Storage<T>;
+
+Storage<T>.release(Storage<T> storage);
+```
+
+`fromAddress` currently uses `Int` for the physical starting address because Eido does not yet expose a dedicated `Address` scalar type.
+
+## Typed allocation
+
+```eido
+var values = Storage<Int>.allocate(100);
+Storage<Int>.write(values, 0, 10);
+Storage<Int>.write(values, 1, 20);
+var second = Storage<Int>.read(values, 1);
+```
+
+`allocate(100)` reserves 100 consecutive `Int` slots. Their physical stride is `sizeof(Int)` and their alignment is derived by the backend; the caller never supplies byte sizes for typed storage.
+
+Allocation and assignment are intentionally separate. This allows every slot to receive a different value instead of requiring one initial value to be duplicated across the whole region.
+
+## Raw consecutive blocks
+
+```eido
+var raw = Storage<Byte>.allocateRaw(4, 8);
+```
+
+This creates four consecutive raw allocation blocks, each eight bytes wide. Capacity is four, not 32. The address of raw block `i` is conceptually `base + i * 8`.
+
+Raw storage becomes typed through `view` before ordinary typed access:
+
+```eido
+var ints = Storage<Int>.view(raw, 0);
+Storage<Int>.write(ints, 1, 55);
 var value = Storage<Int>.read(ints, 1);
-var tail = Storage<Int>.slice(ints, 1, 3);
-var size = Storage<Int>.capacity(tail);
-
-Storage<Byte>.release(raw);
 ```
 
-Direct typed allocation remains available:
+The view is allocation-free. It preserves the raw block stride, so each raw allocation block becomes one typed slot. `view` checks that `T` fits inside one raw block and that the resulting addresses satisfy `T`'s alignment.
+
+The same raw backing may be viewed from different block starts for different supported element types. Nominal/class elements remain deferred until Eido classes themselves have a non-Nim-reference physical representation.
+
+## Explicit starting address
 
 ```eido
-var values = Storage<Int>.allocate(100, 0);
+var region = Storage<Byte>.fromAddress(
+    536870912,
+    16,
+    64
+);
 ```
 
-`allocate(count, initialValue)` creates an owning fixed-capacity region and initializes every typed slot. `view(raw, byteOffset, count)` creates a typed borrowed view over `Storage<Byte>`; `slice(storage, start, count)` creates a borrowed typed subrange. Views and slices allocate no backing memory or metadata.
+`fromAddress` uses the supplied address as block zero, then advances by `bytesPerAllocation` for each following block. It does not ask the hosted allocator to choose a base address.
 
-## Ownership and safety
+The resulting root capability is releasable, but release only invalidates the capability because Storage did not acquire the externally addressed backing memory.
 
-Only an owning allocation may release backing memory. Storage parameters are borrowed, and `view`/`slice` results are borrowed capabilities. Releasing a borrowed local is rejected semantically and defended again by the runtime.
+## Slice and capacity
 
-Straight-line semantic analysis also rejects later use of an owner after release and later use of a local view after its tracked owner is released. Complete control-flow/escape-aware lifetime analysis remains follow-on work.
-
-Indexed access is bounds checked. Raw typed views validate byte bounds and alignment. `Storage<T>` cannot be directly constructed and cannot participate in ordinary class `copy`/`ref` relationships. Copying a class graph that owns Storage is rejected.
-
-Primitive and `String` direct storage allocations are currently supported. Nominal/class elements remain deferred until Eido object ownership and layout are defined. Raw `Storage<String>.view` is rejected because safe initialization state for managed String values has not yet been defined.
-
-## Unified memory model
-
-The intended hierarchy is:
-
-```text
-Storage<Byte>
-    |
-    +-- typed Storage<T> views
-    +-- class/object layouts
-    +-- string backing
-    +-- arenas / pools / pages
-    +-- arrays / vectors / maps
+```eido
+var values = Storage<Int>.allocate(100);
+var middle = Storage<Int>.slice(values, 20, 10);
+var count = Storage<Int>.capacity(middle);
 ```
 
-Higher layers decide allocation policy and object lifetime, but they all ultimately consume the same Storage substrate.
+`slice` is allocation-free and works in slots, never bytes. The example represents original slots 20 through 29 and reports capacity 10.
+
+## Ownership and release
+
+`allocate` and `allocateRaw` create owning roots whose backing memory is returned on `release`. `fromAddress` creates a releasable external root whose backing is not freed. `view` and `slice` create borrowed capabilities and cannot release the backing region.
+
+Storage parameters are borrowed. Straight-line semantic analysis rejects obvious owner use after release, borrowed-view use after tracked owner release, borrowed Storage return escape, and replacement of a live owning Storage local without release. Complete control-flow/escape-aware lifetime analysis remains follow-on work.
+
+## Current implementation boundary
+
+Primitive and `String` typed storage are currently supported. `Storage<String>.view(raw, ...)` remains rejected because raw managed-value initialization tracking is not yet defined. Nominal/class elements remain deferred until object layout and identity move onto the Storage substrate.
+
+The hosted Nim backend zeroes newly acquired backing memory, while Eido's source model separates slot allocation from assignment through `write`. Full initialized-slot tracking for arbitrary dynamic indexes is follow-on safety work; the current phase is proving the unified memory substrate before adding stronger compiler guarantees.
 
 ## Nim backend
 
-The actual hosted Storage implementation lives in `stdlib/native/nim/eido_storage.nim`. A concrete Eido specialization is emitted only as a thin alias/glue layer such as `Storage<Int> = EidoStorage[int64]`.
+The hosted implementation lives in `stdlib/native/nim/eido_storage.nim`. `EidoStorage<T>` is an allocation-free value descriptor carrying the base pointer, slot capacity, byte stride, release/ownership state, raw/typed state, and liveness.
 
-`EidoStorage[T]` is an allocation-free value capability containing a raw typed pointer, capacity, ownership state, and live state. Only `allocate` calls Nim's manual `alloc0`; owner release explicitly resets initialized slots and calls `dealloc`. `view` and `slice` only derive new capability values over existing memory.
+Typed `allocate` uses `sizeof(T)` as its stride. `allocateRaw` uses the explicit `bytesPerAllocation`. `fromAddress` uses the caller-provided base without allocating backing memory. `view` and `slice` derive new descriptors without allocating backing memory.
 
-The generated program therefore contains no Storage `seq[T]`, `ref object`, `newSeq`, or Storage-header allocation. The hosted allocator is still only one provider choice; embedded/freestanding targets may later back the same Eido semantics with static regions, fixed pools, caller-owned memory, or other target-specific providers.
-
-A primitive Storage program already compiles and runs with Nim `--mm:none`. The current hosted trap/error path still constructs Nim exception objects, so full `--mm:none` independence is not yet claimed for the entire runtime; that path and the remaining String/class/interface representations are migration work before `--mm:none` becomes the default Eido backend mode.
+A primitive raw-to-typed Storage program compiles and executes under Nim `--mm:none`. The current hosted trap/error path still constructs Nim exception objects, so complete runtime memory-manager independence is not yet claimed for every failure path.

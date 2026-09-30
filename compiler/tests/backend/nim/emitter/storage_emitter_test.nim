@@ -5,7 +5,7 @@ suite "Storage emission":
   test "emits concrete typed storage support without external native ABI":
     let source = """
       function main() returns Int {
-        var storage = Storage<Int>.allocate(4, 0);
+        var storage = Storage<Int>.allocate(4);
         Storage<Int>.write(storage, 2, 41);
         return Storage<Int>.read(storage, 2);
       }
@@ -17,6 +17,8 @@ suite "Storage emission":
     check " = EidoStorage[int64]" in generated
     check " = EidoStorage[int8]" in generated
     check "eidoStorageAllocate[int64]" in generated
+    check "eidoStorageAllocateRaw" in generated
+    check "eidoStorageFromAddress" in generated
     check "eidoStorageView[int64]" in generated
     check "eidoStorageSlice[int64]" in generated
     check "eidoStorageRelease[int64]" in generated

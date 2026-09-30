@@ -24,7 +24,7 @@ suite "Storage project integration":
     """)
     writeFile(root / "Main.eido", """
       function main() returns Int {
-        var storage = Storage<Int>.allocate(2, 0);
+        var storage = Storage<Int>.allocate(2);
         Storage<Int>.write(storage, 1, 42);
         var value = Storage<Int>.read(storage, 1);
         Storage<Int>.release(storage);

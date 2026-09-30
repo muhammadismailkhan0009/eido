@@ -212,8 +212,8 @@ suite "Compiler pipeline":
   test "manual Storage substrate compiles with Nim memory management disabled":
     let source = """
       function main() returns Int {
-        var raw = Storage<Byte>.allocate(32, 0);
-        var ints = Storage<Int>.view(raw, 0, 4);
+        var raw = Storage<Byte>.allocateRaw(4, 8);
+        var ints = Storage<Int>.view(raw, 0);
         Storage<Int>.write(ints, 1, 73);
         var value = Storage<Int>.read(ints, 1);
         Storage<Byte>.release(raw);

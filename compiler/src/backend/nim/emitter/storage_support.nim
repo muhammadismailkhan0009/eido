@@ -30,7 +30,8 @@ proc renderStorageClassSupport(
 ): string =
   let storageType = className(classDecl.sourceName)
   let byteStorageType = className("Storage<Byte>")
-  let elementType = renderType(storageElementType(classDecl))
+  let element = storageElementType(classDecl)
+  let elementType = renderType(element)
   let allocateName = storageMethodName(classDecl.sourceName, "allocate")
   let viewName = storageMethodName(classDecl.sourceName, "view")
   let sliceName = storageMethodName(classDecl.sourceName, "slice")
@@ -39,20 +40,30 @@ proc renderStorageClassSupport(
   let writeName = storageMethodName(classDecl.sourceName, "write")
   let releaseName = storageMethodName(classDecl.sourceName, "release")
 
-  result.add "proc " & allocateName & "(capacity: int64, initialValue: " &
-    elementType & "): " & storageType & " =\n"
-  result.add "  eidoStorageAllocate[" & elementType &
-    "](capacity, initialValue)\n\n"
+  result.add "proc " & allocateName & "(allocations: int64): " &
+    storageType & " =\n"
+  result.add "  eidoStorageAllocate[" & elementType & "](allocations)\n\n"
+
+  if element == etByte:
+    let allocateRawName = storageMethodName(classDecl.sourceName, "allocateRaw")
+    let fromAddressName = storageMethodName(classDecl.sourceName, "fromAddress")
+    result.add "proc " & allocateRawName &
+      "(allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
+    result.add "  eidoStorageAllocateRaw(allocations, bytesPerAllocation)\n\n"
+    result.add "proc " & fromAddressName &
+      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " &
+      storageType & " =\n"
+    result.add "  eidoStorageFromAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
 
   result.add "proc " & viewName & "(storage: " & byteStorageType &
-    ", byteOffset: int64, count: int64): " & storageType & " =\n"
-  result.add "  eidoStorageView[" & elementType &
-    "](storage, byteOffset, count)\n\n"
+    ", start: int64): " & storageType & " =\n"
+  result.add "  eidoStorageView[" & elementType & "](storage, start)\n\n"
 
   result.add "proc " & sliceName & "(storage: " & storageType &
     ", start: int64, count: int64): " & storageType & " =\n"
   result.add "  eidoStorageSlice[" & elementType &
     "](storage, start, count)\n\n"
+
   result.add "proc " & capacityName & "(storage: " & storageType &
     "): int64 =\n"
   result.add "  eidoStorageCapacity[" & elementType & "](storage)\n\n"

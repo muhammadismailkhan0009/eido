@@ -47,7 +47,7 @@ proc storageValueProvenance(
   of astExpressions.ekMethodCall:
     if source.receiver.kind == astExpressions.ekIdentifier and
         isConcreteStorageTypeName(source.receiver.name):
-      if source.methodName == "allocate":
+      if source.methodName in ["allocate", "allocateRaw", "fromAddress"]:
         return svpOwned
       if source.methodName in ["view", "slice"]:
         return svpBorrowed

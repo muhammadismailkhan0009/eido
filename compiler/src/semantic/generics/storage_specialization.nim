@@ -51,10 +51,7 @@ proc specializeStorageClass*(
   let allocateMethod = storageMethod(
     span,
     "allocate",
-    @[
-      Parameter(span: span, name: "capacity", typeRef: intType),
-      Parameter(span: span, name: "initialValue", typeRef: elementType)
-    ],
+    @[Parameter(span: span, name: "allocations", typeRef: intType)],
     FunctionResultRef(kind: frrSingle, typeRef: storageType)
   )
   let viewMethod = storageMethod(
@@ -62,8 +59,7 @@ proc specializeStorageClass*(
     "view",
     @[
       Parameter(span: span, name: "storage", typeRef: byteStorageType),
-      Parameter(span: span, name: "byteOffset", typeRef: intType),
-      Parameter(span: span, name: "count", typeRef: intType)
+      Parameter(span: span, name: "start", typeRef: intType)
     ],
     FunctionResultRef(kind: frrSingle, typeRef: storageType)
   )
@@ -108,6 +104,37 @@ proc specializeStorageClass*(
     @[Parameter(span: span, name: "storage", typeRef: storageType)],
     FunctionResultRef(kind: frrNone)
   )
+
+  var methods = @[
+    allocateMethod,
+    viewMethod,
+    sliceMethod,
+    capacityMethod,
+    readMethod,
+    writeMethod,
+    releaseMethod
+  ]
+  if elementType.name == "Byte":
+    methods.insert(storageMethod(
+      span,
+      "allocateRaw",
+      @[
+        Parameter(span: span, name: "allocations", typeRef: intType),
+        Parameter(span: span, name: "bytesPerAllocation", typeRef: intType)
+      ],
+      FunctionResultRef(kind: frrSingle, typeRef: storageType)
+    ), 1)
+    methods.insert(storageMethod(
+      span,
+      "fromAddress",
+      @[
+        Parameter(span: span, name: "startingAddress", typeRef: intType),
+        Parameter(span: span, name: "allocations", typeRef: intType),
+        Parameter(span: span, name: "bytesPerAllocation", typeRef: intType)
+      ],
+      FunctionResultRef(kind: frrSingle, typeRef: storageType)
+    ), 2)
+
   ClassDecl(
     span: span,
     name: concreteName,
@@ -116,13 +143,5 @@ proc specializeStorageClass*(
     implements: @[],
     fields: @[],
     invariants: @[],
-    methods: @[
-      allocateMethod,
-      viewMethod,
-      sliceMethod,
-      capacityMethod,
-      readMethod,
-      writeMethod,
-      releaseMethod
-    ]
+    methods: methods
   )
