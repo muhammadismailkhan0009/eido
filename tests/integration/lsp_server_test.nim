@@ -588,6 +588,66 @@ function main() returns Int {
     check messages[0]["result"].len == 1
     check messages[0]["result"][0]["newText"].getStr == "function main() {\n}\n"
 
+  test "formatting preserves source comments":
+    let root = freshLspProject("formatting_comments")
+    defer: removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    let source = """// it's the entry point
+function main(){var value=1; // keep me
+}
+"""
+    let path = root / "Main.eido"
+    writeFile(path, source)
+    let uri = pathToFileUri(path)
+
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {"rootUri": pathToFileUri(root)}
+    })
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "method": "textDocument/didOpen",
+      "params": {
+        "textDocument": {
+          "uri": uri,
+          "languageId": "eido",
+          "version": 1,
+          "text": source
+        }
+      }
+    })
+
+    let messages = server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 6,
+      "method": "textDocument/formatting",
+      "params": {
+        "textDocument": {"uri": uri},
+        "options": {"tabSize": 4, "insertSpaces": true}
+      }
+    })
+
+    check messages.len == 1
+    check messages[0]["result"].len == 1
+    check messages[0]["result"][0]["newText"].getStr == """// it's the entry point
+function main() {
+    var value = 1; // keep me
+}
+"""
+
   test "JSON RPC framing round trips one request":
     let root = freshLspProject("framing")
     defer: removeDir(root)

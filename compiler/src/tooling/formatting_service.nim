@@ -1,8 +1,10 @@
 ## Provides deterministic source formatting without depending on an editor protocol.
-## The formatter operates on Eido tokens so strings/literals keep their exact source spelling.
+## The formatter operates on Eido tokens plus source comments so literals and comments
+## keep their exact source spelling while layout is canonicalized.
 
 import std/strutils
 import ../frontend/lexer/[scanner, token]
+import comment_service
 
 ## Removes horizontal whitespace from the end of the current output buffer.
 proc trimTrailingSpaces(value: var string) =
@@ -48,27 +50,83 @@ proc needsWordSpace(previous: TokenKind): bool =
     tkQuestion, tkLess
   } and not previous.isOperator
 
+## Reports whether a source gap crosses a physical line boundary.
+proc containsLineBreak(source: string, startOffset, endOffset: int): bool =
+  let start = max(0, min(startOffset, source.len))
+  let finish = max(start, min(endOffset, source.len))
+  for index in start ..< finish:
+    if source[index] in {'\r', '\n'}:
+      return true
+  false
+
+## Writes one standalone comment at the current structural indentation.
+proc writeStandaloneComment(
+  value: var string,
+  source: string,
+  comment: ToolingCommentRange,
+  indent: int
+) =
+  if not value.lineStart:
+    value.newline()
+  value.writeIndent(indent)
+  value.add source[comment.startOffset ..< comment.endOffset]
+  value.newline()
+
+## Writes a comment that originally followed a source token on the same line.
+proc writeTrailingComment(
+  value: var string,
+  source: string,
+  comment: ToolingCommentRange
+) =
+  value.ensureSpace()
+  value.add source[comment.startOffset ..< comment.endOffset]
+  value.newline()
+
 ## Formats one complete Eido source string into the canonical v0 layout.
 proc formatSource*(source: string): string =
   let tokens = lexAll(source)
+  let comments = lineCommentRanges(source)
+  var commentIndex = 0
   var indent = 0
   var parenDepth = 0
   var previous = tkEof
 
   for index, token in tokens:
+    # Comments that occur before this token and were not attached to the previous
+    # token are standalone lines at the current structural indentation.
+    while commentIndex < comments.len and
+        comments[commentIndex].startOffset < token.span.startOffset:
+      result.writeStandaloneComment(source, comments[commentIndex], indent)
+      inc commentIndex
+
     if token.kind == tkEof:
       break
 
     let nextKind =
       if index + 1 < tokens.len: tokens[index + 1].kind
       else: tkEof
+    let nextOffset =
+      if index + 1 < tokens.len: tokens[index + 1].span.startOffset
+      else: source.len
+
+    var hasTrailingComment = false
+    if commentIndex < comments.len:
+      let comment = comments[commentIndex]
+      hasTrailingComment =
+        comment.startOffset >= token.span.endOffset and
+        comment.startOffset < nextOffset and
+        not source.containsLineBreak(
+          token.span.endOffset,
+          comment.startOffset
+        )
 
     case token.kind
     of tkLBrace:
       result.ensureSpace()
       result.add "{"
-      result.newline()
       inc indent
+      if not hasTrailingComment:
+        result.newline()
 
     of tkRBrace:
       if not result.lineStart:
@@ -76,18 +134,20 @@ proc formatSource*(source: string): string =
       indent = max(0, indent - 1)
       result.writeIndent(indent)
       result.add "}"
-      if nextKind == tkElse:
-        result.add " "
-      elif nextKind != tkSemicolon:
-        result.newline()
+      if not hasTrailingComment:
+        if nextKind == tkElse:
+          result.add " "
+        elif nextKind != tkSemicolon:
+          result.newline()
 
     of tkSemicolon:
       result.trimTrailingSpaces()
       result.add ";"
-      if parenDepth > 0:
-        result.add " "
-      else:
-        result.newline()
+      if not hasTrailingComment:
+        if parenDepth > 0:
+          result.add " "
+        else:
+          result.newline()
 
     of tkComma:
       result.trimTrailingSpaces()
@@ -133,6 +193,13 @@ proc formatSource*(source: string): string =
         if previous.needsWordSpace:
           result.ensureSpace()
         result.add token.lexeme
+
+    if hasTrailingComment:
+      result.writeTrailingComment(
+        source,
+        comments[commentIndex]
+      )
+      inc commentIndex
 
     previous = token.kind
 
