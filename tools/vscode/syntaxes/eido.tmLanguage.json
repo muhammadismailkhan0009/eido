@@ -45,7 +45,8 @@
     },
     {
       "name": "comment.line.double-slash.eido",
-      "match": "//.*$"
+      "begin": "//",
+      "end": "$"
     },
     {
       "name": "string.quoted.double.eido",

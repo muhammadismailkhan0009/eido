@@ -49,6 +49,26 @@ proc decodeSemanticTokens(data: JsonNode): seq[DecodedSemanticToken] =
     index += 5
 
 suite "Eido LSP integration":
+  test "TextMate line comments own apostrophes through end of line":
+    let projectRoot =
+      currentSourcePath().parentDir.parentDir.parentDir
+    let grammar = parseFile(
+      projectRoot / "tools" / "vscode" / "syntaxes" / "eido.tmLanguage.json"
+    )
+
+    var foundCommentRule = false
+    for pattern in grammar["patterns"]:
+      if not pattern.hasKey("name") or
+          pattern["name"].getStr != "comment.line.double-slash.eido":
+        continue
+
+      foundCommentRule = true
+      check pattern["begin"].getStr == "//"
+      check pattern["end"].getStr == "$"
+      check not pattern.hasKey("match")
+
+    check foundCommentRule
+
   test "initialize advertises full sync diagnostics and hover":
     var server = initLanguageServer()
     let root = freshLspProject("initialize")
@@ -310,7 +330,7 @@ function main() returns Int {
     let root = freshLspProject("comment_tokens")
     defer: removeDir(root)
 
-    let source = """// it's a heading
+    let source = """// Private dynamic view over Storage's target-layout authority.
 function main() returns Int {
     var value = 8; // value's trailing note
     var text = "https://eido.dev//docs";
@@ -374,7 +394,7 @@ function main() returns Int {
       comments.add source[startOffset ..< endOffset]
 
     check comments == @[
-      "// it's a heading",
+      "// Private dynamic view over Storage's target-layout authority.",
       "// value's trailing note"
     ]
 

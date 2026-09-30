@@ -1,0 +1,5 @@
+// Private compiler semantic entry points for compiler-standard compile-time phases.
+class Compiler {
+    native function typeCount() returns Int;
+    native function typeAt(Int index) returns Int;
+}

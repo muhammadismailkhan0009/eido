@@ -8,8 +8,26 @@ import model
 import snapshot
 
 const
-  MemoryLayoutPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout.eido"
+  MemoryLayoutPhaseManifestSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/module.yaml"
+  )
+  CompilerPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/Compiler.eido"
+  )
+  TypeInfoPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/TypeInfo.eido"
+  )
+  FieldInfoPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/FieldInfo.eido"
+  )
+  StorageInfoPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/StorageInfo.eido"
+  )
+  MemoryPlanPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/MemoryPlan.eido"
+  )
+  MemoryLayoutPlannerSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/memory_layout.eido"
   )
   CompileTimeNativeSupportSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/native/eido_native.nim"
@@ -137,9 +155,35 @@ proc runMemoryLayoutPhase*(
 ): CompileTimeMemoryPlan =
   let lines = runCompileTimeEidoPhase(
     "memory_layout",
-    MemoryLayoutPhaseSource,
+    MemoryLayoutPhaseManifestSource,
     CompileTimeNativeSupportSource,
-    buildCompileTimeSnapshotJson(program)
+    buildCompileTimeSnapshotJson(program),
+    @[
+      CompileTimePhaseSource(
+        entry: "Compiler.eido",
+        text: CompilerPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "TypeInfo.eido",
+        text: TypeInfoPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "FieldInfo.eido",
+        text: FieldInfoPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "StorageInfo.eido",
+        text: StorageInfoPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "MemoryPlan.eido",
+        text: MemoryPlanPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "memory_layout.eido",
+        text: MemoryLayoutPlannerSource
+      )
+    ]
   )
 
   result = parsePhaseOutput(lines)

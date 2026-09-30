@@ -1,0 +1,15 @@
+module: memory_layout
+
+sources:
+  - Compiler.eido
+  - TypeInfo.eido
+  - FieldInfo.eido
+  - StorageInfo.eido
+  - MemoryPlan.eido
+  - memory_layout.eido
+
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

@@ -1,0 +1,4 @@
+// Private field-handle queries for compiler-standard compile-time phases.
+class FieldInfo {
+    native function typeOf(Int field) returns Int;
+}

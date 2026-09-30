@@ -75,7 +75,7 @@ compiler/src/compile_time/
     private build-machine execution host, semantic snapshots, target Storage-layout facts, and adapters for compiler-standard phases written in Eido
 
 compiler/compile_time/
-    compiler-owned Eido phase sources plus their private native bridge; neither is part of stdlib or application runtime
+    compiler-owned Eido phase modules plus their private native bridge; each phase has a real module.yaml and obeys normal one-outermost-nominal-per-source validation; none is part of stdlib or application runtime
 
 compiler/src/backend/nim/emitter/
     pure HIR → Nim source translation

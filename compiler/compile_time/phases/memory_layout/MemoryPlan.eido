@@ -1,0 +1,6 @@
+// Private output sink consumed by the compiler after the phase exits.
+class MemoryPlan {
+    native function field(Int ownerType, Int field, Int offset);
+    native function trace(Int ownerType, Int field);
+    native function layout(Int type, Int size, Int alignment);
+}

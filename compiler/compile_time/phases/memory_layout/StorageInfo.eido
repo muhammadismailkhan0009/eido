@@ -1,0 +1,5 @@
+// Private dynamic view over Storage's target-layout authority.
+class StorageInfo {
+    native function sizeOf(Int type) returns Int;
+    native function alignmentOf(Int type) returns Int;
+}
