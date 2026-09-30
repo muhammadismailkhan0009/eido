@@ -2,6 +2,18 @@ import std/[strutils, unittest]
 import support/feature_test_support
 
 suite "Storage execution":
+  test "reports target storage size and alignment through the unified API":
+    let source = """
+      function main() returns Int {
+        return Storage<Int>.size() +
+          Storage<Int>.alignment() +
+          Storage<Byte>.size() +
+          Storage<Byte>.alignment();
+      }
+    """
+
+    check runNativeFeatureSource(source, "storage_layout_queries") == "18"
+
   test "allocates typed slots and assigns values independently":
     let source = """
       function main() returns Int {

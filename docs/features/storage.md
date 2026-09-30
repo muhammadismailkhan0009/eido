@@ -36,7 +36,12 @@ Storage<T>.slice(
 ) returns Storage<T>;
 
 Storage<T>.release(Storage<T> storage);
+
+Storage<T>.size() returns Int;
+Storage<T>.alignment() returns Int;
 ```
+
+`size()` and `alignment()` report the target representation of one `T` slot through Storage itself. Other subsystems do not define parallel size/alignment APIs.
 
 `fromAddress` currently uses `Int` for the physical starting address because Eido does not yet expose a dedicated `Address` scalar type.
 
@@ -49,7 +54,7 @@ Storage<Int>.write(values, 1, 20);
 var second = Storage<Int>.read(values, 1);
 ```
 
-`allocate(100)` reserves 100 consecutive `Int` slots. Their physical stride is `sizeof(Int)` and their alignment is derived by the backend; the caller never supplies byte sizes for typed storage.
+`allocate(100)` reserves 100 consecutive `Int` slots. Its stride comes from `Storage<Int>.size()` and its alignment from `Storage<Int>.alignment()`; the caller never supplies byte sizes for typed storage. Typed allocation does not own a separate physical allocator: it acquires raw `Storage<Byte>` backing through `allocateRaw`, then adopts the same bytes as an owning typed descriptor.
 
 Allocation and assignment are intentionally separate. This allows every slot to receive a different value instead of requiring one initial value to be duplicated across the whole region.
 
@@ -121,7 +126,7 @@ arena.release();
 
 `Arena<T>` owns one `Storage<T>` root and a sequential cursor. `allocate(count)` returns a borrowed `Storage<T>.slice`, `remaining()` reports unused slots, `reset()` rewinds the cursor without reallocating, and `release()` releases the single backing root. Sizing, alignment, addresses, and physical allocation remain Storage responsibilities.
 
-The Arena capacity precondition may query `Storage.capacity` because that compiler-owned native operation is observational and explicitly recognized as contract-safe. Other native Storage operations are not made contract-safe by this exception.
+The Arena capacity precondition may query `Storage.capacity` because that compiler-owned operation is observational and explicitly recognized as contract-safe. `Storage.size()` and `Storage.alignment()` are likewise verified observational queries. Allocation, mutation, and release remain effectful or conservatively unverified.
 
 Allocations returned by an Arena become logically invalid after `reset()` or `release()`; full compiler lifetime invalidation for that relationship is intentionally deferred to the future borrow/lifetime analysis.
 
@@ -135,6 +140,6 @@ The hosted Nim backend zeroes newly acquired backing memory, while Eido's source
 
 The hosted implementation lives in `stdlib/native/nim/eido_storage.nim`. `EidoStorage<T>` is an allocation-free value descriptor carrying the base pointer, slot capacity, byte stride, release/ownership state, raw/typed state, and liveness.
 
-Typed `allocate` uses `sizeof(T)` as its stride. `allocateRaw` uses the explicit `bytesPerAllocation`. `fromAddress` uses the caller-provided base without allocating backing memory. `view` and `slice` derive new descriptors without allocating backing memory.
+`allocateRaw` is the single hosted physical allocation path and uses the explicit `bytesPerAllocation`. Typed `allocate` calls that raw path with `sizeof(T)` and then reinterprets the same owning descriptor as `Storage<T>` without acquiring a second region. `fromAddress` uses the caller-provided base without allocating backing memory. `view` and `slice` derive borrowed descriptors without allocating backing memory. `size()` and `alignment()` expose the backend's `sizeof(T)`/`alignof(T)` facts through the unified Storage API.
 
 A primitive raw-to-typed Storage program compiles and executes under Nim `--mm:none`. The current hosted trap/error path still constructs Nim exception objects, so complete runtime memory-manager independence is not yet claimed for every failure path.

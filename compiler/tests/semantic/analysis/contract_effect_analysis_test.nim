@@ -42,6 +42,22 @@ suite "Contract effect safety":
     # When / Then
     discard analyzeSource(source)
 
+  test "allows Storage layout queries inside contracts":
+    # Given
+    let source = """
+      function checked() {
+        require {
+          Storage<Int>.size() > 0;
+          Storage<Int>.alignment() > 0;
+        }
+      }
+
+      function main() { checked(); }
+    """
+
+    # When / Then
+    discard analyzeSource(source)
+
   test "rejects a directly mutating method called from a contract":
     # Given
     let source = """

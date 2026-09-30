@@ -36,26 +36,8 @@ proc eidoStorageSlotAddress[T](storage: EidoStorage[T], index: int64): uint =
   requireEidoStorageIndex(storage, index)
   cast[uint](storage.data) + uint(index) * uint(storage.strideBytes)
 
-## Allocates one owning typed region containing the requested number of slots.
-proc eidoStorageAllocate*[T](allocations: int64): EidoStorage[T] =
-  let strideBytes = int64(sizeof(T))
-  requireEidoStorageLayout(allocations, strideBytes)
-
-  result.capacity = allocations
-  result.strideBytes = strideBytes
-  result.ownsMemory = true
-  result.releasable = true
-  result.rawBlocks = false
-  result.live = true
-  if allocations == 0:
-    return
-
-  let byteCount = int(allocations * strideBytes)
-  result.data = cast[ptr UncheckedArray[T]](alloc0(byteCount))
-  if result.data.isNil:
-    raise newException(OutOfMemDefect, "Eido storage allocation failed")
-
 ## Allocates one owning raw fixed-stride block sequence.
+## This is the single physical allocation path for all owned Storage backing.
 proc eidoStorageAllocateRaw*(
   allocations: int64,
   bytesPerAllocation: int64
@@ -75,6 +57,49 @@ proc eidoStorageAllocateRaw*(
   result.data = cast[ptr UncheckedArray[int8]](alloc0(byteCount))
   if result.data.isNil:
     raise newException(OutOfMemDefect, "Eido raw storage allocation failed")
+
+## Transfers one owning raw allocation descriptor into an owning typed descriptor.
+## No backing memory is acquired here; the bytes always come from allocateRaw.
+proc eidoStorageAdoptRaw[T](storage: EidoStorage[int8]): EidoStorage[T] =
+  requireEidoStorageLive(storage)
+  if not storage.rawBlocks or not storage.ownsMemory or not storage.releasable:
+    raise newException(
+      AssertionDefect,
+      "Eido typed allocation requires owning raw Storage<Byte>"
+    )
+  if int64(sizeof(T)) > storage.strideBytes:
+    raise newException(
+      ValueError,
+      "Eido typed allocation type does not fit raw allocation block"
+    )
+
+  let targetAddress = cast[uint](storage.data)
+  if not storage.data.isNil and targetAddress mod uint(alignof(T)) != 0'u:
+    raise newException(ValueError, "Eido typed allocation is misaligned")
+  if storage.capacity > 1 and
+      uint(storage.strideBytes) mod uint(alignof(T)) != 0'u:
+    raise newException(ValueError, "Eido typed allocation stride is misaligned")
+
+  result.data = cast[ptr UncheckedArray[T]](storage.data)
+  result.capacity = storage.capacity
+  result.strideBytes = storage.strideBytes
+  result.ownsMemory = true
+  result.releasable = true
+  result.rawBlocks = false
+  result.live = true
+
+## Allocates one owning typed region by composing the raw allocation substrate.
+proc eidoStorageAllocate*[T](allocations: int64): EidoStorage[T] =
+  let raw = eidoStorageAllocateRaw(allocations, int64(sizeof(T)))
+  eidoStorageAdoptRaw[T](raw)
+
+## Reports the target byte width of one typed Storage slot.
+proc eidoStorageSize*[T](): int64 =
+  int64(sizeof(T))
+
+## Reports the target alignment required by one typed Storage slot.
+proc eidoStorageAlignment*[T](): int64 =
+  int64(alignof(T))
 
 ## Creates a releasable raw block sequence beginning at an explicit address.
 proc eidoStorageFromAddress*(

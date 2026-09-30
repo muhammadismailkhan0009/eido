@@ -39,6 +39,8 @@ proc renderStorageClassSupport(
   let readName = storageMethodName(classDecl.sourceName, "read")
   let writeName = storageMethodName(classDecl.sourceName, "write")
   let releaseName = storageMethodName(classDecl.sourceName, "release")
+  let sizeName = storageMethodName(classDecl.sourceName, "size")
+  let alignmentName = storageMethodName(classDecl.sourceName, "alignment")
 
   result.add "proc " & allocateName & "(allocations: int64): " &
     storageType & " =\n"
@@ -79,6 +81,12 @@ proc renderStorageClassSupport(
 
   result.add "proc " & releaseName & "(storage: var " & storageType & ") =\n"
   result.add "  eidoStorageRelease[" & elementType & "](storage)\n\n"
+
+  result.add "proc " & sizeName & "(): int64 =\n"
+  result.add "  eidoStorageSize[" & elementType & "]()\n\n"
+
+  result.add "proc " & alignmentName & "(): int64 =\n"
+  result.add "  eidoStorageAlignment[" & elementType & "]()\n\n"
 
 ## Renders specialization glue for every concrete Storage<T> used by the program.
 proc renderStorageSupport*(classes: seq[hirDeclarations.HirClass]): string =

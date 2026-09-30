@@ -1,7 +1,13 @@
 import std/[strutils, unittest]
 import support/compiler_test_support
+import stdlib/builtin_sources
 
 suite "Storage emission":
+  test "typed allocation composes the single raw physical allocator":
+    check BuiltinStorageSupportSource.count("alloc0(") == 1
+    check "let raw = eidoStorageAllocateRaw(allocations, int64(sizeof(T)))" in
+      BuiltinStorageSupportSource
+
   test "emits concrete typed storage support without external native ABI":
     let source = """
       function main() returns Int {
@@ -22,6 +28,8 @@ suite "Storage emission":
     check "eidoStorageView[int64]" in generated
     check "eidoStorageSlice[int64]" in generated
     check "eidoStorageRelease[int64]" in generated
+    check "eidoStorageSize[int64]" in generated
+    check "eidoStorageAlignment[int64]" in generated
     check "alloc0(" notin generated
     check "dealloc(" notin generated
     check "ptr UncheckedArray" notin generated

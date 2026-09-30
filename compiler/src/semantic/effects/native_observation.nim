@@ -11,4 +11,4 @@ proc isVerifiedObservationalNativeMethod*(call: HirMethodCall): bool =
     call.dispatchKind == hmdClass and
     call.ownerType.kind == etkClass and
     isConcreteStorageTypeName(call.ownerType.className) and
-    call.methodName == "capacity"
+    call.methodName in ["capacity", "size", "alignment"]

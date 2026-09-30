@@ -104,6 +104,18 @@ proc specializeStorageClass*(
     @[Parameter(span: span, name: "storage", typeRef: storageType)],
     FunctionResultRef(kind: frrNone)
   )
+  let sizeMethod = storageMethod(
+    span,
+    "size",
+    @[],
+    FunctionResultRef(kind: frrSingle, typeRef: intType)
+  )
+  let alignmentMethod = storageMethod(
+    span,
+    "alignment",
+    @[],
+    FunctionResultRef(kind: frrSingle, typeRef: intType)
+  )
 
   var methods = @[
     allocateMethod,
@@ -112,7 +124,9 @@ proc specializeStorageClass*(
     capacityMethod,
     readMethod,
     writeMethod,
-    releaseMethod
+    releaseMethod,
+    sizeMethod,
+    alignmentMethod
   ]
   if elementType.name == "Byte":
     methods.insert(storageMethod(

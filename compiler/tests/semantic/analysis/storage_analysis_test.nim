@@ -20,16 +20,26 @@ suite "Storage semantics":
       storage = program.classes[1]
     check storage.typ == classType("Storage<Int>")
     check storage.fields.len == 0
-    check storage.methods.len == 7
+    check storage.methods.len == 9
+    var hasSize = false
+    var hasAlignment = false
     for methodDecl in storage.methods:
       check methodDecl.isNative
       check methodDecl.kind == mkStatic
+      if methodDecl.sourceName == "size":
+        hasSize = true
+        check methodDecl.result.typ == etInt
+      if methodDecl.sourceName == "alignment":
+        hasAlignment = true
+        check methodDecl.result.typ == etInt
+    check hasSize
+    check hasAlignment
 
     var byteStorage = program.classes[0]
     if byteStorage.typ != classType("Storage<Byte>"):
       byteStorage = program.classes[1]
     check byteStorage.typ == classType("Storage<Byte>")
-    check byteStorage.methods.len == 9
+    check byteStorage.methods.len == 11
 
   test "rejects nominal element storage until identity ownership is defined":
     let source = """
