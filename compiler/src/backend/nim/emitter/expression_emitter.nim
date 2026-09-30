@@ -8,6 +8,21 @@ import ../../../types/storage
 import names
 import type_emitter
 
+## Reports whether one managed expression is not already held in a source local.
+## Such values require a short collection barrier while sibling call arguments
+## are still being evaluated.
+proc isManagedTemporary(expr: hirExpressions.HirExpr): bool =
+  not expr.isNil and
+    expr.typ.isManagedNominalType and
+    expr.kind != hirExpressions.hekLocal
+
+## Wraps one rendered compound expression in the GC temporary barrier when needed.
+proc protectManagedTemporary(expression: string, required: bool): string =
+  if required:
+    "eidoGcProtected(" & expression & ")"
+  else:
+    expression
+
 ## Renders one resolved HIR expression as Nim source.
 ## Example: local Int `x + 5` renders as `(eido_local_0_x + int64(5))`.
 proc renderExpr*(expr: hirExpressions.HirExpr): string
@@ -27,12 +42,16 @@ proc renderCall*(call: hirExpressions.HirCall): string =
     else:
       functionName(call.functionId, call.functionName)
 
-  result = renderedName & "("
+  var rendered = renderedName & "("
+  var protect = false
   for index, argument in call.arguments:
     if index > 0:
-      result.add ", "
-    result.add renderExpr(argument)
-  result.add ")"
+      rendered.add ", "
+    rendered.add renderExpr(argument)
+    if argument.isManagedTemporary:
+      protect = true
+  rendered.add ")"
+  result = protectManagedTemporary(rendered, protect)
 
 ## Renders a typed integral literal with its Nim representation.
 ## Example: Eido Byte literal value 7 becomes `int8(7)`, while ordinary Int becomes `int64(...)`.
@@ -75,11 +94,20 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
   of hirExpressions.hekString:
     result = renderStringLiteral(expr)
   of hirExpressions.hekNone:
-    result = "none(" & renderType(requiredType(expr.typ)) & ")"
+    if expr.typ.isManagedNominalType:
+      result = "default(" & renderType(requiredType(expr.typ)) & ")"
+    else:
+      result = "none(" & renderType(requiredType(expr.typ)) & ")"
   of hirExpressions.hekOptionalSome:
-    result = "some(" & renderExpr(expr.optionalValue) & ")"
+    if expr.typ.isManagedNominalType:
+      result = renderExpr(expr.optionalValue)
+    else:
+      result = "some(" & renderExpr(expr.optionalValue) & ")"
   of hirExpressions.hekOptionalGet:
-    result = "get(" & renderExpr(expr.optionalValue) & ")"
+    if expr.typ.isManagedNominalType:
+      result = "eidoGcGet(" & renderExpr(expr.optionalValue) & ")"
+    else:
+      result = "get(" & renderExpr(expr.optionalValue) & ")"
   of hirExpressions.hekLocal:
     result = localName(expr.localId, expr.sourceName)
   of hirExpressions.hekCall:

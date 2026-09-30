@@ -112,3 +112,79 @@ proc classInvariantName*(sourceName: string): string =
 ## Builds the backend-only field used to suppress recursive invariant evaluation.
 proc invariantEvaluationDepthFieldName*(): string =
   "eido_runtime_invariant_evaluation_depth"
+
+
+## Builds the generated Nim payload type name for one managed Eido class.
+proc classPayloadName*(sourceName: string): string =
+  "eido_payload_" & nominalName(sourceName)
+
+## Builds the generated blank-allocation helper for one managed Eido class.
+proc classAllocateName*(sourceName: string): string =
+  "eido_allocate_" & nominalName(sourceName)
+
+## Builds the generated full constructor helper for one managed Eido class.
+proc classConstructorName*(sourceName: string): string =
+  "eido_construct_" & nominalName(sourceName)
+
+## Builds the generated trace callback for one managed Eido class.
+proc classTraceName*(sourceName: string): string =
+  "eido_trace_" & nominalName(sourceName)
+
+## Builds the generated destroy callback for one managed Eido class.
+proc classDestroyName*(sourceName: string): string =
+  "eido_destroy_" & nominalName(sourceName)
+
+## Builds the generated managed interface payload type name.
+proc interfacePayloadName*(sourceName: string): string =
+  "eido_interface_payload_" & nominalName(sourceName)
+
+## Builds the generated managed interface allocation helper.
+proc interfaceAllocateName*(sourceName: string): string =
+  "eido_interface_allocate_" & nominalName(sourceName)
+
+## Builds the generated managed interface trace callback.
+proc interfaceTraceName*(sourceName: string): string =
+  "eido_interface_trace_" & nominalName(sourceName)
+
+## Builds the generated managed interface destroy callback.
+proc interfaceDestroyName*(sourceName: string): string =
+  "eido_interface_destroy_" & nominalName(sourceName)
+
+## Builds the generated interface method dispatcher wrapper.
+proc interfaceDispatchName*(interfaceNameValue, methodNameValue: string): string =
+  "eido_interface_dispatch_" & nominalName(interfaceNameValue) & "_" &
+    methodNameValue
+
+## Builds the generated class-to-interface method thunk.
+proc interfaceThunkName*(
+  classSourceName,
+  interfaceSourceName,
+  methodSourceName: string
+): string =
+  "eido_interface_thunk_" & nominalName(classSourceName) & "_" &
+    nominalName(interfaceSourceName) & "_" & methodSourceName
+
+## Builds the stack-owned precise-root descriptor name for one LocalId.
+proc gcRootName*(id: LocalId): string =
+  "eido_gc_root_" & $id.value
+
+
+## Builds the representation-neutral generated getter for one class field.
+proc classFieldGetName*(classSourceName, fieldSourceName: string): string =
+  "eido_get_" & nominalName(classSourceName) & "_" & fieldSourceName
+
+## Builds the representation-neutral generated setter for one class field.
+proc classFieldSetName*(classSourceName, fieldSourceName: string): string =
+  "eido_set_" & nominalName(classSourceName) & "_" & fieldSourceName
+
+## Builds the generated invariant-depth enter helper.
+proc classInvariantEnterName*(classSourceName: string): string =
+  "eido_invariant_enter_" & nominalName(classSourceName)
+
+## Builds the generated invariant-depth leave helper.
+proc classInvariantLeaveName*(classSourceName: string): string =
+  "eido_invariant_leave_" & nominalName(classSourceName)
+
+## Builds the generated invariant-depth observation helper.
+proc classInvariantClearName*(classSourceName: string): string =
+  "eido_invariant_clear_" & nominalName(classSourceName)

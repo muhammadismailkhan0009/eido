@@ -1,20 +1,24 @@
-## Renders resolved direct class calls and dynamic interface calls.
+## Renders class/interface method calls through representation-neutral helpers.
 
 ## Renders one class/interface method call.
 proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
-  if call.dispatchKind == hmdInterface:
-    result = renderExpr(call.receiver) & "." &
-      interfaceMethodFieldName(
-        call.ownerType.interfaceName,
-        call.methodName
-      ) & "("
+  var protect = false
+  var rendered = ""
 
-    for index, argument in call.arguments:
-      if index > 0:
-        result.add ", "
-      result.add renderExpr(argument)
-    result.add ")"
-    return
+  if call.dispatchKind == hmdInterface:
+    rendered = interfaceDispatchName(
+      call.ownerType.interfaceName,
+      call.methodName
+    ) & "(" & renderExpr(call.receiver)
+    if call.receiver.isManagedTemporary:
+      protect = true
+
+    for argument in call.arguments:
+      rendered.add ", " & renderExpr(argument)
+      if argument.isManagedTemporary:
+        protect = true
+    rendered.add ")"
+    return protectManagedTemporary(rendered, protect)
 
   let renderedName =
     if call.isNative and
@@ -23,23 +27,23 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
     elif call.isNative:
       nativeMethodName(call.ownerType.className, call.methodName)
     else:
-      methodName(
-        call.methodId,
-        call.ownerType.className,
-        call.methodName
-      )
+      methodName(call.methodId, call.ownerType.className, call.methodName)
 
-  result = renderedName & "("
-
-  var hasPreviousArgument = false
+  rendered = renderedName & "("
+  var wroteArgument = false
   if call.kind == mkInstance:
-    result.add renderExpr(call.receiver)
-    hasPreviousArgument = true
+    rendered.add renderExpr(call.receiver)
+    wroteArgument = true
+    if call.receiver.isManagedTemporary:
+      protect = true
 
   for argument in call.arguments:
-    if hasPreviousArgument:
-      result.add ", "
-    result.add renderExpr(argument)
-    hasPreviousArgument = true
+    if wroteArgument:
+      rendered.add ", "
+    rendered.add renderExpr(argument)
+    wroteArgument = true
+    if argument.isManagedTemporary:
+      protect = true
 
-  result.add ")"
+  rendered.add ")"
+  protectManagedTemporary(rendered, protect)

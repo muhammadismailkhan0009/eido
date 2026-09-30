@@ -25,7 +25,7 @@ suite "Contract emission":
     check "require contract failed in method 'debit'" in generated
     check "ensure contract failed in method 'debit'" in generated
     check "invariant contract failed for class 'Account'" in generated
-    check "eido_invariant_Account(eido_class_Account(" in generated
+    check "eido_invariant_Account(eido_construct_Account(" in generated
 
 
   test "does not lower ensure through defer":
@@ -57,7 +57,7 @@ suite "Contract emission":
     """
 
     let generated = emitSource(source)
-    let assignment = generated.find("eido_field_balance = eido_local_1_value")
+    let assignment = generated.find("eido_set_Account_balance(eido_local_0_receiver, eido_local_1_value)")
     let mutationCheck = generated.find("discard eido_invariant_Account", assignment)
 
     check assignment >= 0
@@ -82,9 +82,9 @@ suite "Contract emission":
     let checkerBody = generated[checkerStart ..< validStart]
     let validBody = generated[validStart ..< inspectStart]
 
-    check "eido_runtime_invariant_evaluation_depth += 1" in checkerBody
-    check "eido_runtime_invariant_evaluation_depth += 1" notin validBody
-    check "if eido_local_0_receiver.eido_runtime_invariant_evaluation_depth == 0:" in validBody
+    check "eido_invariant_enter_Account(eido_local_0_receiver)" in checkerBody
+    check "eido_invariant_enter_Account(eido_local_0_receiver)" notin validBody
+    check "if eido_invariant_clear_Account(eido_local_0_receiver):" in validBody
 
 
   test "binds ensure result before checking the postcondition":

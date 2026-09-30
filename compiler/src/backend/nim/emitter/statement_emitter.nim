@@ -8,6 +8,7 @@ import names
 import type_emitter
 import expression_emitter
 import normal_exit
+import gc_root_emitter
 
 ## Returns spaces for one emitted statement indentation level.
 ## Example: indentation(4) prefixes a statement nested inside a function-level conditional.
@@ -42,28 +43,46 @@ proc renderStmtAt*(
     result.add pad & "var " & localName(stmt.localId, stmt.sourceName) &
       ": " & renderType(stmt.typ) & " = " &
       renderExpr(stmt.initializer) & "\n"
+    if exitContext.isGcRoot(stmt.localId):
+      result.add renderLocalRootRegistration(
+        stmt.localId,
+        stmt.sourceName,
+        indent
+      )
+    if exitContext.gcEnabled:
+      result.add pad & "eidoGcSafepoint()\n"
 
   of hirStatements.hskAssign:
     result.add pad & localName(stmt.targetId, stmt.targetName) &
       " = " & renderExpr(stmt.assignedValue) & "\n"
+    if exitContext.gcEnabled:
+      result.add pad & "eidoGcSafepoint()\n"
 
   of hirStatements.hskFieldSet:
-    result.add pad & localName(stmt.receiverId, "receiver") & "." &
-      fieldName(stmt.fieldName) & " = " &
-      renderExpr(stmt.fieldValue) & "\n"
+    result.add pad & classFieldSetName(
+      exitContext.ownerClassName,
+      stmt.fieldName
+    ) & "(" & localName(stmt.receiverId, "receiver") & ", " &
+      renderExpr(stmt.fieldValue) & ")\n"
     result.add renderInvariantValidation(exitContext, indent)
+    if exitContext.gcEnabled:
+      result.add pad & "eidoGcSafepoint()\n"
 
   of hirStatements.hskCall:
     if stmt.call.result.kind == frNone:
       result.add pad & renderCall(stmt.call) & "\n"
     else:
       result.add pad & "discard " & renderCall(stmt.call) & "\n"
+    if exitContext.gcEnabled:
+      result.add pad & "eidoGcSafepoint()\n"
 
   of hirStatements.hskMethodCall:
     if stmt.methodCall.result.kind == frNone:
       result.add pad & renderMethodCall(stmt.methodCall) & "\n"
     else:
       result.add pad & "discard " & renderMethodCall(stmt.methodCall) & "\n"
+    if exitContext.gcEnabled:
+      result.add pad & "eidoGcSafepoint()\n"
 
   of hirStatements.hskReturn:
     if stmt.value.isNil:
@@ -75,7 +94,10 @@ proc renderStmtAt*(
           exitContext.resultBindingName
         else:
           "eido_runtime_return_" & $stmt.span.startOffset
-      result.add pad & "let " & returnLocal & " = " & renderExpr(stmt.value) & "\n"
+      if exitContext.resultRootId >= 0:
+        result.add pad & returnLocal & " = " & renderExpr(stmt.value) & "\n"
+      else:
+        result.add pad & "let " & returnLocal & " = " & renderExpr(stmt.value) & "\n"
       result.add renderNormalExitChecks(exitContext, indent)
       result.add pad & "return " & returnLocal & "\n"
     else:

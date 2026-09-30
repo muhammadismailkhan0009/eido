@@ -2,4 +2,6 @@
 class Compiler {
     native function typeCount() returns Int;
     native function typeAt(Int index) returns Int;
+    native function callableCount() returns Int;
+    native function callableAt(Int index) returns Int;
 }

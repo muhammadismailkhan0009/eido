@@ -51,9 +51,9 @@ proc storageLayoutOf*(typ: EidoType): StorageLayout =
       else:
         requiredLayout(EidoStorage[int8])
     else:
-      # All ordinary Nim-backend classes lower to ref object values.
-      if optional: optionalLayout(pointer) else: requiredLayout(pointer)
+      # Managed class values, including optional absence, are one-pointer handles.
+      requiredLayout(pointer)
 
   of etkInterface:
-    # Interface values also lower to ref object handles in the current backend.
-    if optional: optionalLayout(pointer) else: requiredLayout(pointer)
+    # Managed interface values, including optional absence, are one-pointer boxes.
+    requiredLayout(pointer)

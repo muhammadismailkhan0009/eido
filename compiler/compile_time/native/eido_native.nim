@@ -37,6 +37,17 @@ proc fieldNode(fieldHandle: int64): JsonNode =
   requireIndex(fieldHandle, int64(fields.len), "field")
   fields[int(fieldHandle)]
 
+
+proc callableNode(callableHandle: int64): JsonNode =
+  let callables = snapshot()["callables"]
+  requireIndex(callableHandle, int64(callables.len), "callable")
+  callables[int(callableHandle)]
+
+proc valueNode(valueHandle: int64): JsonNode =
+  let values = snapshot()["values"]
+  requireIndex(valueHandle, int64(values.len), "value")
+  values[int(valueHandle)]
+
 proc eido_native_method_Compiler_typeCount*(): int64 =
   int64(snapshot()["declarations"].len)
 
@@ -44,6 +55,15 @@ proc eido_native_method_Compiler_typeAt*(index: int64): int64 =
   let declarations = snapshot()["declarations"]
   requireIndex(index, int64(declarations.len), "declaration")
   declarations[int(index)].getBiggestInt().int64
+
+
+proc eido_native_method_Compiler_callableCount*(): int64 =
+  int64(snapshot()["callables"].len)
+
+proc eido_native_method_Compiler_callableAt*(index: int64): int64 =
+  let callables = snapshot()["callables"]
+  requireIndex(index, int64(callables.len), "callable")
+  index
 
 proc eido_native_method_TypeInfo_isManaged*(typeHandle: int64): bool =
   typeNode(typeHandle)["managed"].getBool()
@@ -61,6 +81,36 @@ proc eido_native_method_TypeInfo_fieldAt*(
 
 proc eido_native_method_FieldInfo_typeOf*(fieldHandle: int64): int64 =
   fieldNode(fieldHandle)["type"].getBiggestInt().int64
+
+
+proc eido_native_method_CallableInfo_parameterCount*(
+  callableHandle: int64
+): int64 =
+  int64(callableNode(callableHandle)["parameters"].len)
+
+proc eido_native_method_CallableInfo_parameterAt*(
+  callableHandle,
+  index: int64
+): int64 =
+  let parameters = callableNode(callableHandle)["parameters"]
+  requireIndex(index, int64(parameters.len), "callable parameter")
+  parameters[int(index)].getBiggestInt().int64
+
+proc eido_native_method_CallableInfo_localCount*(
+  callableHandle: int64
+): int64 =
+  int64(callableNode(callableHandle)["locals"].len)
+
+proc eido_native_method_CallableInfo_localAt*(
+  callableHandle,
+  index: int64
+): int64 =
+  let locals = callableNode(callableHandle)["locals"]
+  requireIndex(index, int64(locals.len), "callable local")
+  locals[int(index)].getBiggestInt().int64
+
+proc eido_native_method_ValueInfo_typeOf*(valueHandle: int64): int64 =
+  valueNode(valueHandle)["type"].getBiggestInt().int64
 
 proc eido_native_method_StorageInfo_sizeOf*(typeHandle: int64): int64 =
   typeNode(typeHandle)["size"].getBiggestInt().int64
@@ -90,3 +140,10 @@ proc eido_native_method_MemoryPlan_layout*(
   alignment: int64
 ) =
   emitRecord(3, typeHandle, size, alignment)
+
+
+proc eido_native_method_MemoryPlan_root*(
+  callableHandle,
+  valueHandle: int64
+) =
+  emitRecord(4, callableHandle, valueHandle, 0)

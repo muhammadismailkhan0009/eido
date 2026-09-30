@@ -1,6 +1,7 @@
 ## Generates detached graph copiers for nominal classes.
-## Backend memo identity lists preserve sharing/cycles while keeping Eido semantics backend-neutral.
+## Copy allocations use the same representation-neutral class allocation helpers.
 
+import ../../../compile_time/model
 import ../../../hir/declarations as hirDeclarations
 import ../../../types/model
 import ../../../types/storage
@@ -32,42 +33,59 @@ proc renderCopyDeclarations(classes: seq[hirDeclarations.HirClass]): string =
   result.add "\n"
 
 ## Renders one memoized recursive copier body.
-proc renderInternalCopier(classDecl: hirDeclarations.HirClass): string =
+proc renderInternalCopier(
+  classDecl: hirDeclarations.HirClass,
+  plan: CompileTimeMemoryPlan
+): string =
   let sourceType = className(classDecl.sourceName)
   let tableName = classCopyTableName(classDecl.sourceName)
   result.add "proc " & classCopyInternalName(classDecl.sourceName) &
     "(source: " & sourceType & ", context: var " & copyContextName() &
     "): " & sourceType & " =\n"
-  result.add "  if source.isNil:\n"
-  result.add "    return nil\n"
+  if plan.hasManagedLayout(classDecl.sourceName):
+    result.add "  if not eidoGcIsSome(source):\n"
+    result.add "    return default(" & sourceType & ")\n"
+  else:
+    result.add "  if source.isNil:\n"
+    result.add "    return nil\n"
   result.add "  for entry in context." & tableName & ":\n"
   result.add "    if entry.source == source:\n"
   result.add "      return entry.target\n"
-  result.add "  result = " & sourceType & "()\n"
+  result.add "  result = " & classAllocateName(classDecl.sourceName) & "()\n"
   result.add "  context." & tableName &
     ".add((source: source, target: result))\n"
 
   for field in classDecl.fields:
-    let target = "result." & fieldName(field.sourceName)
-    let source = "source." & fieldName(field.sourceName)
+    let getter = classFieldGetName(classDecl.sourceName, field.sourceName)
+    let setter = classFieldSetName(classDecl.sourceName, field.sourceName)
+    let sourceValue = getter & "(source)"
+
     if field.typ.kind == etkClass and
         isConcreteStorageTypeName(field.typ.className):
-      result.add "  " & target & " = " & source & "\n"
+      result.add "  " & setter & "(result, " & sourceValue & ")\n"
     elif field.typ.kind == etkClass:
-      if field.typ.isOptional:
-        result.add "  if isSome(" & source & "):\n"
-        result.add "    " & target & " = some(" &
+      if plan.hasManagedLayout(classDecl.sourceName):
+        result.add "  if eidoGcIsSome(" & sourceValue & "):\n"
+        result.add "    " & setter & "(result, " &
           classCopyInternalName(field.typ.className) &
-          "(get(" & source & "), context))\n"
+          "(" & sourceValue & ", context))\n"
         result.add "  else:\n"
-        result.add "    " & target & " = none(" &
-          className(field.typ.className) & ")\n"
-      else:
-        result.add "  " & target & " = " &
+        result.add "    " & setter & "(result, default(" &
+          className(field.typ.className) & "))\n"
+      elif field.typ.isOptional:
+        result.add "  if isSome(" & sourceValue & "):\n"
+        result.add "    " & setter & "(result, some(" &
           classCopyInternalName(field.typ.className) &
-          "(" & source & ", context)\n"
+          "(get(" & sourceValue & "), context)))\n"
+        result.add "  else:\n"
+        result.add "    " & setter & "(result, none(" &
+          className(field.typ.className) & "))\n"
+      else:
+        result.add "  " & setter & "(result, " &
+          classCopyInternalName(field.typ.className) &
+          "(" & sourceValue & ", context))\n"
     else:
-      result.add "  " & target & " = " & source & "\n"
+      result.add "  " & setter & "(result, " & sourceValue & ")\n"
   result.add "\n"
 
 ## Renders the public copy entry point that creates an empty memo context.
@@ -82,7 +100,10 @@ proc renderPublicCopier(
     "(source, context)\n\n"
 
 ## Renders all copy support needed by the program's nominal classes.
-proc renderClassCopiers*(classes: seq[hirDeclarations.HirClass]): string =
+proc renderClassCopiers*(
+  classes: seq[hirDeclarations.HirClass],
+  plan: CompileTimeMemoryPlan = CompileTimeMemoryPlan()
+): string =
   var copyableClasses: seq[hirDeclarations.HirClass]
   for classDecl in classes:
     if not isConcreteStorageTypeName(classDecl.sourceName):
@@ -94,6 +115,6 @@ proc renderClassCopiers*(classes: seq[hirDeclarations.HirClass]): string =
   result.add renderCopyContext(copyableClasses)
   result.add renderCopyDeclarations(copyableClasses)
   for classDecl in copyableClasses:
-    result.add renderInternalCopier(classDecl)
+    result.add renderInternalCopier(classDecl, plan)
   for classDecl in copyableClasses:
     result.add renderPublicCopier(classDecl)

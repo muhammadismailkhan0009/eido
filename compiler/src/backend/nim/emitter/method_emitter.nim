@@ -1,7 +1,9 @@
 ## Renders class-owned Eido methods as Nim procedures.
 ## Instance methods receive a hidden receiver; inferred static methods do not.
 
+import ../../../compile_time/model
 import ../../../hir/declarations as hirDeclarations
+import ../../../semantic/symbols/ids
 import ../../../hir/expressions as hirExpressions
 import ../../../types/function_result
 import ../../../types/method_kind
@@ -10,6 +12,7 @@ import type_emitter
 import statement_emitter
 import contract_emitter
 import normal_exit
+import gc_root_emitter
 
 ## Renders one generated method signature with a receiver only for instance methods.
 ## Example: Calculator.add(Int, Int) emits two Int parameters, while Account.value() emits its hidden Account receiver.
@@ -43,9 +46,14 @@ proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
 ## Example: an empty inferred static method still emits discard.
 proc renderMethod*(
   methodDecl: hirDeclarations.HirMethod,
-  enforceInvariant: bool = false
+  enforceInvariant: bool = false,
+  memoryPlan: CompileTimeMemoryPlan = CompileTimeMemoryPlan()
 ): string =
   result.add renderMethodSignature(methodDecl) & " =\n"
+
+  let roots = memoryPlan.rootsForMethod(methodDecl.methodId)
+  if memoryPlan.types.len > 0:
+    result.add renderMethodRootPreamble(methodDecl, roots)
 
   let hasInvariant = enforceInvariant and methodDecl.kind == mkInstance
   let receiverName =
@@ -60,6 +68,12 @@ proc renderMethod*(
   for clause in methodDecl.ensures:
     effectiveEnsures.add clause
 
+  var resultRootId = -1
+  for root in roots:
+    if effectiveEnsures.len > 0 and methodDecl.result.kind == frSingle and
+        root.localId == methodDecl.ensureResultLocalId.value:
+      resultRootId = root.localId
+
   let exitContext = NormalExitContext(
     contractClauses: effectiveEnsures,
     contractMessage: "ensure contract failed in method '" &
@@ -71,7 +85,11 @@ proc renderMethod*(
         "",
     invariantOwner:
       if hasInvariant: methodDecl.ownerType.className else: "",
-    invariantReceiver: receiverName
+    invariantReceiver: receiverName,
+    ownerClassName: methodDecl.ownerType.className,
+    gcEnabled: memoryPlan.types.len > 0,
+    gcRootIds: roots.rootIds,
+    resultRootId: resultRootId
   )
 
   if hasInvariant:

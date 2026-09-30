@@ -37,5 +37,5 @@ suite "Set statement emission":
     let generated = emitSource(source)
 
     # Then
-    check "eido_local_0_receiver.eido_field_balance = " &
-      "(eido_local_0_receiver.eido_field_balance - eido_local_1_amount)" in generated
+    check "eido_set_Account_balance(eido_local_0_receiver, " &
+      "(eido_get_Account_balance(eido_local_0_receiver) - eido_local_1_amount))" in generated

@@ -25,9 +25,9 @@ suite "Construction expression emission":
     check "type\n  eido_class_Point = ref object" in generated
     check "eido_field_x: int64" in generated
     check "eido_field_visible: bool" in generated
-    check "eido_class_Point(" in generated
-    check "eido_field_visible: true" in generated
-    check "eido_field_x: int64(10)" in generated
+    check "proc eido_construct_Point(" in generated
+    check "arg_eido_field_visible = true" in generated
+    check "arg_eido_field_x = int64(10)" in generated
 
   test "emits nested construction":
     # Given
@@ -46,4 +46,4 @@ suite "Construction expression emission":
     let generated = emitSource(source)
 
     # Then
-    check "eido_field_marker: eido_class_Marker()" in generated
+    check "arg_eido_field_marker = eidoGcProtected(eido_construct_Marker())" in generated

@@ -2,6 +2,7 @@
 ## Postconditions and stable-boundary invariants use this instead of Nim defer.
 
 import ../../../hir/expressions as hirExpressions
+import ../../../semantic/symbols/ids
 import std/strutils
 import names
 import contract_emitter
@@ -13,6 +14,14 @@ type
     resultBindingName*: string
     invariantOwner*: string
     invariantReceiver*: string
+    ownerClassName*: string
+    gcEnabled*: bool
+    gcRootIds*: seq[int]
+    resultRootId*: int
+
+## Reports whether one LocalId was selected as a precise GC root.
+proc isGcRoot*(context: NormalExitContext, localId: LocalId): bool =
+  localId.value in context.gcRootIds
 
 ## Reports whether any normal-exit work is configured.
 proc hasNormalExitChecks*(context: NormalExitContext): bool =
@@ -27,8 +36,9 @@ proc renderInvariantValidation*(
     return
 
   let pad = " ".repeat(indent)
-  result.add pad & "if " & context.invariantReceiver & "." &
-    invariantEvaluationDepthFieldName() & " == 0:\n"
+  result.add pad & "if " & classInvariantClearName(
+    context.invariantOwner
+  ) & "(" & context.invariantReceiver & "):\n"
   result.add pad & "  discard " & classInvariantName(context.invariantOwner) &
     "(" & context.invariantReceiver & ")\n"
 

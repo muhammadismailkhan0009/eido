@@ -3,4 +3,7 @@
 
 ## Renders one field-access expression recursively from its receiver.
 proc renderFieldAccess(expr: hirExpressions.HirExpr): string =
-  renderExpr(expr.target) & "." & fieldName(expr.sourceFieldName)
+  classFieldGetName(
+    expr.target.typ.className,
+    expr.sourceFieldName
+  ) & "(" & renderExpr(expr.target) & ")"

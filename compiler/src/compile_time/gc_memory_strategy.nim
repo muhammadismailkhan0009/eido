@@ -19,8 +19,13 @@ type
     alignment: int64
     fields: seq[RawFieldLayout]
 
+  RawCallableRoots = object
+    callableHandle: int64
+    valueHandles: seq[int64]
+
   RawMemoryPlan = object
     types: seq[RawTypeLayout]
+    callables: seq[RawCallableRoots]
 
 const
   GcMemoryStrategyManifestSource = staticRead(
@@ -31,6 +36,12 @@ const
   )
   TypeInfoPhaseSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/TypeInfo.eido"
+  )
+  CallableInfoPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/CallableInfo.eido"
+  )
+  ValueInfoPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/ValueInfo.eido"
   )
   FieldInfoPhaseSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/FieldInfo.eido"
@@ -110,6 +121,31 @@ proc addLayoutRecord(
   plan.types[typeIndex].size = size
   plan.types[typeIndex].alignment = alignment
 
+## Returns the mutable raw root-plan slot for one private callable handle.
+proc ensureCallablePlan(
+  plan: var RawMemoryPlan,
+  callableHandle: int64
+): int =
+  for index, callablePlan in plan.callables:
+    if callablePlan.callableHandle == callableHandle:
+      return index
+
+  result = plan.callables.len
+  plan.callables.add RawCallableRoots(
+    callableHandle: callableHandle,
+    valueHandles: @[]
+  )
+
+## Adds one selected parameter/local root emitted by the Eido strategy.
+proc addRootRecord(
+  plan: var RawMemoryPlan,
+  callableHandle,
+  valueHandle: int64
+) =
+  let callableIndex = plan.ensureCallablePlan(callableHandle)
+  if valueHandle notin plan.callables[callableIndex].valueHandles:
+    plan.callables[callableIndex].valueHandles.add valueHandle
+
 ## Parses the private line protocol while keeping invocation-local handles private.
 proc parsePhaseOutput(lines: seq[string]): RawMemoryPlan =
   for line in lines:
@@ -137,6 +173,8 @@ proc parsePhaseOutput(lines: seq[string]): RawMemoryPlan =
       result.addTraceRecord(first, second)
     of 3:
       result.addLayoutRecord(first, second, third)
+    of 4:
+      result.addRootRecord(first, second)
     else:
       raise newException(
         ValueError,
@@ -164,6 +202,41 @@ proc resolvePlan(
       )
 
     result.types.add typePlan
+
+  for rawCallable in rawPlan.callables:
+    let rawKind = semanticSnapshot.callableKind(rawCallable.callableHandle)
+    var callablePlan = CompileTimeCallableRoots(
+      kind:
+        if rawKind == SnapshotFunctionKind:
+          ctkFunction
+        elif rawKind == SnapshotMethodKind:
+          ctkMethod
+        else:
+          raise newException(
+            ValueError,
+            "unknown compile-time callable kind"
+          ),
+      semanticId: int(
+        semanticSnapshot.callableSemanticId(
+          rawCallable.callableHandle
+        )
+      ),
+      ownerName: semanticSnapshot.callableOwnerName(
+        rawCallable.callableHandle
+      ),
+      sourceName: semanticSnapshot.callableSourceName(
+        rawCallable.callableHandle
+      ),
+      roots: @[]
+    )
+
+    for valueHandle in rawCallable.valueHandles:
+      callablePlan.roots.add CompileTimeRoot(
+        localId: int(semanticSnapshot.valueLocalId(valueHandle)),
+        sourceName: semanticSnapshot.valueSourceName(valueHandle)
+      )
+
+    result.callables.add callablePlan
 
 ## Counts ordinary class declarations that receive compile-time layout records.
 proc expectedClassLayouts(program: hirProgram.HirProgram): int =
@@ -209,6 +282,14 @@ proc runGcMemoryStrategy*(
       CompileTimePhaseSource(
         entry: "TypeInfo.eido",
         text: TypeInfoPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "CallableInfo.eido",
+        text: CallableInfoPhaseSource
+      ),
+      CompileTimePhaseSource(
+        entry: "ValueInfo.eido",
+        text: ValueInfoPhaseSource
       ),
       CompileTimePhaseSource(
         entry: "FieldInfo.eido",

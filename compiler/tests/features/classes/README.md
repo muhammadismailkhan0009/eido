@@ -68,4 +68,12 @@ class parameters preserving identity, copy/ref construction fields, recursive
 detachment with internal sharing preservation, detached class returns, and
 class relationship replacement through `set` for locals and own class fields.
 
+
+`gc_management_variants_test.nim` covers automatic managed class lifetime under the default GC strategy:
+
+- precise local roots and traced child graphs under collection pressure
+- compound call temporaries surviving nested safe points
+- zero-field class construction still selecting managed representation
+- Storage-backed GC allocation with no direct allocator path (runtime-level coverage lives in backend toolchain tests)
+
 Interfaces and contracts remain outside the current class slice.

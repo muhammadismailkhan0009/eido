@@ -16,7 +16,7 @@ suite "Field access expression emission":
     let generated = emitSource(source)
 
     # Then
-    check "return eido_local_0_point.eido_field_x" in generated
+    check "return eido_get_Point_x(eido_local_0_point)" in generated
 
   test "emits chained field access":
     # Given
@@ -36,7 +36,7 @@ suite "Field access expression emission":
     let generated = emitSource(source)
 
     # Then
-    check "return eido_local_0_employee.eido_field_address.eido_field_zip" in generated
+    check "return eido_get_Address_zip(eido_get_Employee_address(eido_local_0_employee))" in generated
 
   test "emits access directly from construction":
     # Given
@@ -51,4 +51,4 @@ suite "Field access expression emission":
     let generated = emitSource(source)
 
     # Then
-    check "return eido_class_Point(eido_field_x: int64(10)).eido_field_x" in generated
+    check "return eido_get_Point_x(eidoGcProtected(eido_construct_Point(arg_eido_field_x = int64(10))))" in generated

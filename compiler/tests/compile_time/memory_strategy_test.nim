@@ -1,6 +1,6 @@
 import std/[os, strutils, unittest]
 import support/[compiler_test_support, project_fixture_support]
-import compile_time/phase_runner
+import compile_time/[model, phase_runner]
 import pipeline/[options, project_compiler]
 
 suite "Compiler-standard Eido memory strategies":
@@ -75,6 +75,49 @@ suite "Compiler-standard Eido memory strategies":
 
     check sawStableParentIdentity
 
+  test "GC strategy selects managed parameters locals and receivers as roots":
+    let source = """
+      class Box {
+        Int value;
+
+        function keep(Box other) returns Int {
+          var local = Box { value = other.value; };
+          return local.value + self.value;
+        }
+      }
+
+      function consume(Box input) returns Int {
+        var localBox = Box { value = input.value; };
+        return localBox.value;
+      }
+
+      function main() returns Int {
+        var box = Box { value = 1; };
+        return consume(box);
+      }
+    """
+
+    let program = analyzeSource(source)
+    let plan = runStandardCompileTimePhases(program, msGc)
+
+    var sawFunctionRoots = false
+    var sawMethodRoots = false
+    for callable in plan.callables:
+      if callable.kind == ctkFunction and callable.sourceName == "consume":
+        sawFunctionRoots = true
+        check callable.roots.len == 2
+        check callable.roots[0].sourceName == "input"
+        check callable.roots[1].sourceName == "localBox"
+      if callable.kind == ctkMethod and callable.sourceName == "keep":
+        sawMethodRoots = true
+        check callable.roots.len == 3
+        check callable.roots[0].sourceName == "receiver"
+        check callable.roots[1].sourceName == "other"
+        check callable.roots[2].sourceName == "local"
+
+    check sawFunctionRoots
+    check sawMethodRoots
+
   test "GC strategy plan becomes generated backend metadata":
     let source = """
       class Child {
@@ -87,7 +130,15 @@ suite "Compiler-standard Eido memory strategies":
         Child child;
       }
 
-      function main() {}
+      function main() returns Int {
+        var child = Child { value = 7; };
+        var parent = Parent {
+          tag = 1;
+          number = 2;
+          child = ref child;
+        };
+        return parent.child.value;
+      }
     """
 
     let generated = compileProjectToNim(
@@ -100,6 +151,10 @@ suite "Compiler-standard Eido memory strategies":
     check "eido_class_Parent_gc_trace_count = 1" in generated
     check "eido_class_Parent_gc_trace_0_offset = int64(16)" in generated
     check "eido_class_Child_gc_trace_count = 0" in generated
+    check "var eido_gc_root_" in generated
+    check "eidoGcPushRoot(" in generated
+    check "eidoGcPopRoot(" in generated
+    check "eidoGcSafepoint()" in generated
 
   test "generic runner contains no GC layout policy":
     let projectRoot =
@@ -133,6 +188,21 @@ suite "Compiler-standard Eido memory strategies":
     check "when isMainModule" in generated
     check "_gc_payload_size" notin generated
     check "_gc_trace_count" notin generated
+
+  test "manual strategy rejects even zero-field class construction":
+    let source = """
+      class Token {}
+
+      function main() {
+        var token = Token {};
+      }
+    """
+
+    expect ValueError:
+      discard compileProjectToNim(
+        fixtureProject(source),
+        CompilationOptions(memoryStrategy: msManual)
+      )
 
   test "manual strategy rejects managed class declarations":
     let source = """

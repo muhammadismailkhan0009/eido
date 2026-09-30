@@ -18,13 +18,16 @@ proc renderClassInvariantCheckers*(classes: seq[hirDeclarations.HirClass]): stri
       else:
         LocalId(0)
     let receiverName = localName(receiverId, "receiver")
-    let depthField = invariantEvaluationDepthFieldName()
     result.add "proc " & classInvariantName(classDecl.sourceName) & "(" &
       receiverName & ": " & renderType(classDecl.typ) & "): " &
       renderType(classDecl.typ) & " =\n"
-    result.add "  " & receiverName & "." & depthField & " += 1\n"
+    result.add "  " & classInvariantEnterName(
+      classDecl.sourceName
+    ) & "(" & receiverName & ")\n"
     result.add "  defer:\n"
-    result.add "    " & receiverName & "." & depthField & " -= 1\n"
+    result.add "    " & classInvariantLeaveName(
+      classDecl.sourceName
+    ) & "(" & receiverName & ")\n"
 
     for clause in classDecl.invariants:
       result.add renderContractCheck(

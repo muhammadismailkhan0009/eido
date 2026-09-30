@@ -1,18 +1,21 @@
 ## Renders validated named class construction.
-## Example: Point { x: 10; } becomes a generated Nim ref-object initializer.
+## Example: Point { x: 10; } becomes a generated representation-neutral constructor call.
 
 ## Renders one construction expression using generated class/field identifiers.
 proc renderConstruction(expr: hirExpressions.HirExpr): string =
+  var rendered = ""
   if expr.checkInvariant:
-    result = classInvariantName(expr.constructedTypeName) & "("
-  result.add className(expr.constructedTypeName) & "("
+    rendered = classInvariantName(expr.constructedTypeName) & "("
+  rendered.add classConstructorName(expr.constructedTypeName) & "("
 
   for index, field in expr.fields:
     if index > 0:
-      result.add ", "
-    result.add fieldName(field.sourceName) & ": " &
+      rendered.add ", "
+    rendered.add "arg_" & fieldName(field.sourceName) & " = " &
       renderExpr(field.value)
 
-  result.add ")"
+  rendered.add ")"
   if expr.checkInvariant:
-    result.add ")"
+    rendered.add ")"
+
+  protectManagedTemporary(rendered, true)

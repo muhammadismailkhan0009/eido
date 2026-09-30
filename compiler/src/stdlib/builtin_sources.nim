@@ -33,6 +33,9 @@ const
   BuiltinStorageSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_storage.nim"
   )
+  BuiltinManagedGcSupportSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_managed_gc.nim"
+  )
 
 ## Resolves one manifest-owned stdlib source to its embedded compiler payload.
 ## The manifest controls membership; this mapping only supplies bytes for installed compilers.

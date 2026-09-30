@@ -331,3 +331,38 @@ suite "Interface contract propagation":
           return item.value();
         }
       """, "interface_parent_contract_preserved")
+
+suite "Managed interface GC execution":
+  test "interface root traces its concrete receiver under collection pressure":
+    let output = runFeatureSource("""
+      interface Value {
+        function value() returns Int;
+      }
+
+      class HiddenValue implements Value {
+        Int stored;
+
+        function value() returns Int {
+          return self.stored;
+        }
+
+        function create(Int initialStored) returns Value {
+          return HiddenValue { stored = initialStored; };
+        }
+      }
+
+      function main() returns Int {
+        var kept = HiddenValue.create(42);
+        var index = 0;
+
+        while (index < 200) {
+          var garbage = HiddenValue { stored = index; };
+          set garbage = HiddenValue { stored = index + 1; };
+          set index = index + 1;
+        }
+
+        return kept.value();
+      }
+    """, "interface_gc_pressure")
+
+    check output == "42"

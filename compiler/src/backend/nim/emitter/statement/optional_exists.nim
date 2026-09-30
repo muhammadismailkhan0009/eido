@@ -9,7 +9,11 @@ proc renderExists(
   exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
-  result.add pad & "if isSome(" & renderExpr(stmt.existsValue) & "):\n"
+  if stmt.existsValue.typ.isManagedNominalType:
+    result.add pad & "if eidoGcIsSome(" &
+      renderExpr(stmt.existsValue) & "):\n"
+  else:
+    result.add pad & "if isSome(" & renderExpr(stmt.existsValue) & "):\n"
 
   if stmt.existsBody.len == 0:
     result.add indentation(indent + 2) & "discard\n"

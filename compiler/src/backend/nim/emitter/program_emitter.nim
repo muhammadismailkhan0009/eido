@@ -14,6 +14,7 @@ import function_emitter
 import invariant_emitter
 import storage_support
 import gc_metadata_emitter
+import managed_class_emitter
 
 ## Renders the full HIR program plus validated compilation strategy decisions
 ## to compilable Nim source.
@@ -22,6 +23,11 @@ proc emitNim*(
   plan: CompilationPlan
 ): string =
   result.add "import std/options\n"
+  let managedRuntime = plan.memory.types.len > 0
+  if managedRuntime:
+    result.add "import eido_managed_gc\n"
+  else:
+    result.add "template eidoGcProtected(body: untyped): untyped = body\n"
   var hasStorage = false
   for classDecl in program.classes:
     if isConcreteStorageTypeName(classDecl.sourceName):
@@ -50,10 +56,21 @@ proc emitNim*(
     result.add "import eido_native\n"
 
   result.add "\n"
-  result.add renderNominalTypes(program.interfaces, program.classes)
+  result.add renderNominalTypes(
+    program.interfaces,
+    program.classes,
+    plan.memory
+  )
   result.add renderGcMetadata(plan.memory)
   result.add renderStorageSupport(program.classes)
-  result.add renderClassCopiers(program.classes)
+  result.add renderClassRuntimeSupport(program.classes, plan.memory)
+  if managedRuntime:
+    result.add renderManagedInterfaceSupport(program.interfaces)
+  result.add renderInterfaceDispatchers(
+    program.interfaces,
+    managedRuntime
+  )
+  result.add renderClassCopiers(program.classes, plan.memory)
 
   # Forward declare every Eido-bodied method and function before adapters or callable bodies.
   for classDecl in program.classes:
@@ -67,21 +84,29 @@ proc emitNim*(
 
   result.add "\n"
   result.add renderClassInvariantCheckers(program.classes)
-  result.add renderInterfaceUpcasts(program.interfaces)
+  result.add renderInterfaceUpcasts(
+    program.interfaces,
+    managedRuntime
+  )
   result.add renderClassInterfaceAdapters(
     program.interfaces,
-    program.classes
+    program.classes,
+    managedRuntime
   )
 
   for classDecl in program.classes:
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
-        result.add renderMethod(methodDecl, classDecl.invariants.len > 0)
+        result.add renderMethod(
+          methodDecl,
+          classDecl.invariants.len > 0,
+          plan.memory
+        )
         result.add "\n"
 
   for fn in program.functions:
     if not fn.isNative:
-      result.add renderFunction(fn)
+      result.add renderFunction(fn, plan.memory)
       result.add "\n"
 
   if program.hasMain:
@@ -97,9 +122,16 @@ proc emitNim*(
     result.add "when isMainModule:\n"
     if mainFn.result.kind == frNone:
       result.add "  " & mainName & "()\n"
+      if managedRuntime:
+        result.add "  eidoGcShutdown()\n"
     else:
       # Temporary v0 harness: result printing remains until process-exit/stdlib semantics replace it.
-      result.add "  echo " & mainName & "()\n"
+      if managedRuntime:
+        result.add "  let eido_runtime_main_result = " & mainName & "()\n"
+        result.add "  echo eido_runtime_main_result\n"
+        result.add "  eidoGcShutdown()\n"
+      else:
+        result.add "  echo " & mainName & "()\n"
 
 
 ## Preserves low-level emitter tests/callers that intentionally bypass compiler

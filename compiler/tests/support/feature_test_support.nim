@@ -17,11 +17,27 @@ proc runFeatureSource*(source: string, caseName: string): string =
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  writeFile(generatedPath, compileProjectToNim(fixtureProject(source)))
+  let generated = compileProjectToNim(fixtureProject(source))
+  writeFile(generatedPath, generated)
 
-  let nimCompiler = getEnv("NIM", "nim")
+  if "import eido_managed_gc" in generated:
+    let outputPath = generatedPath.changeFileExt("")
+    defer:
+      if fileExists(outputPath):
+        removeFile(outputPath)
+
+    nimCompiler.compileWithNim(generated, outputPath)
+    let execution = execCmdEx(outputPath)
+    if execution.exitCode != 0:
+      raise newException(
+        OSError,
+        "native managed feature execution failed:\n" & execution.output
+      )
+    return execution.output.strip()
+
+  let nimExecutable = getEnv("NIM", "nim")
   let process = startProcess(
-    nimCompiler,
+    nimExecutable,
     args = [
       "e",
       "--hints:off",

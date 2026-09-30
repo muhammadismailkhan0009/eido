@@ -33,4 +33,4 @@ suite "Class copy emission":
 
     check "eido_copy_Account_internal(" in generated
     check "eido_copy_Order_internal(" in generated
-    check "eido_field_account = eido_copy_Account_internal(" in generated
+    check "eido_set_Order_account(result, eido_copy_Account_internal(" in generated

@@ -3,6 +3,8 @@ module: memory_gc
 sources:
   - Compiler.eido
   - TypeInfo.eido
+  - CallableInfo.eido
+  - ValueInfo.eido
   - FieldInfo.eido
   - StorageInfo.eido
   - MemoryPlan.eido

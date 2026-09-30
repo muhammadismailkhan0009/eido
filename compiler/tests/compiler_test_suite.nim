@@ -77,6 +77,7 @@ import semantic/analysis/expression/comparison_operator_analysis_test
 import semantic/analysis/expression/boolean_operator_analysis_test
 import backend/nim/toolchain/artifacts_test
 import backend/nim/toolchain/native_support_test
+import backend/nim/toolchain/managed_gc_runtime_test
 import backend/nim/emitter/nim_emitter_test
 import backend/nim/emitter/contract_emitter_test
 import backend/nim/emitter/native_function_emitter_test
@@ -127,6 +128,7 @@ import features/classes/class_method_variants_test
 import features/classes/class_static_method_variants_test
 import features/classes/self_receiver_variants_test
 import features/classes/class_copy_ref_variants_test
+import features/classes/gc_management_variants_test
 import features/storage/storage_variants_test
 import features/storage/arena_variants_test
 import features/interfaces/interface_variants_test

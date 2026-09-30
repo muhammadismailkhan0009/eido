@@ -45,14 +45,74 @@ class SelectedMemoryStrategy {
         );
     }
 
-    function plan() {
-        var index = 0;
+    function planCallable(Int callable) {
+        var parameterIndex = 0;
 
-        while (index < Compiler.typeCount()) {
+        while (
+            parameterIndex <
+            CallableInfo.parameterCount(callable)
+        ) {
+            var parameter =
+                CallableInfo.parameterAt(
+                    callable,
+                    parameterIndex
+                );
+
+            if (
+                TypeInfo.isManaged(
+                    ValueInfo.typeOf(parameter)
+                )
+            ) {
+                MemoryPlan.root(callable, parameter);
+            }
+
+            set parameterIndex = parameterIndex + 1;
+        }
+
+        var localIndex = 0;
+
+        while (
+            localIndex <
+            CallableInfo.localCount(callable)
+        ) {
+            var local =
+                CallableInfo.localAt(
+                    callable,
+                    localIndex
+                );
+
+            if (
+                TypeInfo.isManaged(
+                    ValueInfo.typeOf(local)
+                )
+            ) {
+                MemoryPlan.root(callable, local);
+            }
+
+            set localIndex = localIndex + 1;
+        }
+    }
+
+    function plan() {
+        var typeIndex = 0;
+
+        while (typeIndex < Compiler.typeCount()) {
             SelectedMemoryStrategy.planType(
-                Compiler.typeAt(index)
+                Compiler.typeAt(typeIndex)
             );
-            set index = index + 1;
+            set typeIndex = typeIndex + 1;
+        }
+
+        var callableIndex = 0;
+
+        while (
+            callableIndex <
+            Compiler.callableCount()
+        ) {
+            SelectedMemoryStrategy.planCallable(
+                Compiler.callableAt(callableIndex)
+            );
+            set callableIndex = callableIndex + 1;
         }
     }
 }

@@ -23,7 +23,7 @@ suite "Class method emission":
     check "proc eido_method_0_Account_remaining(" in generated
     check "eido_local_0_receiver: eido_class_Account" in generated
     check "eido_local_1_amount: int64" in generated
-    check "eido_local_0_receiver.eido_field_balance" in generated
+    check "eido_get_Account_balance(eido_local_0_receiver)" in generated
 
   test "emits a value-returning instance method call":
     # Given

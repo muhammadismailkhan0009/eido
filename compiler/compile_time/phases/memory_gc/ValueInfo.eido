@@ -1,0 +1,4 @@
+// Private parameter/local-handle queries for compiler-standard compile-time phases.
+class ValueInfo {
+    native function typeOf(Int value) returns Int;
+}
