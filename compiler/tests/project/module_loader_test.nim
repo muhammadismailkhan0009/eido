@@ -62,14 +62,16 @@ suite "Module project loading":
       BuiltinProcessSourcePath,
       BuiltinConsoleSourcePath,
       BuiltinArenaSourcePath,
-      BuiltinMemorySourcePath
+      BuiltinMemorySourcePath,
+      BuiltinManagedGcNativeSourcePath,
+      BuiltinManagedGcRuntimeSourcePath
     ]
     check project.modules[2].exports == @["Process", "Console", "Memory"]
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 6
+    check project.sources.len == 8
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
-    for index in 2 .. 5:
+    for index in 2 .. 7:
       check project.sources[index].moduleName == "eido.stdlib"
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 

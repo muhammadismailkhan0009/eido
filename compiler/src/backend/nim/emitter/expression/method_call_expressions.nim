@@ -26,6 +26,8 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
       storageMethodName(call.ownerType.className, call.methodName)
     elif call.isNative:
       nativeMethodName(call.ownerType.className, call.methodName)
+    elif isManagedGcRuntimeClassName(call.ownerType.className):
+      managedGcRuntimeMethodName(call.methodName)
     else:
       methodName(call.methodId, call.ownerType.className, call.methodName)
 

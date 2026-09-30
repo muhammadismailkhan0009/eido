@@ -47,21 +47,35 @@ The compiler lowers strategy-selected roots to stack-owned root descriptors. Par
 
 Generated class trace procedures follow exactly the fields selected by the Eido strategy. Mark walks roots and recursively follows those trace procedures. Sweep destroys unreachable payloads and releases their backing Storage. Cycles therefore do not require special handling: an unreachable cycle is unmarked and swept normally.
 
-The managed runtime itself is a backend/native mechanism because Eido does not yet expose the raw heterogeneous payload/header primitives needed to implement it safely in Eido. Its physical allocation still obeys the language memory invariant:
+The collector algorithm itself now lives in hidden ordinary Eido source: `stdlib/src/managed_gc_runtime.eido`. It owns allocation layout orchestration, mark/root traversal, sweep, live-count/threshold policy, safepoints, and shutdown collection. Physical memory is acquired and reclaimed through the normal public Storage API:
 
-```text
-Eido managed allocation
-        ↓
-eidoGcAllocate
-        ↓
-eidoStorageAllocateRaw
-        ↓
-physical allocator
+```eido
+var backing = Storage<Byte>.allocateRaw(1, totalSize);
+...
+Storage<Byte>.release(backing);
 ```
 
-The GC runtime contains no direct `alloc0`/`dealloc` path. Reclamation returns backing through `eidoStorageRelease`.
+The dependency is therefore:
+
+```text
+SelectedMemoryStrategy.eido      build-time policy
+        ↓
+CompilationPlan
+        ↓
+ManagedGcRuntime.eido            target-time policy
+        ↓
+Storage<Byte> public Eido API
+        ↓
+eido_storage.nim                 physical Storage mechanics
+```
+
+`eido_managed_gc.nim` is now a minimal machine bridge only: managed-reference representation, process-global anchors, raw header/root/payload addressing, invariant/protection metadata, and indirect trace/destroy callback invocation. It contains no Storage allocation/release call and no mark/sweep/collect algorithm. A private ABI exception passes `Storage<Byte>` descriptors only for compiler-owned `ManagedGcNative`; user native functions remain unable to accept or return Storage.
 
 The current collection trigger is intentionally simple: allocation pressure raises a threshold and generated safe points run collection after the threshold is crossed. The collector is currently single-threaded and mark traversal is recursive. Managed finalizers/destructors are not part of v0 semantics.
+
+## Runtime injection
+
+The hidden `managed_gc_native.eido` and `managed_gc_runtime.eido` files are owned by `eido.stdlib` for normal parser/module/LSP behavior but are not exported. Compilation first analyzes/plans without target GC runtime code; the compiler injects and reanalyzes the hidden runtime only when `--memory=gc` actually produces managed layouts. Primitive-only and manual targets therefore carry no collector runtime merely because the files are module-owned.
 
 ## Manual mode
 
@@ -80,11 +94,11 @@ The Nim backend consumes that plan to generate:
 - class payload size/alignment constants
 - traced-field metadata
 - class trace and destroy callbacks
-- Storage-backed managed allocation helpers
+- Eido `ManagedGcRuntime` entrypoints whose allocation/reclamation compile to normal Storage API calls
 - representation-neutral field getters/setters and constructors
 - managed interface boxes, adapters, upcasts, and dispatchers
 - precise root registration for functions and methods
 - statement safe points
-- process-shutdown collection
+- process-shutdown collection through `ManagedGcRuntime.shutdown`
 
 Eido class/interface identity is therefore managed by the Eido GC rather than Nim's `ref object` ownership. Other backend facilities are still independently Nim-backed where Eido has not replaced them; notably `String` and some generated helper containers such as graph-copy memo tables still use Nim runtime representations. This GC implementation should not be read as whole-program `--mm:none` readiness.

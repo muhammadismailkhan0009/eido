@@ -102,7 +102,8 @@ proc renderManagedInterfaceSupport*(
       "(payloadAddress: pointer) {.nimcall.} =\n"
     result.add "  let payload = cast[ptr " & payloadType &
       "](payloadAddress)\n"
-    result.add "  eidoGcMark(payload[].eido_receiver)\n\n"
+    result.add "  " & managedGcRuntimeMethodName("mark") &
+      "(eidoGcHandle(payload[].eido_receiver))\n\n"
 
     result.add "proc " & interfaceDestroyName(sourceName) &
       "(payloadAddress: pointer) {.nimcall.} =\n"
@@ -111,12 +112,13 @@ proc renderManagedInterfaceSupport*(
 
     result.add "proc " & interfaceAllocateName(sourceName) & "(): " &
       interfaceName(sourceName) & " =\n"
-    result.add "  result = eidoGcAllocate(\n"
+    result.add "  result = eidoGcRefFromHandle(" &
+      managedGcRuntimeMethodName("allocate") & "(\n"
     result.add "    int64(sizeof(" & payloadType & ")),\n"
     result.add "    int64(alignof(" & payloadType & ")),\n"
-    result.add "    " & interfaceTraceName(sourceName) & ",\n"
-    result.add "    " & interfaceDestroyName(sourceName) & "\n"
-    result.add "  )\n\n"
+    result.add "    eidoGcTraceAddress(" & interfaceTraceName(sourceName) & "),\n"
+    result.add "    eidoGcDestroyAddress(" & interfaceDestroyName(sourceName) & ")\n"
+    result.add "  ))\n\n"
 
 ## Renders one class-to-interface adapter after class methods are forward-declared.
 proc renderClassInterfaceAdapter(

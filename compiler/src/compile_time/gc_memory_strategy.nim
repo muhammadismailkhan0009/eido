@@ -3,6 +3,7 @@
 import std/[os, strutils]
 import ../hir/program as hirProgram
 import ../types/storage
+import ../types/managed_gc_runtime
 import host
 import model
 import snapshot
@@ -241,7 +242,8 @@ proc resolvePlan(
 ## Counts ordinary class declarations that receive compile-time layout records.
 proc expectedClassLayouts(program: hirProgram.HirProgram): int =
   for classDecl in program.classes:
-    if not isConcreteStorageTypeName(classDecl.sourceName):
+    if not isConcreteStorageTypeName(classDecl.sourceName) and
+        not isManagedGcInternalClassName(classDecl.sourceName):
       inc result
 
 ## Verifies one complete stable layout for every ordinary class declaration.

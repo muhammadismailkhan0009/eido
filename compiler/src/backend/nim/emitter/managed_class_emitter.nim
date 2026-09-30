@@ -51,8 +51,8 @@ proc renderTraceProc(
     let fieldPlan = typePlan.findFieldPlan(field.sourceName)
     if not fieldPlan.traced:
       continue
-    result.add "  eidoGcMark(payload[]." &
-      fieldName(field.sourceName) & ")\n"
+    result.add "  " & managedGcRuntimeMethodName("mark") &
+      "(eidoGcHandle(payload[]." & fieldName(field.sourceName) & "))\n"
     inc traced
 
   if traced == 0:
@@ -98,12 +98,13 @@ proc renderAllocateProc(
 
   if plan.hasManagedLayout(sourceName):
     let metadataPrefix = className(sourceName) & "_gc"
-    result.add "  result = eidoGcAllocate(\n"
+    result.add "  result = eidoGcRefFromHandle(" &
+      managedGcRuntimeMethodName("allocate") & "(\n"
     result.add "    " & metadataPrefix & "_payload_size,\n"
     result.add "    " & metadataPrefix & "_alignment,\n"
-    result.add "    " & classTraceName(sourceName) & ",\n"
-    result.add "    " & classDestroyName(sourceName) & "\n"
-    result.add "  )\n\n"
+    result.add "    eidoGcTraceAddress(" & classTraceName(sourceName) & "),\n"
+    result.add "    eidoGcDestroyAddress(" & classDestroyName(sourceName) & ")\n"
+    result.add "  ))\n\n"
   else:
     result.add "  result = " & className(sourceName) & "()\n\n"
 

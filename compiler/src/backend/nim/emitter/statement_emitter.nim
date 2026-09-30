@@ -50,13 +50,13 @@ proc renderStmtAt*(
         indent
       )
     if exitContext.gcEnabled:
-      result.add pad & "eidoGcSafepoint()\n"
+      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
 
   of hirStatements.hskAssign:
     result.add pad & localName(stmt.targetId, stmt.targetName) &
       " = " & renderExpr(stmt.assignedValue) & "\n"
     if exitContext.gcEnabled:
-      result.add pad & "eidoGcSafepoint()\n"
+      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
 
   of hirStatements.hskFieldSet:
     result.add pad & classFieldSetName(
@@ -66,7 +66,7 @@ proc renderStmtAt*(
       renderExpr(stmt.fieldValue) & ")\n"
     result.add renderInvariantValidation(exitContext, indent)
     if exitContext.gcEnabled:
-      result.add pad & "eidoGcSafepoint()\n"
+      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
 
   of hirStatements.hskCall:
     if stmt.call.result.kind == frNone:
@@ -74,7 +74,7 @@ proc renderStmtAt*(
     else:
       result.add pad & "discard " & renderCall(stmt.call) & "\n"
     if exitContext.gcEnabled:
-      result.add pad & "eidoGcSafepoint()\n"
+      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
 
   of hirStatements.hskMethodCall:
     if stmt.methodCall.result.kind == frNone:
@@ -82,7 +82,7 @@ proc renderStmtAt*(
     else:
       result.add pad & "discard " & renderMethodCall(stmt.methodCall) & "\n"
     if exitContext.gcEnabled:
-      result.add pad & "eidoGcSafepoint()\n"
+      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
 
   of hirStatements.hskReturn:
     if stmt.value.isNil:

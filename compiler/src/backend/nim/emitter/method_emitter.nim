@@ -7,6 +7,7 @@ import ../../../semantic/symbols/ids
 import ../../../hir/expressions as hirExpressions
 import ../../../types/function_result
 import ../../../types/method_kind
+import ../../../types/managed_gc_runtime
 import names
 import type_emitter
 import statement_emitter
@@ -17,11 +18,16 @@ import gc_root_emitter
 ## Renders one generated method signature with a receiver only for instance methods.
 ## Example: Calculator.add(Int, Int) emits two Int parameters, while Account.value() emits its hidden Account receiver.
 proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
-  result = "proc " & methodName(
-    methodDecl.methodId,
-    methodDecl.ownerType.className,
-    methodDecl.sourceName
-  ) & "("
+  let renderedMethodName =
+    if isManagedGcRuntimeClassName(methodDecl.ownerType.className):
+      managedGcRuntimeMethodName(methodDecl.sourceName)
+    else:
+      methodName(
+        methodDecl.methodId,
+        methodDecl.ownerType.className,
+        methodDecl.sourceName
+      )
+  result = "proc " & renderedMethodName & "("
 
   var hasPreviousParameter = false
   if methodDecl.kind == mkInstance:
@@ -51,8 +57,14 @@ proc renderMethod*(
 ): string =
   result.add renderMethodSignature(methodDecl) & " =\n"
 
-  let roots = memoryPlan.rootsForMethod(methodDecl.methodId)
-  if memoryPlan.types.len > 0:
+  let isGcRuntimeMethod =
+    isManagedGcRuntimeClassName(methodDecl.ownerType.className)
+  let roots =
+    if isGcRuntimeMethod:
+      @[]
+    else:
+      memoryPlan.rootsForMethod(methodDecl.methodId)
+  if memoryPlan.types.len > 0 and not isGcRuntimeMethod:
     result.add renderMethodRootPreamble(methodDecl, roots)
 
   let hasInvariant = enforceInvariant and methodDecl.kind == mkInstance
@@ -87,7 +99,7 @@ proc renderMethod*(
       if hasInvariant: methodDecl.ownerType.className else: "",
     invariantReceiver: receiverName,
     ownerClassName: methodDecl.ownerType.className,
-    gcEnabled: memoryPlan.types.len > 0,
+    gcEnabled: memoryPlan.types.len > 0 and not isGcRuntimeMethod,
     gcRootIds: roots.rootIds,
     resultRootId: resultRootId
   )

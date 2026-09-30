@@ -7,7 +7,7 @@ import ../hir/expressions as hirExpressions
 import ../hir/program as hirProgram
 import ../hir/statements as hirStatements
 import ../pipeline/options
-import ../types/[method_kind, storage]
+import ../types/[managed_gc_runtime, method_kind, storage]
 import gc_memory_strategy
 import model
 
@@ -16,7 +16,8 @@ import model
 proc requiresManagedRepresentation(
   classDecl: hirDeclarations.HirClass
 ): bool =
-  if isConcreteStorageTypeName(classDecl.sourceName):
+  if isConcreteStorageTypeName(classDecl.sourceName) or
+      isManagedGcInternalClassName(classDecl.sourceName):
     return false
   if classDecl.fields.len > 0:
     return true

@@ -1,5 +1,12 @@
-## Precise non-moving stop-the-world managed heap for Eido class/interface values.
-## Every managed allocation acquires and releases physical bytes only through Storage.
+## Minimal Nim bridge for Eido's managed-memory runtime.
+##
+## Collector policy/orchestration lives in stdlib/src/managed_gc_runtime.eido.
+## This module exposes only machine primitives Eido cannot yet express:
+## process-global anchors, raw allocation-header/root interpretation, managed-ref
+## representation, and indirect trace/destroy callback invocation.
+##
+## IMPORTANT: this module performs no physical allocation or reclamation.
+## Eido runtime code calls Storage<Byte>.allocateRaw/release for those operations.
 
 import eido_storage
 
@@ -31,13 +38,28 @@ var
   eidoGcCollectionThreshold = 64'i64
   eidoGcProtectionDepth: int
 
-## Aligns one byte offset upward to a positive power-independent alignment.
-proc eidoGcAlignUp(value, alignment: int64): int64 =
-  if alignment <= 0:
-    raise newException(ValueError, "Eido GC alignment must be positive")
-  ((value + alignment - 1) div alignment) * alignment
+## Converts one private integer handle to its allocation header pointer.
+proc eidoGcAllocation(handle: int64): ptr EidoManagedAllocation =
+  cast[ptr EidoManagedAllocation](uint(handle))
 
-## Reports whether one managed reference denotes a live object identity.
+## Converts one allocation header pointer to its private integer handle.
+proc eidoGcAllocationHandle(
+  allocation: ptr EidoManagedAllocation
+): int64 =
+  int64(cast[uint](allocation))
+
+## Returns the raw payload address behind one allocation header.
+proc eidoGcPayloadAddress(
+  allocation: ptr EidoManagedAllocation
+): pointer =
+  if allocation.isNil:
+    raise newException(AssertionDefect, "managed allocation is nil")
+  cast[pointer](
+    cast[uint](allocation.storage.data) +
+      uint(allocation.payloadOffset)
+  )
+
+## Reports whether one managed reference denotes an object identity.
 proc eidoGcIsSome*(reference: EidoManagedRef): bool =
   not reference.allocation.isNil
 
@@ -47,19 +69,29 @@ proc eidoGcGet*(reference: EidoManagedRef): EidoManagedRef =
     raise newException(AssertionDefect, "optional managed value is absent")
   reference
 
+## Converts a backend managed reference to the opaque Eido runtime handle.
+proc eidoGcHandle*(reference: EidoManagedRef): int64 =
+  eidoGcAllocationHandle(reference.allocation)
+
+## Converts an opaque Eido runtime handle to a backend managed reference.
+proc eidoGcRefFromHandle*(handle: int64): EidoManagedRef =
+  EidoManagedRef(allocation: eidoGcAllocation(handle))
+
+## Converts one generated trace callback to an opaque address passed through Eido.
+proc eidoGcTraceAddress*(traceProc: EidoGcTraceProc): int64 =
+  int64(cast[uint](traceProc))
+
+## Converts one generated destroy callback to an opaque address passed through Eido.
+proc eidoGcDestroyAddress*(destroyProc: EidoGcDestroyProc): int64 =
+  int64(cast[uint](destroyProc))
+
 ## Returns the raw payload address behind one present managed reference.
 proc eidoGcPayloadAddress*(reference: EidoManagedRef): pointer =
-  if reference.allocation.isNil:
-    raise newException(AssertionDefect, "managed reference is nil")
-  cast[pointer](
-    cast[uint](reference.allocation.storage.data) +
-      uint(reference.allocation.payloadOffset)
-  )
+  eidoGcPayloadAddress(reference.allocation)
 
 ## Returns a typed pointer over one managed payload without allocating.
 proc eidoGcPayload*[T](reference: EidoManagedRef): ptr T =
   cast[ptr T](eidoGcPayloadAddress(reference))
-
 
 ## Returns the backend-only invariant recursion counter stored outside the Eido payload.
 proc eidoGcInvariantDepth*(reference: EidoManagedRef): var int =
@@ -84,65 +116,8 @@ proc eidoGcPopRoot*(root: ptr EidoGcRoot) =
   root.previous = nil
   root.slot = nil
 
-## Marks one managed allocation and recursively traces its managed payload fields.
-proc eidoGcMark*(reference: EidoManagedRef) =
-  let allocation = reference.allocation
-  if allocation.isNil or allocation.marked:
-    return
-
-  allocation.marked = true
-  if not allocation.traceProc.isNil:
-    allocation.traceProc(eidoGcPayloadAddress(reference))
-
-## Marks all currently registered stack roots.
-proc eidoGcMarkRoots() =
-  var root = eidoGcRoots
-  while not root.isNil:
-    if not root.slot.isNil:
-      eidoGcMark(root.slot[])
-    root = root.previous
-
-## Sweeps every unmarked allocation and clears marks on survivors.
-proc eidoGcSweep() =
-  var previous: ptr EidoManagedAllocation
-  var current = eidoGcHeapHead
-
-  while not current.isNil:
-    let next = current.next
-    if current.marked:
-      current.marked = false
-      previous = current
-    else:
-      if previous.isNil:
-        eidoGcHeapHead = next
-      else:
-        previous.next = next
-
-      if not current.destroyProc.isNil:
-        current.destroyProc(
-          cast[pointer](
-            cast[uint](current.storage.data) +
-              uint(current.payloadOffset)
-          )
-        )
-
-      var backing = current.storage
-      dec eidoGcLiveAllocations
-      eidoStorageRelease(backing)
-
-    current = next
-
-## Runs one complete precise stop-the-world mark/sweep collection.
-proc eidoGcCollect*() =
-  eidoGcMarkRoots()
-  eidoGcSweep()
-  eidoGcCollectionThreshold = max(
-    64'i64,
-    eidoGcLiveAllocations * 2'i64 + 1'i64
-  )
-
-## Protects one expression evaluation from collection while it contains managed
-## temporaries that have not yet reached a precise source-level root slot.
+## Protects one expression evaluation while managed temporaries have not yet
+## reached precise Eido root slots. Collection policy itself lives in Eido.
 template eidoGcProtected*(body: untyped): untyped =
   block:
     inc eidoGcProtectionDepth
@@ -150,50 +125,154 @@ template eidoGcProtected*(body: untyped): untyped =
       dec eidoGcProtectionDepth
     body
 
-## Runs a collection only when allocation pressure crosses the current threshold.
-## Protected compound expressions defer collection until their managed temporaries
-## have reached a precise source-level root or managed payload field.
-proc eidoGcSafepoint*() =
-  if eidoGcProtectionDepth == 0 and
-      eidoGcLiveAllocations >= eidoGcCollectionThreshold:
-    eidoGcCollect()
+## Returns the current number of registered allocations for verification/tooling.
+proc eidoGcAllocationCount*(): int64 =
+  eidoGcLiveAllocations
 
-## Allocates one zeroed managed payload using Storage as the physical allocator.
-proc eidoGcAllocate*(
+# ---------------------------------------------------------------------------
+# Private ManagedGcNative ABI consumed only by managed_gc_runtime.eido.
+# ---------------------------------------------------------------------------
+
+proc eido_native_method_ManagedGcNative_headerSize*(): int64 =
+  int64(sizeof(EidoManagedAllocation))
+
+proc eido_native_method_ManagedGcNative_headerAlignment*(): int64 =
+  int64(alignof(EidoManagedAllocation))
+
+proc eido_native_method_ManagedGcNative_initialize*(
+  backing: EidoStorage[int8],
+  payloadOffset,
   payloadSize,
-  payloadAlignment: int64,
-  traceProc: EidoGcTraceProc,
-  destroyProc: EidoGcDestroyProc
-): EidoManagedRef =
-  if payloadSize < 0:
-    raise newException(ValueError, "Eido GC payload size cannot be negative")
+  traceAddress,
+  destroyAddress: int64
+): int64 =
+  if not backing.live or not backing.ownsMemory or backing.data.isNil:
+    raise newException(
+      AssertionDefect,
+      "managed allocation requires owning live Storage<Byte>"
+    )
+  if payloadOffset < int64(sizeof(EidoManagedAllocation)) or
+      payloadSize < 0 or
+      payloadOffset + payloadSize > backing.strideBytes:
+    raise newException(
+      ValueError,
+      "managed payload does not fit Storage<Byte> backing"
+    )
 
-  let effectiveAlignment = max(payloadAlignment, int64(alignof(EidoManagedAllocation)))
-  let payloadOffset = eidoGcAlignUp(
-    int64(sizeof(EidoManagedAllocation)),
-    effectiveAlignment
-  )
-  let totalSize = payloadOffset + payloadSize
-  var storage = eidoStorageAllocateRaw(1, max(1'i64, totalSize))
-  let allocation = cast[ptr EidoManagedAllocation](storage.data)
-
-  allocation.storage = storage
-  allocation.next = eidoGcHeapHead
+  let allocation = cast[ptr EidoManagedAllocation](backing.data)
+  allocation.storage = backing
+  allocation.next = nil
   allocation.marked = false
   allocation.invariantDepth = 0
   allocation.payloadOffset = payloadOffset
   allocation.payloadSize = payloadSize
-  allocation.traceProc = traceProc
-  allocation.destroyProc = destroyProc
+  allocation.traceProc =
+    if traceAddress == 0:
+      nil
+    else:
+      cast[EidoGcTraceProc](uint(traceAddress))
+  allocation.destroyProc =
+    if destroyAddress == 0:
+      nil
+    else:
+      cast[EidoGcDestroyProc](uint(destroyAddress))
 
-  eidoGcHeapHead = allocation
-  inc eidoGcLiveAllocations
-  EidoManagedRef(allocation: allocation)
+  eidoGcAllocationHandle(allocation)
 
-## Returns the current number of live managed allocations for runtime verification.
-proc eidoGcAllocationCount*(): int64 =
+proc eido_native_method_ManagedGcNative_backing*(
+  handle: int64
+): EidoStorage[int8] =
+  let allocation = eidoGcAllocation(handle)
+  if allocation.isNil:
+    raise newException(AssertionDefect, "managed allocation is nil")
+  allocation.storage
+
+proc eido_native_method_ManagedGcNative_heapHead*(): int64 =
+  eidoGcAllocationHandle(eidoGcHeapHead)
+
+proc eido_native_method_ManagedGcNative_setHeapHead*(handle: int64) =
+  eidoGcHeapHead = eidoGcAllocation(handle)
+
+proc eido_native_method_ManagedGcNative_next*(handle: int64): int64 =
+  let allocation = eidoGcAllocation(handle)
+  if allocation.isNil:
+    return 0
+  eidoGcAllocationHandle(allocation.next)
+
+proc eido_native_method_ManagedGcNative_setNext*(
+  handle,
+  nextHandle: int64
+) =
+  let allocation = eidoGcAllocation(handle)
+  if allocation.isNil:
+    raise newException(AssertionDefect, "managed allocation is nil")
+  allocation.next = eidoGcAllocation(nextHandle)
+
+proc eido_native_method_ManagedGcNative_marked*(handle: int64): bool =
+  let allocation = eidoGcAllocation(handle)
+  not allocation.isNil and allocation.marked
+
+proc eido_native_method_ManagedGcNative_setMarked*(
+  handle: int64,
+  marked: bool
+) =
+  let allocation = eidoGcAllocation(handle)
+  if allocation.isNil:
+    raise newException(AssertionDefect, "managed allocation is nil")
+  allocation.marked = marked
+
+proc eido_native_method_ManagedGcNative_liveAllocations*(): int64 =
   eidoGcLiveAllocations
 
-## Releases all currently unreachable managed allocations at process shutdown.
-proc eidoGcShutdown*() =
-  eidoGcCollect()
+proc eido_native_method_ManagedGcNative_setLiveAllocations*(count: int64) =
+  if count < 0:
+    raise newException(
+      AssertionDefect,
+      "managed allocation count cannot be negative"
+    )
+  eidoGcLiveAllocations = count
+
+proc eido_native_method_ManagedGcNative_collectionThreshold*(): int64 =
+  eidoGcCollectionThreshold
+
+proc eido_native_method_ManagedGcNative_setCollectionThreshold*(
+  threshold: int64
+) =
+  if threshold <= 0:
+    raise newException(
+      AssertionDefect,
+      "managed collection threshold must be positive"
+    )
+  eidoGcCollectionThreshold = threshold
+
+proc eido_native_method_ManagedGcNative_rootHead*(): int64 =
+  int64(cast[uint](eidoGcRoots))
+
+proc eido_native_method_ManagedGcNative_rootNext*(rootHandle: int64): int64 =
+  let root = cast[ptr EidoGcRoot](uint(rootHandle))
+  if root.isNil:
+    return 0
+  int64(cast[uint](root.previous))
+
+proc eido_native_method_ManagedGcNative_rootAllocation*(
+  rootHandle: int64
+): int64 =
+  let root = cast[ptr EidoGcRoot](uint(rootHandle))
+  if root.isNil or root.slot.isNil:
+    return 0
+  eidoGcHandle(root.slot[])
+
+proc eido_native_method_ManagedGcNative_protectionDepth*(): int64 =
+  int64(eidoGcProtectionDepth)
+
+proc eido_native_method_ManagedGcNative_trace*(handle: int64) =
+  let allocation = eidoGcAllocation(handle)
+  if allocation.isNil or allocation.traceProc.isNil:
+    return
+  allocation.traceProc(eidoGcPayloadAddress(allocation))
+
+proc eido_native_method_ManagedGcNative_destroy*(handle: int64) =
+  let allocation = eidoGcAllocation(handle)
+  if allocation.isNil or allocation.destroyProc.isNil:
+    return
+  allocation.destroyProc(eidoGcPayloadAddress(allocation))

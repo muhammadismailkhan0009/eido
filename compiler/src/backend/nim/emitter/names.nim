@@ -51,6 +51,11 @@ proc nativeMethodName*(ownerName, sourceName: string): string =
 proc storageMethodName*(ownerName, sourceName: string): string =
   "eido_storage_" & nominalName(ownerName) & "_" & sourceName
 
+## Builds stable backend names for hidden Eido managed-GC runtime methods.
+## These names intentionally do not depend on semantic method IDs.
+proc managedGcRuntimeMethodName*(sourceName: string): string =
+  "eido_gc_runtime_" & sourceName
+
 ## Builds a collision-safe Nim method name from semantic identity and owner.
 proc methodName*(
   id: MethodId,

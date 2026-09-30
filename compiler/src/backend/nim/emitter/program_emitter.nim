@@ -1,10 +1,12 @@
 ## Renders a complete HIR program to Nim, including class methods, functions, and the temporary main harness.
 
 import ../../../hir/program as hirProgram
+import ../../../hir/declarations as hirDeclarations
 import ../../../compilation/plan
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import ../../../types/storage
+import ../../../types/managed_gc_runtime
 import names
 import interface_emitter
 import nominal_type_emitter
@@ -24,6 +26,10 @@ proc emitNim*(
 ): string =
   result.add "import std/options\n"
   let managedRuntime = plan.memory.types.len > 0
+  var ordinaryClasses: seq[hirDeclarations.HirClass]
+  for classDecl in program.classes:
+    if not isManagedGcInternalClassName(classDecl.sourceName):
+      ordinaryClasses.add classDecl
   if managedRuntime:
     result.add "import eido_managed_gc\n"
   else:
@@ -44,6 +50,8 @@ proc emitNim*(
 
   if not hasNativeDeclarations:
     for classDecl in program.classes:
+      if isManagedGcInternalClassName(classDecl.sourceName):
+        continue
       for methodDecl in classDecl.methods:
         if methodDecl.isNative and
             not isConcreteStorageTypeName(classDecl.sourceName):
@@ -58,22 +66,17 @@ proc emitNim*(
   result.add "\n"
   result.add renderNominalTypes(
     program.interfaces,
-    program.classes,
+    ordinaryClasses,
     plan.memory
   )
   result.add renderGcMetadata(plan.memory)
-  result.add renderStorageSupport(program.classes)
-  result.add renderClassRuntimeSupport(program.classes, plan.memory)
-  if managedRuntime:
-    result.add renderManagedInterfaceSupport(program.interfaces)
-  result.add renderInterfaceDispatchers(
-    program.interfaces,
-    managedRuntime
-  )
-  result.add renderClassCopiers(program.classes, plan.memory)
+  result.add renderStorageSupport(ordinaryClasses)
 
-  # Forward declare every Eido-bodied method and function before adapters or callable bodies.
+  # Forward declare Eido-bodied callables before generated class/interface helpers
+  # because managed allocation/trace helpers call the hidden Eido GC runtime.
   for classDecl in program.classes:
+    if isManagedGcInternalClassName(classDecl.sourceName) and not managedRuntime:
+      continue
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
         result.add renderMethodSignature(methodDecl) & "\n"
@@ -83,18 +86,29 @@ proc emitNim*(
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
-  result.add renderClassInvariantCheckers(program.classes)
+  result.add renderClassRuntimeSupport(ordinaryClasses, plan.memory)
+  if managedRuntime:
+    result.add renderManagedInterfaceSupport(program.interfaces)
+  result.add renderInterfaceDispatchers(
+    program.interfaces,
+    managedRuntime
+  )
+  result.add renderClassCopiers(ordinaryClasses, plan.memory)
+
+  result.add renderClassInvariantCheckers(ordinaryClasses)
   result.add renderInterfaceUpcasts(
     program.interfaces,
     managedRuntime
   )
   result.add renderClassInterfaceAdapters(
     program.interfaces,
-    program.classes,
+    ordinaryClasses,
     managedRuntime
   )
 
   for classDecl in program.classes:
+    if isManagedGcInternalClassName(classDecl.sourceName) and not managedRuntime:
+      continue
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
         result.add renderMethod(
@@ -123,13 +137,13 @@ proc emitNim*(
     if mainFn.result.kind == frNone:
       result.add "  " & mainName & "()\n"
       if managedRuntime:
-        result.add "  eidoGcShutdown()\n"
+        result.add "  " & managedGcRuntimeMethodName("shutdown") & "()\n"
     else:
       # Temporary v0 harness: result printing remains until process-exit/stdlib semantics replace it.
       if managedRuntime:
         result.add "  let eido_runtime_main_result = " & mainName & "()\n"
         result.add "  echo eido_runtime_main_result\n"
-        result.add "  eidoGcShutdown()\n"
+        result.add "  " & managedGcRuntimeMethodName("shutdown") & "()\n"
       else:
         result.add "  echo " & mainName & "()\n"
 

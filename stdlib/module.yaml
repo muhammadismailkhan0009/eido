@@ -5,6 +5,8 @@ sources:
   - src/console.eido
   - src/arena.eido
   - src/memory.eido
+  - src/managed_gc_native.eido
+  - src/managed_gc_runtime.eido
 
 children: []
 dependencies: []

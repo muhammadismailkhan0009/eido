@@ -34,6 +34,21 @@ suite "Native function semantics":
     expect ValueError:
       discard analyzeSource(source)
 
+  test "rejects user Storage values across the native boundary":
+    let parameterSource = """
+      native function consume(Storage<Byte> storage);
+      function main() {}
+    """
+    let resultSource = """
+      native function acquire() returns Storage<Byte>;
+      function main() {}
+    """
+
+    expect ValueError:
+      discard analyzeSource(parameterSource)
+    expect ValueError:
+      discard analyzeSource(resultSource)
+
   test "rejects optional values across the native boundary":
     let parameterSource = """
       native function platformMaybe(Int? value);

@@ -12,6 +12,7 @@ import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
 import ../../types/storage
+import ../../types/managed_gc_runtime
 import ../effects/inference
 import ../effects/contract_validation
 import ../symbols/ids
@@ -31,7 +32,8 @@ import storage_result_provenance
 proc validateNativeSignature(
   sourceFunction: astDeclarations.FunctionDecl,
   parameterTypes: seq[EidoType],
-  functionResult: FunctionResult
+  functionResult: FunctionResult,
+  allowCompilerStorage: bool = false
 ) =
   for index, parameterType in parameterTypes:
     if parameterType.isOptional:
@@ -43,11 +45,13 @@ proc validateNativeSignature(
 
     case parameterType.kind
     of etkClass:
-      failAt(
-        sourceFunction.parameters[index].typeRef.span,
-        "native function parameters cannot use class type '" &
-          parameterType.className & "'"
-      )
+      if not (allowCompilerStorage and
+          isConcreteStorageTypeName(parameterType.className)):
+        failAt(
+          sourceFunction.parameters[index].typeRef.span,
+          "native function parameters cannot use class type '" &
+            parameterType.className & "'"
+        )
     of etkInterface:
       failAt(
         sourceFunction.parameters[index].typeRef.span,
@@ -67,11 +71,13 @@ proc validateNativeSignature(
 
     case functionResult.typ.kind
     of etkClass:
-      failAt(
-        sourceFunction.result.typeRef.span,
-        "native function results cannot use class type '" &
-          functionResult.typ.className & "'"
-      )
+      if not (allowCompilerStorage and
+          isConcreteStorageTypeName(functionResult.typ.className)):
+        failAt(
+          sourceFunction.result.typeRef.span,
+          "native function results cannot use class type '" &
+            functionResult.typ.className & "'"
+        )
     of etkInterface:
       failAt(
         sourceFunction.result.typeRef.span,
@@ -182,7 +188,15 @@ proc analyzeProgram*(
       let methodResult = resolveFunctionResult(sourceMethod.result, symbols)
       if sourceMethod.isNative and
           not isConcreteStorageTypeName(sourceClass.name):
-        validateNativeSignature(sourceMethod, parameterTypes, methodResult)
+        let allowCompilerStorage =
+          isManagedGcNativeClassName(sourceClass.name) and
+          sourceClass.span.sourcePath.endsWith("managed_gc_native.eido")
+        validateNativeSignature(
+          sourceMethod,
+          parameterTypes,
+          methodResult,
+          allowCompilerStorage
+        )
 
       let storageResultProvenance =
         if isConcreteStorageTypeName(sourceClass.name):

@@ -1,0 +1,142 @@
+// Compiler-private managed-memory runtime policy.
+//
+// This is ordinary Eido code. It deliberately allocates and releases physical
+// backing through the public Storage API so collector policy does not depend on
+// the Nim allocator or Storage implementation internals.
+class ManagedGcRuntime {
+    function alignUp(Int value, Int alignment) returns Int {
+        return ((value + alignment - 1) / alignment) * alignment;
+    }
+
+    function allocate(
+        Int payloadSize,
+        Int payloadAlignment,
+        Int traceAddress,
+        Int destroyAddress
+    ) returns Int {
+        var effectiveAlignment = payloadAlignment + 0;
+        var headerAlignment = ManagedGcNative.headerAlignment();
+
+        if (effectiveAlignment < headerAlignment) {
+            set effectiveAlignment = headerAlignment;
+        }
+
+        var payloadOffset = ManagedGcRuntime.alignUp(
+            ManagedGcNative.headerSize(),
+            effectiveAlignment
+        );
+        var totalSize = payloadOffset + payloadSize;
+
+        if (totalSize < 1) {
+            set totalSize = 1;
+        }
+
+        var backing = Storage<Byte>.allocateRaw(1, totalSize);
+        var allocation = ManagedGcNative.initialize(
+            backing,
+            payloadOffset,
+            payloadSize,
+            traceAddress,
+            destroyAddress
+        );
+
+        ManagedGcNative.setNext(
+            allocation,
+            ManagedGcNative.heapHead()
+        );
+        ManagedGcNative.setHeapHead(allocation);
+        ManagedGcNative.setLiveAllocations(
+            ManagedGcNative.liveAllocations() + 1
+        );
+
+        return allocation;
+    }
+
+    function mark(Int allocation) {
+        if (allocation == 0) {
+            return;
+        }
+
+        if (ManagedGcNative.marked(allocation)) {
+            return;
+        }
+
+        ManagedGcNative.setMarked(allocation, true);
+        ManagedGcNative.trace(allocation);
+    }
+
+    function markRoots() {
+        var root = ManagedGcNative.rootHead();
+
+        while (root != 0) {
+            ManagedGcRuntime.mark(
+                ManagedGcNative.rootAllocation(root)
+            );
+            set root = ManagedGcNative.rootNext(root);
+        }
+    }
+
+    function sweep() {
+        var previous = 0;
+        var current = ManagedGcNative.heapHead();
+
+        while (current != 0) {
+            var nextAllocation = ManagedGcNative.next(current);
+
+            if (ManagedGcNative.marked(current)) {
+                ManagedGcNative.setMarked(current, false);
+                set previous = current;
+            } else {
+                if (previous == 0) {
+                    ManagedGcNative.setHeapHead(nextAllocation);
+                } else {
+                    ManagedGcNative.setNext(
+                        previous,
+                        nextAllocation
+                    );
+                }
+
+                ManagedGcNative.destroy(current);
+
+                // Ownership of this descriptor was transferred into the native
+                // allocation header by initialize(). Recover it and release the
+                // physical backing through the normal Eido Storage API.
+                var backing = ManagedGcNative.backing(current);
+                ManagedGcNative.setLiveAllocations(
+                    ManagedGcNative.liveAllocations() - 1
+                );
+                Storage<Byte>.release(backing);
+            }
+
+            set current = nextAllocation;
+        }
+    }
+
+    function collect() {
+        ManagedGcRuntime.markRoots();
+        ManagedGcRuntime.sweep();
+
+        var nextThreshold =
+            ManagedGcNative.liveAllocations() * 2 + 1;
+
+        if (nextThreshold < 64) {
+            set nextThreshold = 64;
+        }
+
+        ManagedGcNative.setCollectionThreshold(nextThreshold);
+    }
+
+    function safepoint() {
+        if (
+            ManagedGcNative.protectionDepth() == 0 and
+            ManagedGcNative.liveAllocations() >=
+                ManagedGcNative.collectionThreshold()
+        ) {
+            ManagedGcRuntime.collect();
+        }
+    }
+
+    function shutdown() {
+        ManagedGcRuntime.collect();
+    }
+}

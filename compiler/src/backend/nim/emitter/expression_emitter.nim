@@ -5,6 +5,7 @@ import ../../../hir/expressions as hirExpressions
 import ../../../types/model
 import ../../../types/method_kind
 import ../../../types/storage
+import ../../../types/managed_gc_runtime
 import names
 import type_emitter
 

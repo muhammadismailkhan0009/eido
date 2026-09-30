@@ -15,6 +15,8 @@ const
   BuiltinConsoleSourcePath* = "eido://stdlib/console.eido"
   BuiltinArenaSourcePath* = "eido://stdlib/arena.eido"
   BuiltinMemorySourcePath* = "eido://stdlib/memory.eido"
+  BuiltinManagedGcNativeSourcePath* = "eido://stdlib/managed_gc_native.eido"
+  BuiltinManagedGcRuntimeSourcePath* = "eido://stdlib/managed_gc_runtime.eido"
   BuiltinProcessSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/src/process.eido"
   )
@@ -26,6 +28,12 @@ const
   )
   BuiltinMemorySource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/src/memory.eido"
+  )
+  BuiltinManagedGcNativeSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/src/managed_gc_native.eido"
+  )
+  BuiltinManagedGcRuntimeSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/src/managed_gc_runtime.eido"
   )
   BuiltinNativeSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native.nim"
@@ -49,6 +57,10 @@ proc embeddedStdlibSource(sourceEntry: string): tuple[path, text: string] =
     (BuiltinArenaSourcePath, BuiltinArenaSource)
   of "src/memory.eido":
     (BuiltinMemorySourcePath, BuiltinMemorySource)
+  of "src/managed_gc_native.eido":
+    (BuiltinManagedGcNativeSourcePath, BuiltinManagedGcNativeSource)
+  of "src/managed_gc_runtime.eido":
+    (BuiltinManagedGcRuntimeSourcePath, BuiltinManagedGcRuntimeSource)
   else:
     raise newException(
       ValueError,

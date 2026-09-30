@@ -86,7 +86,9 @@ suite "Module manifest parsing":
       "src/process.eido",
       "src/console.eido",
       "src/arena.eido",
-      "src/memory.eido"
+      "src/memory.eido",
+      "src/managed_gc_native.eido",
+      "src/managed_gc_runtime.eido"
     ]
     check manifest.children.len == 0
     check manifest.dependencies.len == 0

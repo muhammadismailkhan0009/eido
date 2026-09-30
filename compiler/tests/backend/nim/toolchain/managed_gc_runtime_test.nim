@@ -1,14 +1,72 @@
 import std/[os, osproc, strutils, unittest]
 import backend/nim/toolchain/compiler as nimCompiler
+import pipeline/[options, project_compiler]
 import stdlib/builtin_sources
+import support/project_fixture_support
 
 suite "Managed GC runtime":
-  test "physical managed allocation delegates to Storage only":
-    check "eidoStorageAllocateRaw(" in BuiltinManagedGcSupportSource
+  test "collector policy uses Eido Storage API while native bridge never allocates":
+    check "Storage<Byte>.allocateRaw(" in BuiltinManagedGcRuntimeSource
+    check "Storage<Byte>.release(" in BuiltinManagedGcRuntimeSource
+    check "function mark(" in BuiltinManagedGcRuntimeSource
+    check "function sweep()" in BuiltinManagedGcRuntimeSource
+    check "function collect()" in BuiltinManagedGcRuntimeSource
+
+    check "eidoStorageAllocateRaw(" notin BuiltinManagedGcSupportSource
+    check "eidoStorageRelease(" notin BuiltinManagedGcSupportSource
     check "alloc0(" notin BuiltinManagedGcSupportSource
     check "dealloc(" notin BuiltinManagedGcSupportSource
+    check "proc eidoGcCollect" notin BuiltinManagedGcSupportSource
+    check "proc eidoGcSweep" notin BuiltinManagedGcSupportSource
+    check "proc eidoGcMark" notin BuiltinManagedGcSupportSource
 
-  test "marks reachable graphs and sweeps unreachable objects and cycles":
+  test "generated runtime executes Eido mark sweep and reclaims unreachable cycles":
+    let source = """
+      class Node {
+        Node? next;
+        Int value;
+
+        function link(Node other) {
+          set self.next = ref other;
+        }
+      }
+
+      function main() returns Int {
+        var left = Node {
+          next = none;
+          value = 20;
+        };
+        var right = Node {
+          next = none;
+          value = 22;
+        };
+
+        left.link(right);
+        right.link(left);
+        return left.value + right.value;
+      }
+    """
+
+    var generated = compileProjectToNim(
+      fixtureProject(source),
+      CompilationOptions(memoryStrategy: msGc)
+    )
+
+    check "eido_gc_runtime_allocate(" in generated
+    check "eido_gc_runtime_mark(" in generated
+    check "eido_gc_runtime_sweep()" in generated
+    check "eido_gc_runtime_collect()" in generated
+    check "eido_gc_runtime_shutdown()" in generated
+    check "_allocateRaw(int64(1)," in generated
+    check "_release(eido_local_" in generated
+
+    # The program's generated main runs shutdown first. This backend-only
+    # assertion then proves the unreachable cycle was swept by the Eido runtime.
+    generated.add """
+when isMainModule:
+  doAssert eidoGcAllocationCount() == 0
+"""
+
     let outputPath =
       getTempDir() / ("eido_managed_gc_runtime_" & $getCurrentProcessId())
     let generatedPath = outputPath & "_generated.nim"
@@ -18,64 +76,9 @@ suite "Managed GC runtime":
       if fileExists(generatedPath):
         removeFile(generatedPath)
 
-    let source = """
-import eido_managed_gc
-
-type
-  Payload = object
-    child: EidoManagedRef
-    value: int64
-
-## Traces the one managed child field used by this runtime fixture.
-proc tracePayload(payloadAddress: pointer) {.nimcall.} =
-  eidoGcMark(cast[ptr Payload](payloadAddress)[].child)
-
-## Clears one payload before its Storage backing is released.
-proc destroyPayload(payloadAddress: pointer) {.nimcall.} =
-  cast[ptr Payload](payloadAddress)[] = default(Payload)
-
-## Allocates one fixture payload through the Eido GC runtime.
-proc makePayload(value: int64): EidoManagedRef =
-  result = eidoGcAllocate(
-    int64(sizeof(Payload)),
-    int64(alignof(Payload)),
-    tracePayload,
-    destroyPayload
-  )
-  eidoGcPayload[Payload](result)[].value = value
-
-var rootValue = makePayload(1)
-var rootNode: EidoGcRoot
-eidoGcPushRoot(addr rootNode, addr rootValue)
-
-let child = makePayload(2)
-eidoGcPayload[Payload](rootValue)[].child = child
-
-for index in 0 ..< 80:
-  discard makePayload(int64(index))
-
-eidoGcCollect()
-doAssert eidoGcAllocationCount() == 2
-doAssert eidoGcPayload[Payload](rootValue)[].value == 1
-doAssert eidoGcPayload[Payload](
-  eidoGcPayload[Payload](rootValue)[].child
-)[].value == 2
-
-eidoGcPopRoot(addr rootNode)
-eidoGcCollect()
-doAssert eidoGcAllocationCount() == 0
-
-let cycleA = makePayload(10)
-let cycleB = makePayload(20)
-eidoGcPayload[Payload](cycleA)[].child = cycleB
-eidoGcPayload[Payload](cycleB)[].child = cycleA
-doAssert eidoGcAllocationCount() == 2
-
-eidoGcCollect()
-doAssert eidoGcAllocationCount() == 0
-
-echo "ok"
-"""
-
-    nimCompiler.compileWithNim(source, outputPath)
-    check execProcess(outputPath).strip() == "ok"
+    nimCompiler.compileWithNim(
+      generated,
+      outputPath,
+      generatedSourcePath = generatedPath
+    )
+    check execProcess(outputPath).strip() == "42"

@@ -1,0 +1,44 @@
+// Compiler-private machine bridge for the Eido managed GC runtime.
+//
+// This class is not exported from stdlib. Its native methods expose only
+// operations Eido cannot currently express: process-global anchors, raw header
+// interpretation, root-slot addressing, and indirect callback invocation.
+// Physical allocation/reclamation deliberately does not live here.
+class ManagedGcNative {
+    native function headerSize() returns Int;
+    native function headerAlignment() returns Int;
+
+    native function initialize(
+        Storage<Byte> backing,
+        Int payloadOffset,
+        Int payloadSize,
+        Int traceAddress,
+        Int destroyAddress
+    ) returns Int;
+
+    native function backing(Int allocation) returns Storage<Byte>;
+
+    native function heapHead() returns Int;
+    native function setHeapHead(Int allocation);
+
+    native function next(Int allocation) returns Int;
+    native function setNext(Int allocation, Int nextAllocation);
+
+    native function marked(Int allocation) returns Bool;
+    native function setMarked(Int allocation, Bool marked);
+
+    native function liveAllocations() returns Int;
+    native function setLiveAllocations(Int count);
+
+    native function collectionThreshold() returns Int;
+    native function setCollectionThreshold(Int threshold);
+
+    native function rootHead() returns Int;
+    native function rootNext(Int root) returns Int;
+    native function rootAllocation(Int root) returns Int;
+
+    native function protectionDepth() returns Int;
+
+    native function trace(Int allocation);
+    native function destroy(Int allocation);
+}

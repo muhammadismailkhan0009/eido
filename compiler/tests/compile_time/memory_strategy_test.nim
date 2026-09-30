@@ -154,7 +154,7 @@ suite "Compiler-standard Eido memory strategies":
     check "var eido_gc_root_" in generated
     check "eidoGcPushRoot(" in generated
     check "eidoGcPopRoot(" in generated
-    check "eidoGcSafepoint()" in generated
+    check "eido_gc_runtime_safepoint()" in generated
 
   test "generic runner contains no GC layout policy":
     let projectRoot =

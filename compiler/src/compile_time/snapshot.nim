@@ -4,7 +4,7 @@
 import std/json
 import ../hir/[declarations, program, statements]
 import ../semantic/symbols/ids
-import ../types/[function_result, method_kind, model, storage]
+import ../types/[function_result, managed_gc_runtime, method_kind, model, storage]
 import target_storage_layout
 
 type
@@ -81,7 +81,8 @@ proc addClass(
   snapshot: var CompileTimeSnapshot,
   classDecl: HirClass
 ) =
-  if isConcreteStorageTypeName(classDecl.sourceName):
+  if isConcreteStorageTypeName(classDecl.sourceName) or
+      isManagedGcInternalClassName(classDecl.sourceName):
     return
 
   let typeHandle = snapshot.ensureType(classDecl.typ)
@@ -270,7 +271,8 @@ proc buildCompileTimeSnapshot*(program: HirProgram): CompileTimeSnapshot =
       result.addFunction(fn)
 
   for classDecl in program.classes:
-    if isConcreteStorageTypeName(classDecl.sourceName):
+    if isConcreteStorageTypeName(classDecl.sourceName) or
+        isManagedGcInternalClassName(classDecl.sourceName):
       continue
     for methodDecl in classDecl.methods:
       result.addMethod(methodDecl)
