@@ -32,6 +32,10 @@ target-aware semantic analysis
     ↓
 typed + resolved HIR
     ↓
+compiler-standard Eido compile-time phases
+    ↓
+validated compiler-internal phase results
+    ↓
 Nim emitter
     ↓
 generated Nim
@@ -66,6 +70,12 @@ compiler/src/semantic/
 
 compiler/src/hir/
     resolved and typed compiler representation
+
+compiler/src/compile_time/
+    private build-machine execution host, semantic snapshots, target Storage-layout facts, and adapters for compiler-standard phases written in Eido
+
+compiler/compile_time/
+    compiler-owned Eido phase sources plus their private native bridge; neither is part of stdlib or application runtime
 
 compiler/src/backend/nim/emitter/
     pure HIR → Nim source translation
@@ -126,6 +136,8 @@ tests/integration/
 - Generic class applications are statically specialized from AST templates into concrete nominal AST classes before ordinary semantic declaration/body analysis. Implemented interface names survive specialization; generic interfaces remain deferred.
 - Optionality is semantic state, not a source-level wrapper API. `T?` remains explicit through semantic types/HIR; `if path exists` introduces an exact lexical presence proof, and HIR inserts backend unwrap nodes only at proven reads. The Nim backend currently represents optionals with `Option[T]`, but Eido semantics do not depend on Nim's representation.
 - HIR must contain resolved symbol identity and semantic types needed by backends. Class-owned functions also carry resolved `mkStatic`/`mkInstance` kind: only instance-method HIR variants may contain a receiver ID/value, so backends/tooling cannot accidentally invent receivers for inferred static methods. Interface calls additionally carry resolved interface-dispatch kind.
+- Compiler-standard compile-time phases may consume read-only semantic snapshots derived from HIR and return validated compiler plans. Their Eido-facing contracts are private compiler implementation APIs, not ordinary reflection, FFI, stdlib, or runtime APIs. Phase executables run only on the build machine and must not add code/data to the target binary merely because a phase ran.
+- Dynamic compile-time Storage layout queries are private adapters over Storage's target-layout authority. Ordinary Eido source continues to see only the public `Storage<T>.size()` / `alignment()` surface; compiler semantic APIs do not duplicate physical memory facts. The phase receives target layout in its snapshot rather than querying the build-machine executable, preserving a clean path to future embedded/cross-target backends.
 - Backends consume HIR, not raw AST.
 - The Nim emitter must not perform Eido source/module name resolution, type checking, conformance checking, module API reachability, or static/instance/interface dispatch inference. Module resolution and semantic analysis resolve those facts first. Canonical module identities are encoded into collision-safe backend names. The current Nim backend represents interface values as closure-backed wrapper objects with generated concrete adapters/upcasts and emits all nominal class/interface layouts in one type section so they may reference one another; those representations are backend-only and not part of Eido semantics.
 - Nim-specific types, names, process execution, artifact paths, and native-support module layout must not leak into Eido semantic types or AST.

@@ -4,6 +4,7 @@
 import ../project/model
 import ../frontend/parser/project_parser
 import ../hir/program as hirProgram
+import ../compile_time/phase_runner
 import ../semantic/analysis/program_analysis
 import ../semantic/modules/architecture_validation
 import ../backend/nim/emitter/program_emitter
@@ -18,4 +19,6 @@ proc analyzeProject*(project: EidoProject): hirProgram.HirProgram =
 ## Compiles one Eido project through semantic analysis to generated Nim source.
 ## Example: an executable project emits one Nim program containing declarations from all supplied Eido files.
 proc compileProjectToNim*(project: EidoProject): string =
-  emitNim(analyzeProject(project))
+  let program = analyzeProject(project)
+  discard runStandardCompileTimePhases(program)
+  emitNim(program)

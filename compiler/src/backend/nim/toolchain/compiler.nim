@@ -11,7 +11,8 @@ proc compileWithNim*(
   nimSource,
   outputPath: string,
   generatedSourcePath: string = "",
-  memoryMode: string = ""
+  memoryMode: string = "",
+  additionalImportPaths: seq[string] = @[]
 ) =
   let outputDirectory = parentDir(outputPath)
   if outputDirectory.len > 0:
@@ -28,6 +29,8 @@ proc compileWithNim*(
   if memoryMode.len > 0:
     compilerArgs.add "--mm:" & memoryMode
   compilerArgs.add "--path:" & nativeSupportPath()
+  for importPath in additionalImportPaths:
+    compilerArgs.add "--path:" & importPath
   compilerArgs.add "-o:" & outputPath
   compilerArgs.add nimPath
 
