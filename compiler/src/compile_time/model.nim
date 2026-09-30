@@ -1,14 +1,14 @@
-## Defines compiler-internal compile-time phase results.
-## These structures never become part of the Eido runtime or public stdlib surface.
+## Defines compiler-internal compile-time strategy results after private phase handles
+## have been resolved back to stable semantic identities.
 
 type
   CompileTimeFieldLayout* = object
-    fieldHandle*: int64
+    fieldName*: string
     offset*: int64
     traced*: bool
 
   CompileTimeTypeLayout* = object
-    typeHandle*: int64
+    className*: string
     size*: int64
     alignment*: int64
     fields*: seq[CompileTimeFieldLayout]

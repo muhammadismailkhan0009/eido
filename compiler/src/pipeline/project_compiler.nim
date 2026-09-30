@@ -6,6 +6,7 @@ import ../frontend/parser/project_parser
 import ../hir/program as hirProgram
 import ../compile_time/phase_runner
 import options
+import ../compilation/plan
 import ../semantic/analysis/program_analysis
 import ../semantic/modules/architecture_validation
 import ../backend/nim/emitter/program_emitter
@@ -24,5 +25,10 @@ proc compileProjectToNim*(
   options: CompilationOptions = DefaultCompilationOptions
 ): string =
   let program = analyzeProject(project)
-  discard runStandardCompileTimePhases(program, options.memoryStrategy)
-  emitNim(program)
+  let plan = CompilationPlan(
+    memory: runStandardCompileTimePhases(
+      program,
+      options.memoryStrategy
+    )
+  )
+  emitNim(program, plan)

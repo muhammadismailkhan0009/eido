@@ -9,14 +9,16 @@ import target_storage_layout
 type
   SnapshotType = object
     typ: EidoType
+    declarationName: string
     fields: seq[int64]
     managed: bool
 
   SnapshotField = object
     ownerType: int64
+    sourceName: string
     typ: int64
 
-  CompileTimeSnapshot = object
+  CompileTimeSnapshot* = object
     types: seq[SnapshotType]
     fields: seq[SnapshotField]
     declarations: seq[int64]
@@ -47,6 +49,7 @@ proc ensureType(snapshot: var CompileTimeSnapshot, typ: EidoType): int64 =
   let handle = int64(snapshot.types.len)
   snapshot.types.add SnapshotType(
     typ: typ,
+    declarationName: "",
     fields: @[],
     managed: isManagedReference(typ)
   )
@@ -61,6 +64,7 @@ proc addClass(
     return
 
   let typeHandle = snapshot.ensureType(classDecl.typ)
+  snapshot.types[int(typeHandle)].declarationName = classDecl.sourceName
   snapshot.declarations.add typeHandle
 
   for field in classDecl.fields:
@@ -68,6 +72,7 @@ proc addClass(
     let fieldHandle = int64(snapshot.fields.len)
     snapshot.fields.add SnapshotField(
       ownerType: typeHandle,
+      sourceName: field.sourceName,
       typ: fieldTypeHandle
     )
     snapshot.types[int(typeHandle)].fields.add fieldHandle
@@ -82,7 +87,7 @@ proc addInterface(
   discard snapshot.ensureType(interfaceDecl.typ)
 
 ## Builds the read-only invocation snapshot consumed by compiler-standard Eido phases.
-proc buildSnapshot(program: HirProgram): CompileTimeSnapshot =
+proc buildCompileTimeSnapshot*(program: HirProgram): CompileTimeSnapshot =
   # Seed primitive/String handles so dynamically discovered field types always
   # have stable storage-layout facts even when no declaration mentions them first.
   for typ in [etBool, etByte, etShort, etInt, etFloat, etChar, etString]:
@@ -93,6 +98,24 @@ proc buildSnapshot(program: HirProgram): CompileTimeSnapshot =
 
   for classDecl in program.classes:
     result.addClass(classDecl)
+
+## Resolves one private type handle back to the canonical class identity it represents.
+proc declarationName*(snapshot: CompileTimeSnapshot, typeHandle: int64): string =
+  if typeHandle < 0 or typeHandle >= int64(snapshot.types.len):
+    raise newException(ValueError, "invalid compile-time type handle")
+
+  result = snapshot.types[int(typeHandle)].declarationName
+  if result.len == 0:
+    raise newException(
+      ValueError,
+      "compile-time type handle does not identify a class declaration"
+    )
+
+## Resolves one private field handle back to its stable source-level field identity.
+proc fieldName*(snapshot: CompileTimeSnapshot, fieldHandle: int64): string =
+  if fieldHandle < 0 or fieldHandle >= int64(snapshot.fields.len):
+    raise newException(ValueError, "invalid compile-time field handle")
+  snapshot.fields[int(fieldHandle)].sourceName
 
 ## Encodes one compile-time semantic snapshot into the private JSON transport model.
 proc toJson(snapshot: CompileTimeSnapshot): JsonNode =
@@ -127,6 +150,10 @@ proc toJson(snapshot: CompileTimeSnapshot): JsonNode =
   result["fields"] = fields
   result["declarations"] = declarations
 
+## Serializes one already-built snapshot into the private phase transport protocol.
+proc compileTimeSnapshotJson*(snapshot: CompileTimeSnapshot): string =
+  $toJson(snapshot)
+
 ## Serializes one analyzed program into the private compile-time phase protocol.
 proc buildCompileTimeSnapshotJson*(program: HirProgram): string =
-  $toJson(buildSnapshot(program))
+  buildCompileTimeSnapshot(program).compileTimeSnapshotJson()

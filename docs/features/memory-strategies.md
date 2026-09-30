@@ -37,6 +37,15 @@ Primitive and compiler-owned `Storage<T>` programs can already use manual mode. 
 
 ## Current implementation boundary
 
-The compile-time strategy result is already computed and validated, but the backend does not yet consume that plan to generate the mark-and-sweep runtime. Class values still use the current Nim backend representation.
+The selected strategy result is now resolved from invocation-local phase handles to stable canonical class/field identities and carried into code generation as `CompilationPlan.memory`.
 
-The next memory-management work is therefore to make the selected `CompileTimeMemoryPlan` a backend input, then extend the strategy contract with function/local/parameter root planning before implementing the runtime collector over Storage.
+The Nim backend emits per-class GC constants for the planned Eido-managed payload:
+
+- payload size
+- payload alignment
+- number of traced managed-reference fields
+- one payload-relative offset for every traced field
+
+These constants describe the future Eido-managed payload layout, not Nim's current `ref object` header/representation. Class values still use the current Nim backend representation, and no collector reads the metadata yet.
+
+The next memory-management work is to extend the strategy contract with function/local/parameter root planning, generate precise root-frame metadata, then implement the managed heap and mark/sweep runtime over Storage.

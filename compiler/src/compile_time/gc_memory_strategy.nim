@@ -7,6 +7,21 @@ import host
 import model
 import snapshot
 
+type
+  RawFieldLayout = object
+    fieldHandle: int64
+    offset: int64
+    traced: bool
+
+  RawTypeLayout = object
+    typeHandle: int64
+    size: int64
+    alignment: int64
+    fields: seq[RawFieldLayout]
+
+  RawMemoryPlan = object
+    types: seq[RawTypeLayout]
+
 const
   GcMemoryStrategyManifestSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/module.yaml"
@@ -36,9 +51,9 @@ const
     currentSourcePath().parentDir / "../../compile_time/native/eido_native.nim"
   )
 
-## Returns the mutable plan slot for one invocation-local type handle, creating it on first use.
+## Returns the mutable raw plan slot for one private type handle.
 proc ensureTypePlan(
-  plan: var CompileTimeMemoryPlan,
+  plan: var RawMemoryPlan,
   typeHandle: int64
 ): int =
   for index, typePlan in plan.types:
@@ -46,30 +61,30 @@ proc ensureTypePlan(
       return index
 
   result = plan.types.len
-  plan.types.add CompileTimeTypeLayout(
+  plan.types.add RawTypeLayout(
     typeHandle: typeHandle,
     size: -1,
     alignment: -1,
     fields: @[]
   )
 
-## Adds one field offset emitted by the Eido GC memory strategy.
+## Adds one private field-offset record emitted by the Eido strategy.
 proc addFieldRecord(
-  plan: var CompileTimeMemoryPlan,
+  plan: var RawMemoryPlan,
   ownerType,
   fieldHandle,
   offset: int64
 ) =
   let typeIndex = plan.ensureTypePlan(ownerType)
-  plan.types[typeIndex].fields.add CompileTimeFieldLayout(
+  plan.types[typeIndex].fields.add RawFieldLayout(
     fieldHandle: fieldHandle,
     offset: offset,
     traced: false
   )
 
-## Marks one previously described field as containing a managed reference.
+## Marks one previously described raw field as containing a managed reference.
 proc addTraceRecord(
-  plan: var CompileTimeMemoryPlan,
+  plan: var RawMemoryPlan,
   ownerType,
   fieldHandle: int64
 ) =
@@ -84,9 +99,9 @@ proc addTraceRecord(
     "GC memory strategy traced a field before describing its layout"
   )
 
-## Stores the completed payload size and alignment emitted for one class type.
+## Stores the completed payload size and alignment emitted for one class handle.
 proc addLayoutRecord(
-  plan: var CompileTimeMemoryPlan,
+  plan: var RawMemoryPlan,
   typeHandle,
   size,
   alignment: int64
@@ -95,8 +110,8 @@ proc addLayoutRecord(
   plan.types[typeIndex].size = size
   plan.types[typeIndex].alignment = alignment
 
-## Parses the private line protocol emitted by the Eido GC memory strategy.
-proc parsePhaseOutput(lines: seq[string]): CompileTimeMemoryPlan =
+## Parses the private line protocol while keeping invocation-local handles private.
+proc parsePhaseOutput(lines: seq[string]): RawMemoryPlan =
   for line in lines:
     if line.len == 0:
       continue
@@ -128,13 +143,35 @@ proc parsePhaseOutput(lines: seq[string]): CompileTimeMemoryPlan =
         "unknown compiler-standard phase record kind " & $kind
       )
 
-## Counts ordinary class declarations that require managed payload layout planning.
+## Resolves ephemeral phase handles back to canonical backend-facing identities.
+proc resolvePlan(
+  semanticSnapshot: CompileTimeSnapshot,
+  rawPlan: RawMemoryPlan
+): CompileTimeMemoryPlan =
+  for rawType in rawPlan.types:
+    var typePlan = CompileTimeTypeLayout(
+      className: semanticSnapshot.declarationName(rawType.typeHandle),
+      size: rawType.size,
+      alignment: rawType.alignment,
+      fields: @[]
+    )
+
+    for rawField in rawType.fields:
+      typePlan.fields.add CompileTimeFieldLayout(
+        fieldName: semanticSnapshot.fieldName(rawField.fieldHandle),
+        offset: rawField.offset,
+        traced: rawField.traced
+      )
+
+    result.types.add typePlan
+
+## Counts ordinary class declarations that receive compile-time layout records.
 proc expectedClassLayouts(program: hirProgram.HirProgram): int =
   for classDecl in program.classes:
     if not isConcreteStorageTypeName(classDecl.sourceName):
       inc result
 
-## Verifies that the Eido phase returned one complete layout for every ordinary class.
+## Verifies one complete stable layout for every ordinary class declaration.
 proc validatePlan(
   program: hirProgram.HirProgram,
   plan: CompileTimeMemoryPlan
@@ -146,7 +183,9 @@ proc validatePlan(
     )
 
   for typePlan in plan.types:
-    if typePlan.size < 0 or typePlan.alignment <= 0:
+    if typePlan.className.len == 0 or
+        typePlan.size < 0 or
+        typePlan.alignment <= 0:
       raise newException(
         ValueError,
         "GC memory strategy returned an incomplete type layout"
@@ -156,11 +195,12 @@ proc validatePlan(
 proc runGcMemoryStrategy*(
   program: hirProgram.HirProgram
 ): CompileTimeMemoryPlan =
+  let semanticSnapshot = buildCompileTimeSnapshot(program)
   let lines = runCompileTimeEidoPhase(
     "memory_gc",
     GcMemoryStrategyManifestSource,
     CompileTimeNativeSupportSource,
-    buildCompileTimeSnapshotJson(program),
+    semanticSnapshot.compileTimeSnapshotJson(),
     @[
       CompileTimePhaseSource(
         entry: "Compiler.eido",
@@ -193,5 +233,6 @@ proc runGcMemoryStrategy*(
     ]
   )
 
-  result = parsePhaseOutput(lines)
+  let rawPlan = parsePhaseOutput(lines)
+  result = resolvePlan(semanticSnapshot, rawPlan)
   validatePlan(program, result)

@@ -1,6 +1,7 @@
 ## Renders a complete HIR program to Nim, including class methods, functions, and the temporary main harness.
 
 import ../../../hir/program as hirProgram
+import ../../../compilation/plan
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import ../../../types/storage
@@ -12,9 +13,14 @@ import method_emitter
 import function_emitter
 import invariant_emitter
 import storage_support
+import gc_metadata_emitter
 
-## Renders the full HIR program to compilable Nim source.
-proc emitNim*(program: hirProgram.HirProgram): string =
+## Renders the full HIR program plus validated compilation strategy decisions
+## to compilable Nim source.
+proc emitNim*(
+  program: hirProgram.HirProgram,
+  plan: CompilationPlan
+): string =
   result.add "import std/options\n"
   var hasStorage = false
   for classDecl in program.classes:
@@ -45,6 +51,7 @@ proc emitNim*(program: hirProgram.HirProgram): string =
 
   result.add "\n"
   result.add renderNominalTypes(program.interfaces, program.classes)
+  result.add renderGcMetadata(plan.memory)
   result.add renderStorageSupport(program.classes)
   result.add renderClassCopiers(program.classes)
 
@@ -93,3 +100,9 @@ proc emitNim*(program: hirProgram.HirProgram): string =
     else:
       # Temporary v0 harness: result printing remains until process-exit/stdlib semantics replace it.
       result.add "  echo " & mainName & "()\n"
+
+
+## Preserves low-level emitter tests/callers that intentionally bypass compiler
+## strategy execution. Normal compilation goes through the plan-aware overload.
+proc emitNim*(program: hirProgram.HirProgram): string =
+  emitNim(program, CompilationPlan())

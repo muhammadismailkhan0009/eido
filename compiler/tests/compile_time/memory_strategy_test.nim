@@ -64,6 +64,43 @@ suite "Compiler-standard Eido memory strategies":
     check totalFields == 4
     check tracedFields == 1
 
+    var sawStableParentIdentity = false
+    for typePlan in plan.types:
+      if typePlan.className != "Parent":
+        continue
+      sawStableParentIdentity = true
+      check typePlan.fields.len == 3
+      check typePlan.fields[2].fieldName == "child"
+      check typePlan.fields[2].traced
+
+    check sawStableParentIdentity
+
+  test "GC strategy plan becomes generated backend metadata":
+    let source = """
+      class Child {
+        Int value;
+      }
+
+      class Parent {
+        Byte tag;
+        Int number;
+        Child child;
+      }
+
+      function main() {}
+    """
+
+    let generated = compileProjectToNim(
+      fixtureProject(source),
+      CompilationOptions(memoryStrategy: msGc)
+    )
+
+    check "eido_class_Parent_gc_payload_size = int64(24)" in generated
+    check "eido_class_Parent_gc_alignment = int64(8)" in generated
+    check "eido_class_Parent_gc_trace_count = 1" in generated
+    check "eido_class_Parent_gc_trace_0_offset = int64(16)" in generated
+    check "eido_class_Child_gc_trace_count = 0" in generated
+
   test "generic runner contains no GC layout policy":
     let projectRoot =
       currentSourcePath().parentDir.parentDir.parentDir.parentDir
@@ -94,6 +131,8 @@ suite "Compiler-standard Eido memory strategies":
     )
 
     check "when isMainModule" in generated
+    check "_gc_payload_size" notin generated
+    check "_gc_trace_count" notin generated
 
   test "manual strategy rejects managed class declarations":
     let source = """
