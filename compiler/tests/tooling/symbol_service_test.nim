@@ -193,15 +193,17 @@ function main() returns Int {
       factorySource.find("value")
 
   test "resolves inherited interface method definition":
-    let source = """
+    let readableSource = """
 interface Readable {
     function read() returns Int;
 }
-
+"""
+    let detailedSource = """
 interface DetailedReadable extends Readable {
     function detail() returns Int;
 }
-
+"""
+    let valueSource = """
 class Value implements DetailedReadable {
     Int stored;
 
@@ -213,7 +215,8 @@ class Value implements DetailedReadable {
         return self.stored + 1;
     }
 }
-
+"""
+    let mainSource = """
 function consume(DetailedReadable value) returns Int {
     return value.read();
 }
@@ -224,7 +227,12 @@ function main() returns Int {
 """
     let project = initProject(
       ptExecutable,
-      @[initSourceUnit(0, "main.eido", source)]
+      @[
+        initSourceUnit(0, "Readable.eido", readableSource),
+        initSourceUnit(1, "DetailedReadable.eido", detailedSource),
+        initSourceUnit(2, "Value.eido", valueSource),
+        initSourceUnit(3, "main.eido", mainSource)
+      ]
     )
     let program = requireCheckedProject(project)
     let symbols = buildSymbolIndex(program, project)
@@ -232,10 +240,11 @@ function main() returns Int {
     let readUse = symbolAt(
       symbols,
       "main.eido",
-      source.rfind("read")
+      mainSource.rfind("read")
     )
 
     check readUse.found
     check readUse.symbol.kind == tskMethod
+    check readUse.symbol.declarationSpan.sourcePath == "Readable.eido"
     check readUse.symbol.declarationSpan.startOffset ==
-      source.find("read()")
+      readableSource.find("read()")

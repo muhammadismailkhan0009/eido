@@ -1,4 +1,4 @@
-module: memory_layout
+module: memory_gc
 
 sources:
   - Compiler.eido
@@ -6,7 +6,8 @@ sources:
   - FieldInfo.eido
   - StorageInfo.eido
   - MemoryPlan.eido
-  - memory_layout.eido
+  - SelectedMemoryStrategy.eido
+  - runner.eido
 
 children: []
 dependencies: []

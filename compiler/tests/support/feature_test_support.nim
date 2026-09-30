@@ -2,7 +2,8 @@
 ## Native code generation itself stays covered by the dedicated compiler pipeline tests.
 
 import std/[os, osproc, strutils]
-import pipeline/compiler
+import pipeline/project_compiler
+import support/project_fixture_support
 import backend/nim/toolchain/native_support
 import backend/nim/toolchain/compiler as nimCompiler
 
@@ -16,7 +17,7 @@ proc runFeatureSource*(source: string, caseName: string): string =
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  writeFile(generatedPath, compileToNim(source))
+  writeFile(generatedPath, compileProjectToNim(fixtureProject(source)))
 
   let nimCompiler = getEnv("NIM", "nim")
   let process = startProcess(
@@ -54,7 +55,7 @@ proc runNativeFeatureSource*(source: string, caseName: string): string =
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  nimCompiler.compileWithNim(compileToNim(source), outputPath)
+  nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
   execProcess(outputPath).strip()
 
 ## Runs an Eido native feature expected to fail and returns its process result.
@@ -72,5 +73,5 @@ proc runFailingNativeFeatureSource*(
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  nimCompiler.compileWithNim(compileToNim(source), outputPath)
+  nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
   execCmdEx(outputPath)

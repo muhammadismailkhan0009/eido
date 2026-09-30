@@ -16,8 +16,7 @@ proc parseProject*(project: EidoProject): Program =
   for sourceUnit in project.sources:
     var sourceProgram = parseProgram(lexAll(sourceUnit))
 
-    if project.modules.len > 0 and
-        sourceProgram.interfaces.len + sourceProgram.classes.len > 1:
+    if sourceProgram.interfaces.len + sourceProgram.classes.len > 1:
       failAt(
         sourceUnit.path,
         1,

@@ -35,7 +35,7 @@ sequences, plain/quoted scalars, empty `[]`/`{}`, and small inline mappings
 such as `processor: { path: processor }`. YAML anchors/tags and unrelated YAML
 features are intentionally outside the manifest grammar.
 
-Each listed `.eido` source may contain at most one outermost nominal declaration total: one class or one interface. Top-level functions may coexist in that file. Multiple same-level classes/interfaces must be split into separate source files; nested nominal declarations are not part of the current grammar.
+Every `.eido` source may contain at most one outermost nominal declaration total: one class or one interface, regardless of whether the source is compiled standalone or through `module.yaml`. Top-level functions may coexist in that file. Multiple same-level classes/interfaces must be split into separate source files; nested nominal declarations are not part of the current grammar.
 
 ## Architectural meaning
 

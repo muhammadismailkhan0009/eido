@@ -1,0 +1,8 @@
+// Generic compiler-owned memory-strategy entrypoint.
+//
+// Strategy policy is intentionally absent here. The compiler selects a phase
+// module that supplies the stable SelectedMemoryStrategy.plan() contract.
+
+function main() {
+    SelectedMemoryStrategy.plan();
+}

@@ -1,0 +1,12 @@
+module: phases
+
+sources: []
+
+children:
+  memory_gc:
+    path: memory_gc
+
+dependencies: []
+exports: []
+provides: {}
+adopts: []

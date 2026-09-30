@@ -1,0 +1,58 @@
+// Selected automatic memory strategy.
+//
+// The compiler chooses this module for --memory=gc. The generic runner knows
+// only the stable SelectedMemoryStrategy.plan() contract; mark-and-sweep policy
+// lives here rather than in the phase entrypoint.
+
+class SelectedMemoryStrategy {
+    function align(Int offset, Int alignment) returns Int {
+        return ((offset + alignment - 1) / alignment) * alignment;
+    }
+
+    function planType(Int type) {
+        var offset = 0;
+        var requiredAlignment = 1;
+        var fieldIndex = 0;
+
+        while (fieldIndex < TypeInfo.fieldCount(type)) {
+            var field = TypeInfo.fieldAt(type, fieldIndex);
+            var fieldType = FieldInfo.typeOf(field);
+            var fieldAlignment = StorageInfo.alignmentOf(fieldType);
+
+            set offset = SelectedMemoryStrategy.align(
+                offset,
+                fieldAlignment
+            );
+            MemoryPlan.field(type, field, offset);
+
+            if (TypeInfo.isManaged(fieldType)) {
+                MemoryPlan.trace(type, field);
+            }
+
+            set offset = offset + StorageInfo.sizeOf(fieldType);
+
+            if (fieldAlignment > requiredAlignment) {
+                set requiredAlignment = fieldAlignment;
+            }
+
+            set fieldIndex = fieldIndex + 1;
+        }
+
+        MemoryPlan.layout(
+            type,
+            SelectedMemoryStrategy.align(offset, requiredAlignment),
+            requiredAlignment
+        );
+    }
+
+    function plan() {
+        var index = 0;
+
+        while (index < Compiler.typeCount()) {
+            SelectedMemoryStrategy.planType(
+                Compiler.typeAt(index)
+            );
+            set index = index + 1;
+        }
+    }
+}

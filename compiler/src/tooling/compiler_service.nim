@@ -5,6 +5,7 @@ import ../diagnostics/[errors, model]
 import ../hir/program as hirProgram
 import ../project/model
 import ../pipeline/compiler
+import ../pipeline/options
 import ../pipeline/project_compiler
 
 type
@@ -30,10 +31,16 @@ proc requireCheckedProject*(project: EidoProject): hirProgram.HirProgram =
 
 ## Compiles one Eido project to generated Nim source through the shared project pipeline.
 ## Example: declarations in main.eido and account.eido are emitted into one backend program.
-proc compileProject*(project: EidoProject): string =
-  compileProjectToNim(project)
+proc compileProject*(
+  project: EidoProject,
+  options: CompilationOptions = DefaultCompilationOptions
+): string =
+  compileProjectToNim(project, options)
 
 ## Compiles one complete anonymous Eido source program through the executable pipeline.
 ## Example: compileSourceToNim("function main() returns Int { return 1; }") returns generated Nim.
-proc compileSourceToNim*(source: string): string =
-  compileToNim(source)
+proc compileSourceToNim*(
+  source: string,
+  options: CompilationOptions = DefaultCompilationOptions
+): string =
+  compileToNim(source, options)

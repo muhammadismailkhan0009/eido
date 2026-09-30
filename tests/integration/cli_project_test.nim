@@ -28,6 +28,26 @@ suite "CLI project integration":
     check options.sourcePaths == @["Main.eido", "Helper.eido"]
     check options.outputPath == "app"
 
+  test "parses compiler memory strategy for build run and compile":
+    let buildOptions = parseArgs(@["build", "--memory=manual"])
+    check buildOptions.memoryStrategy == msManual
+
+    let runOptions = parseArgs(@[
+      "run", "shop/module.yaml", "--memory=manual", "--", "arg"
+    ])
+    check runOptions.memoryStrategy == msManual
+    check runOptions.applicationArgs == @["arg"]
+
+    let compileOptions = parseArgs(@[
+      "compile", "Main.eido", "--memory=manual", "-o", "app"
+    ])
+    check compileOptions.memoryStrategy == msManual
+
+    check parseArgs(@["build"]).memoryStrategy == msGc
+
+    expect ValueError:
+      discard parseArgs(@["build", "--memory=arc"])
+
   test "uses a conventional project build layout":
     let root = freshProject("layout")
     defer:
@@ -100,6 +120,36 @@ suite "CLI project integration":
 
     check exitCode == 0
     check fileExists(layout.executablePath)
+  test "manual strategy builds a primitive module with implicit stdlib":
+    let root = freshProject("manual_strategy")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(
+      root / "Main.eido",
+      "function main() returns Int { return 7; }"
+    )
+
+    let outputPath = root / "app"
+    buildModuleFile(
+      root / "module.yaml",
+      outputPath,
+      memoryStrategy = msManual
+    )
+
+    check execProcess(outputPath).strip() == "7"
+
   test "parses manifest-driven build with output option":
     let options = parseArgs(@[
       "build", "shop/module.yaml", "-o", "bin/app"

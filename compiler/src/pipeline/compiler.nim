@@ -4,10 +4,15 @@
 import ../project/model
 import ../source/source_unit
 import project_compiler
+import options
 
 ## Runs one anonymous Eido source string through the executable project pipeline.
 ## Example: `function main() returns Int { return 5; }` still compiles without callers constructing a Project explicitly.
-proc compileToNim*(source: string): string =
+proc compileToNim*(
+  source: string,
+  options: CompilationOptions = DefaultCompilationOptions
+): string =
   compileProjectToNim(
-    initProject(ptExecutable, @[initSourceUnit(0, "", source)])
+    initProject(ptExecutable, @[initSourceUnit(0, "", source)]),
+    options
   )

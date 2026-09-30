@@ -1,4 +1,4 @@
-## Adapts the generic compile-time Eido host to managed object-layout planning.
+## Adapts the generic compile-time Eido host to the selected precise mark-and-sweep strategy.
 
 import std/[os, strutils]
 import ../hir/program as hirProgram
@@ -8,26 +8,29 @@ import model
 import snapshot
 
 const
-  MemoryLayoutPhaseManifestSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/module.yaml"
+  GcMemoryStrategyManifestSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/module.yaml"
   )
   CompilerPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/Compiler.eido"
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/Compiler.eido"
   )
   TypeInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/TypeInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/TypeInfo.eido"
   )
   FieldInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/FieldInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/FieldInfo.eido"
   )
   StorageInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/StorageInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/StorageInfo.eido"
   )
   MemoryPlanPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/MemoryPlan.eido"
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/MemoryPlan.eido"
   )
-  MemoryLayoutPlannerSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_layout/memory_layout.eido"
+  SelectedMemoryStrategySource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/SelectedMemoryStrategy.eido"
+  )
+  RunnerSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_gc/runner.eido"
   )
   CompileTimeNativeSupportSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/native/eido_native.nim"
@@ -50,7 +53,7 @@ proc ensureTypePlan(
     fields: @[]
   )
 
-## Adds one field offset emitted by the Eido memory-layout phase.
+## Adds one field offset emitted by the Eido GC memory strategy.
 proc addFieldRecord(
   plan: var CompileTimeMemoryPlan,
   ownerType,
@@ -78,7 +81,7 @@ proc addTraceRecord(
 
   raise newException(
     ValueError,
-    "compile-time memory phase traced a field before describing its layout"
+    "GC memory strategy traced a field before describing its layout"
   )
 
 ## Stores the completed payload size and alignment emitted for one class type.
@@ -92,7 +95,7 @@ proc addLayoutRecord(
   plan.types[typeIndex].size = size
   plan.types[typeIndex].alignment = alignment
 
-## Parses the private line protocol emitted by the Eido memory-layout phase.
+## Parses the private line protocol emitted by the Eido GC memory strategy.
 proc parsePhaseOutput(lines: seq[string]): CompileTimeMemoryPlan =
   for line in lines:
     if line.len == 0:
@@ -139,23 +142,23 @@ proc validatePlan(
   if plan.types.len != expectedClassLayouts(program):
     raise newException(
       ValueError,
-      "compile-time memory phase did not return one layout per ordinary class"
+      "GC memory strategy did not return one layout per ordinary class"
     )
 
   for typePlan in plan.types:
     if typePlan.size < 0 or typePlan.alignment <= 0:
       raise newException(
         ValueError,
-        "compile-time memory phase returned an incomplete type layout"
+        "GC memory strategy returned an incomplete type layout"
       )
 
-## Executes the bundled Eido memory-layout phase against one analyzed program.
-proc runMemoryLayoutPhase*(
+## Executes the bundled Eido GC memory strategy against one analyzed program.
+proc runGcMemoryStrategy*(
   program: hirProgram.HirProgram
 ): CompileTimeMemoryPlan =
   let lines = runCompileTimeEidoPhase(
-    "memory_layout",
-    MemoryLayoutPhaseManifestSource,
+    "memory_gc",
+    GcMemoryStrategyManifestSource,
     CompileTimeNativeSupportSource,
     buildCompileTimeSnapshotJson(program),
     @[
@@ -180,8 +183,12 @@ proc runMemoryLayoutPhase*(
         text: MemoryPlanPhaseSource
       ),
       CompileTimePhaseSource(
-        entry: "memory_layout.eido",
-        text: MemoryLayoutPlannerSource
+        entry: "SelectedMemoryStrategy.eido",
+        text: SelectedMemoryStrategySource
+      ),
+      CompileTimePhaseSource(
+        entry: "runner.eido",
+        text: RunnerSource
       )
     ]
   )

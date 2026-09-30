@@ -121,15 +121,15 @@ eido clean
 
 ```text
 eido check [module.yaml]
-eido build [module.yaml] [-o <output>]
-eido run [module.yaml] [-- <application args...>]
+eido build [module.yaml] [--memory=gc|manual] [-o <output>]
+eido run [module.yaml] [--memory=gc|manual] [-- <application args...>]
 eido clean [module.yaml]
-eido compile <source.eido>... -o <output>
+eido compile <source.eido>... [--memory=gc|manual] -o <output>
 eido --help
 eido --version
 ```
 
-`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration.
+`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default compilation strategy; `--memory=manual` currently skips managed planning and rejects classes that require managed instance representation.
 
 `compile` is the lower-level standalone source path. Normal application development should currently prefer a `module.yaml` project because project compilation also provides the implicit SDK standard library and module architecture.
 

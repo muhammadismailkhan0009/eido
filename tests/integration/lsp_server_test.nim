@@ -49,6 +49,60 @@ proc decodeSemanticTokens(data: JsonNode): seq[DecodedSemanticToken] =
     index += 5
 
 suite "Eido LSP integration":
+  test "compiler-owned phase sources discover the phases module root":
+    let projectRoot =
+      currentSourcePath().parentDir.parentDir.parentDir
+    let phaseSource =
+      projectRoot / "compiler" / "compile_time" / "phases" /
+        "memory_gc" / "StorageInfo.eido"
+
+    var documents = initDocumentStore(projectRoot)
+    check documents.findProjectManifest(phaseSource) ==
+      absolutePath(
+        projectRoot / "compiler" / "compile_time" / "phases" / "module.yaml"
+      )
+
+  test "compiler-owned phase source checks through the phases module root":
+    let projectRoot =
+      currentSourcePath().parentDir.parentDir.parentDir
+    let phaseSource =
+      projectRoot / "compiler" / "compile_time" / "phases" /
+        "memory_gc" / "StorageInfo.eido"
+    let source = readFile(phaseSource)
+    let uri = pathToFileUri(phaseSource)
+
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {"rootUri": pathToFileUri(projectRoot)}
+    })
+
+    let messages = server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "method": "textDocument/didOpen",
+      "params": {
+        "textDocument": {
+          "uri": uri,
+          "languageId": "eido",
+          "version": 1,
+          "text": source
+        }
+      }
+    })
+
+    var sawProjectError = false
+    let published = diagnosticsFor(messages, uri)
+    for message in messages:
+      if message.hasKey("method") and
+          message["method"].getStr == "window/showMessage":
+        sawProjectError = true
+
+    check not sawProjectError
+    check not published.isNil
+    check published["params"]["diagnostics"].len == 0
+
   test "TextMate line comments own apostrophes through end of line":
     let projectRoot =
       currentSourcePath().parentDir.parentDir.parentDir

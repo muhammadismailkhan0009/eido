@@ -2,6 +2,7 @@
 ## Compilation remains delegated to the reusable explicit build operation.
 
 import std/osproc
+import ../../../../compiler/src/pipeline/options
 import build_command
 import project_layout
 
@@ -10,13 +11,15 @@ import project_layout
 proc runModuleProject*(
   manifestPath: string,
   applicationArgs: seq[string],
-  layout: ProjectLayout
+  layout: ProjectLayout,
+  memoryStrategy: MemoryStrategy = msGc
 ): int =
   layout.prepareProjectLayout()
   buildModuleFile(
     manifestPath,
     layout.executablePath,
-    layout.generatedSourcePath
+    layout.generatedSourcePath,
+    memoryStrategy
   )
 
   let process = startProcess(

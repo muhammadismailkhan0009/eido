@@ -27,14 +27,19 @@ when isMainModule:
       let manifestPath = resolvedManifest(options)
       let layout = projectLayout(manifestPath)
       if options.outputPath.len > 0:
-        buildModuleFile(manifestPath, options.outputPath)
+        buildModuleFile(
+          manifestPath,
+          options.outputPath,
+          memoryStrategy = options.memoryStrategy
+        )
         echo "Built " & options.outputPath
       else:
         layout.prepareProjectLayout()
         buildModuleFile(
           manifestPath,
           layout.executablePath,
-          layout.generatedSourcePath
+          layout.generatedSourcePath,
+          options.memoryStrategy
         )
         echo "Built " & layout.executablePath
 
@@ -55,7 +60,8 @@ when isMainModule:
       let exitCode = runModuleProject(
         manifestPath,
         options.applicationArgs,
-        layout
+        layout,
+        options.memoryStrategy
       )
       if exitCode != 0:
         quit(exitCode)
@@ -66,7 +72,11 @@ when isMainModule:
       echo "Cleaned " & projectLayout(manifestPath).buildDirectory
 
     of ccCompile:
-      buildFiles(options.sourcePaths, options.outputPath)
+      buildFiles(
+        options.sourcePaths,
+        options.outputPath,
+        options.memoryStrategy
+      )
       echo "Built " & options.outputPath
 
   except CompilerError as error:

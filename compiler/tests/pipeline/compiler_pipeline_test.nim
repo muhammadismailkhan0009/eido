@@ -1,5 +1,5 @@
 import std/[os, osproc, strutils, unittest]
-import pipeline/[compiler, project_compiler]
+import pipeline/[compiler, options, project_compiler]
 import project/model
 import source/source_unit
 import backend/nim/toolchain/compiler as nimCompiler
@@ -37,6 +37,14 @@ proc runNativeProject(project: EidoProject, caseName: string): string =
   execProcess(outputPath).strip()
 
 suite "Compiler pipeline":
+  test "rejects multiple outermost nominal declarations in standalone source":
+    expect ValueError:
+      discard compileToNim("""
+        class Account {}
+        interface Repository { function save(); }
+        function main() {}
+      """)
+
   test "compiles value-returning primitive representations to a native executable":
     # Given
     let source = """
@@ -231,7 +239,10 @@ suite "Compiler pipeline":
         removeFile(generatedPath)
 
     nimCompiler.compileWithNim(
-      compileToNim(source),
+      compileToNim(
+        source,
+        CompilationOptions(memoryStrategy: msManual)
+      ),
       outputPath,
       memoryMode = "none"
     )
