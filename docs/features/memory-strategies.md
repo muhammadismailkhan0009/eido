@@ -47,7 +47,7 @@ The compiler lowers strategy-selected roots to stack-owned root descriptors. Par
 
 Generated class trace procedures follow exactly the fields selected by the Eido strategy. Mark walks roots and recursively follows those trace procedures. Sweep destroys unreachable payloads and releases their backing Storage. Cycles therefore do not require special handling: an unreachable cycle is unmarked and swept normally.
 
-The collector runtime itself now lives largely in hidden ordinary Eido source: `stdlib/src/managed_gc_runtime.eido`. It owns class-wide heap state, the allocation-header byte layout and fields, mark/root traversal, sweep, live-count/threshold policy, safepoints, invariant depth, and shutdown collection. Header fields are typed views over raw Storage; physical memory is acquired and reclaimed through the same Storage API:
+The collector runtime itself now lives largely in hidden ordinary Eido source: `stdlib/memory/managed/managed_gc_runtime.eido`. It owns class-wide heap state, the allocation-header byte layout and fields, mark/root traversal, sweep, live-count/threshold policy, safepoints, invariant depth, and shutdown collection. Header fields are typed views over raw Storage; physical memory is acquired and reclaimed through the same Storage API:
 
 ```eido
 var backing = Storage<Byte>.allocateRaw(1, totalSize);
@@ -75,7 +75,7 @@ The current collection trigger is intentionally simple: allocation pressure rais
 
 ## Runtime injection
 
-The hidden `managed_gc_native.eido` and `managed_gc_runtime.eido` files are owned by `eido.stdlib` for normal parser/module/LSP behavior but are not exported. Compilation first analyzes/plans without target GC runtime code; the compiler injects and reanalyzes the hidden runtime only when `--memory=gc` actually produces managed layouts. Primitive-only and manual targets therefore carry no collector runtime merely because the files are module-owned.
+The hidden `managed_gc_native.eido` and `managed_gc_runtime.eido` files are owned by `eido.stdlib.memory.managed` for normal parser/module/LSP behavior but are not exported by that module or the umbrella stdlib. Compilation first analyzes/plans without target GC runtime code; the compiler injects and reanalyzes the hidden runtime only when `--memory=gc` actually produces managed layouts. Primitive-only and manual targets therefore carry no collector runtime merely because the files are module-owned.
 
 ## Manual mode
 

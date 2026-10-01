@@ -23,8 +23,8 @@ suite "Eido-written CLI dogfood":
       getTempDir() / ("eido_dogfood_cli_" & $getCurrentProcessId())
     let generatedPath = outputPath & "_generated.nim"
     let sources = @[
-      "stdlib/src/process.eido",
-      "stdlib/src/console.eido",
+      "stdlib/process/process.eido",
+      "stdlib/io/console.eido",
       "tools/cli/eido/main.eido"
     ]
 

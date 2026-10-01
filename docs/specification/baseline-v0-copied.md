@@ -2765,8 +2765,8 @@ to know physical native-support paths.
 The first ordinary Eido-facing stdlib files are:
 
 ```text
-stdlib/src/process.eido
-stdlib/src/console.eido
+stdlib/process/process.eido
+stdlib/io/console.eido
 ```
 
 They currently provide foundational operations required by the CLI:

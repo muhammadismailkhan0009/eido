@@ -1,0 +1,13 @@
+module: process
+
+sources:
+  - process.eido
+
+children: []
+dependencies: []
+
+exports:
+  - Process
+
+provides: {}
+adopts: []

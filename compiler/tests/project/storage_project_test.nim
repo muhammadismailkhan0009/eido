@@ -70,3 +70,36 @@ suite "Storage project integration":
       loadModuleProject(root / "module.yaml", ptExecutable)
     )
     check checked.success
+
+  test "stdlib umbrella preserves Process Console Memory and Arena visibility":
+    let root = getTempDir() / ("eido_stdlib_umbrella_" & $getCurrentProcessId())
+    if dirExists(root):
+      removeDir(root)
+    createDir(root)
+    defer:
+      removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: stdlibapp
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", """
+      function main() returns Int {
+        Console.writeLine("stdlib");
+        var arena = Memory<Int>.arena(2);
+        var remaining = arena.remaining();
+        arena.release();
+        return Process.argumentCount() + remaining;
+      }
+    """)
+
+    let checked = checkProject(
+      loadModuleProject(root / "module.yaml", ptExecutable)
+    )
+    check checked.success

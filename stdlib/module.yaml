@@ -1,20 +1,18 @@
 module: stdlib
 
-sources:
-  - src/process.eido
-  - src/console.eido
-  - src/arena.eido
-  - src/memory.eido
-  - src/managed_gc_native.eido
-  - src/managed_gc_runtime.eido
+sources: []
 
-children: []
+children:
+  process: { path: process }
+  io: { path: io }
+  memory: { path: memory }
+
 dependencies: []
 
 exports:
-  - Process
-  - Console
-  - Memory
+  - process.Process
+  - io.Console
+  - memory.Memory
 
 provides: {}
 adopts: []

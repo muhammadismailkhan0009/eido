@@ -82,16 +82,26 @@ suite "Module manifest parsing":
     )
 
     check manifest.name == "stdlib"
-    check manifest.sources == @[
-      "src/process.eido",
-      "src/console.eido",
-      "src/arena.eido",
-      "src/memory.eido",
-      "src/managed_gc_native.eido",
-      "src/managed_gc_runtime.eido"
-    ]
-    check manifest.children.len == 0
+    check manifest.sources.len == 0
+    check manifest.children.len == 3
+    check manifest.children[0].name == "process"
+    check manifest.children[1].name == "io"
+    check manifest.children[2].name == "memory"
     check manifest.dependencies.len == 0
-    check manifest.exports == @["Process", "Console", "Memory"]
+    check manifest.exports == @[
+      "process.Process",
+      "io.Console",
+      "memory.Memory"
+    ]
     check manifest.provides.len == 0
     check manifest.adopts.len == 0
+
+    let memoryManifest = parseModuleManifest(
+      BuiltinMemoryManifestSource,
+      BuiltinMemoryManifestPath
+    )
+    check memoryManifest.name == "memory"
+    check memoryManifest.sources == @["memory.eido", "arena.eido"]
+    check memoryManifest.children.len == 1
+    check memoryManifest.children[0].name == "managed"
+    check memoryManifest.exports == @["Memory"]

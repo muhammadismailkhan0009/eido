@@ -1,0 +1,11 @@
+module: managed
+
+sources:
+  - managed_gc_native.eido
+  - managed_gc_runtime.eido
+
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

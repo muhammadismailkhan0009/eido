@@ -52,27 +52,52 @@ suite "Module project loading":
     let project = loadModuleProject(root / "module.yaml", ptExecutable)
 
     check project.rootModule == "shop"
-    check project.modules.len == 3
+    check project.modules.len == 7
     check project.modules[0].canonicalName == "shop"
     check project.modules[1].canonicalName == "shop.payments"
+
     check project.modules[2].canonicalName == BuiltinStdlibModuleName
     check project.modules[2].name == "stdlib"
     check project.modules[2].manifestPath == BuiltinStdlibManifestPath
-    check project.modules[2].sourcePaths == @[
-      BuiltinProcessSourcePath,
-      BuiltinConsoleSourcePath,
-      BuiltinArenaSourcePath,
+    check project.modules[2].sourcePaths.len == 0
+    check project.modules[2].children == @[
+      BuiltinProcessModuleName,
+      BuiltinIoModuleName,
+      BuiltinMemoryModuleName
+    ]
+    check project.modules[2].exports == @[
+      "process.Process",
+      "io.Console",
+      "memory.Memory"
+    ]
+
+    check project.modules[3].canonicalName == BuiltinProcessModuleName
+    check project.modules[3].sourcePaths == @[BuiltinProcessSourcePath]
+    check project.modules[4].canonicalName == BuiltinIoModuleName
+    check project.modules[4].sourcePaths == @[BuiltinConsoleSourcePath]
+    check project.modules[5].canonicalName == BuiltinMemoryModuleName
+    check project.modules[5].sourcePaths == @[
       BuiltinMemorySourcePath,
+      BuiltinArenaSourcePath
+    ]
+    check project.modules[5].children == @[BuiltinManagedGcModuleName]
+    check project.modules[6].canonicalName == BuiltinManagedGcModuleName
+    check project.modules[6].sourcePaths == @[
       BuiltinManagedGcNativeSourcePath,
       BuiltinManagedGcRuntimeSourcePath
     ]
-    check project.modules[2].exports == @["Process", "Console", "Memory"]
+    check project.modules[6].exports.len == 0
+
     check BuiltinStdlibModuleName in project.modules[0].dependencies
     check project.sources.len == 8
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
-    for index in 2 .. 7:
-      check project.sources[index].moduleName == "eido.stdlib"
+    check project.sources[2].moduleName == BuiltinProcessModuleName
+    check project.sources[3].moduleName == BuiltinIoModuleName
+    check project.sources[4].moduleName == BuiltinMemoryModuleName
+    check project.sources[5].moduleName == BuiltinMemoryModuleName
+    check project.sources[6].moduleName == BuiltinManagedGcModuleName
+    check project.sources[7].moduleName == BuiltinManagedGcModuleName
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

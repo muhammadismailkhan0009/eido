@@ -110,7 +110,7 @@ Storage parameters are borrowed. Borrowed Storage may cross a callable result bo
 
 ## Arena memory policy
 
-The first memory-management policy implemented above Storage is ordinary Eido source in `stdlib/src/arena.eido`:
+The first memory-management policy implemented above Storage is ordinary Eido source in `stdlib/memory/arena.eido`:
 
 ```eido
 var arena = Arena<Int>.create(100);

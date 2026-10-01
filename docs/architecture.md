@@ -107,8 +107,11 @@ tools/lsp/
 tools/vscode/
     thin VS Code client for eido-lsp plus CLI-backed project check/build/run commands
 
-stdlib/src/
-    ordinary Eido-facing foundational APIs
+stdlib/process/, stdlib/io/, stdlib/memory/
+    independent manifest-owned Eido stdlib modules; memory/managed is compiler-private
+
+stdlib/module.yaml
+    source-free SDK umbrella; re-exports public roots from child stdlib modules
 
 stdlib/native/
     backend-specific implementation support used by explicit Eido native declarations
@@ -139,8 +142,8 @@ tests/integration/
 - Compiler-standard compile-time phases may consume read-only semantic snapshots derived from HIR and return validated compiler plans. Their Eido-facing contracts are private compiler implementation APIs, not ordinary reflection, FFI, stdlib, or runtime APIs. Phase executables run only on the build machine and must not add code/data to the target binary merely because a phase ran.
 - Memory policy is selected through `CompilationOptions.memoryStrategy`; the CLI exposes `--memory=gc|manual` with `gc` as the default. The generic runner invokes the selected module's private `SelectedMemoryStrategy.plan()` contract. The current Eido-written GC strategy plans payload layout/tracing and precise callable roots; manual mode skips managed planning and rejects class construction/instance representations that require automatic memory management.
 - Selected strategy output crosses into backend generation only after private phase handles are resolved to stable semantic identities. `CompilationPlan` is a compiler-level model consumed by pipeline/backend without reversing dependency direction. Under GC, ordinary class/interface values lower to one-pointer `EidoManagedRef` handles; generated class payloads are separate objects whose size/alignment are statically checked against the Eido strategy plan. Strategy-selected parameters, locals, receivers, and managed postcondition result bindings become precise stack roots.
-- The target collector is hidden ordinary Eido code (`stdlib/src/managed_gc_runtime.eido`): class-owned fields hold heap head/live count/threshold; Eido computes and owns the raw allocation-header layout, reads/writes it through Storage byte-offset views, and implements allocation, mark/root traversal, sweep, safepoints, invariant-depth bookkeeping, and shutdown collection. `eido_managed_gc.nim` no longer knows the header layout or Storage; it retains only managed-reference/root pointer mechanics, temporary-expression protection, payload pointer conversion, and indirect trace/destroy callback invocation.
-- Hidden target-GC sources are owned but not exported by `eido.stdlib`. Compilation strips them for initial analysis/planning and injects/reanalyzes them only when the selected GC strategy produces managed layouts, so primitive-only/manual targets do not carry collector runtime code.
+- The target collector is hidden ordinary Eido code (`stdlib/memory/managed/managed_gc_runtime.eido`): class-owned fields hold heap head/live count/threshold; Eido computes and owns the raw allocation-header layout, reads/writes it through Storage byte-offset views, and implements allocation, mark/root traversal, sweep, safepoints, invariant-depth bookkeeping, and shutdown collection. `eido_managed_gc.nim` no longer knows the header layout or Storage; it retains only managed-reference/root pointer mechanics, temporary-expression protection, payload pointer conversion, and indirect trace/destroy callback invocation.
+- Hidden target-GC sources are owned by `eido.stdlib.memory.managed`, which exports nothing; the umbrella `eido.stdlib` therefore cannot expose them. Compilation strips them for initial analysis/planning and injects/reanalyzes them only when the selected GC strategy produces managed layouts, so primitive-only/manual targets do not carry collector runtime code.
 - Dynamic compile-time Storage layout queries are private adapters over Storage's target-layout authority. Ordinary Eido source continues to see only the public `Storage<T>.size()` / `alignment()` surface; compiler semantic APIs do not duplicate physical memory facts. The phase receives target layout in its snapshot rather than querying the build-machine executable, preserving a clean path to future embedded/cross-target backends.
 - Backends consume HIR, not raw AST.
 - The Nim emitter must not perform Eido source/module name resolution, type checking, conformance checking, module API reachability, or static/instance/interface dispatch inference. Module resolution and semantic analysis resolve those facts first. Canonical module identities are encoded into collision-safe backend names. Under `--memory=gc`, ordinary classes/interfaces use `EidoManagedRef` handles, separate generated payloads, managed interface boxes, and generated static method thunks; Storage and manual/bootstrap-only cases keep their dedicated backend representations. These are backend details, not Eido semantics.

@@ -1,0 +1,13 @@
+module: io
+
+sources:
+  - console.eido
+
+children: []
+dependencies: []
+
+exports:
+  - Console
+
+provides: {}
+adopts: []

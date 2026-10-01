@@ -2,7 +2,7 @@ import std/[os, strutils, unittest]
 import support/feature_test_support
 
 const ArenaSource = staticRead(
-  currentSourcePath().parentDir / "../../../../stdlib/src/arena.eido"
+  currentSourcePath().parentDir / "../../../../stdlib/memory/arena.eido"
 )
 
 suite "Arena memory policy":

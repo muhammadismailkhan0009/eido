@@ -41,10 +41,10 @@ proc withManagedGcRuntime(project: EidoProject): EidoProject =
 
   var runtimeModule = ""
   if result.modules.len > 0:
-    runtimeModule = BuiltinStdlibModuleName
+    runtimeModule = BuiltinManagedGcModuleName
     var foundStdlib = false
     for moduleIndex in 0 ..< result.modules.len:
-      if result.modules[moduleIndex].canonicalName == BuiltinStdlibModuleName:
+      if result.modules[moduleIndex].canonicalName == BuiltinManagedGcModuleName:
         result.modules[moduleIndex].sourcePaths.add(
           BuiltinManagedGcNativeSourcePath
         )
@@ -56,7 +56,7 @@ proc withManagedGcRuntime(project: EidoProject): EidoProject =
     if not foundStdlib:
       raise newException(
         ValueError,
-        "compiler invariant: managed GC runtime requires eido.stdlib module"
+        "compiler invariant: managed GC runtime requires eido.stdlib.memory.managed module"
       )
 
   var nextId = result.sources.len

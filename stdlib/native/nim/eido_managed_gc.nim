@@ -1,7 +1,7 @@
 ## Minimal machine bridge for Eido's managed-memory runtime.
 ##
 ## GC policy, heap state, allocation-header layout, allocation, mark/sweep, and
-## Storage ownership live in stdlib/src/managed_gc_runtime.eido.
+## Storage ownership live in stdlib/memory/managed/managed_gc_runtime.eido.
 ## This module keeps only representation/pointer operations Eido cannot yet express.
 
 type
