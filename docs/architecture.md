@@ -87,7 +87,7 @@ compiler/src/pipeline/
     single-source compatibility plus project parse/analyze/emit orchestration
 
 compiler/src/tooling/
-    protocol-neutral project check/compile services exposed to CLI, MCP, LSP, CI, and agents
+    protocol-neutral project check/compile/editor/documentation services exposed to CLI, MCP, LSP, CI, and agents
 
 compiler/tests/
     compiler-internal and language-facing conformance tests
@@ -150,7 +150,7 @@ tests/integration/
 - Nim-specific types, names, process execution, artifact paths, and native-support module layout must not leak into Eido semantic types or AST.
 - `native function` is an explicit language boundary: semantic analysis validates only its Eido-visible signature, while backend symbol/provider mechanics remain backend support concerns. Native declarations may be top-level or class-owned; class-owned native declarations are resolved as static/type-associated methods with no receiver and no Eido body.
 - The native ABI accepts primitives/String only and rejects Storage, class, interface, and optional values. The GC no longer needs a Storage exception: all Storage allocation/header/release behavior stays on the Eido side of the boundary.
-- `compiler/src/tooling/` may coordinate stable compiler capabilities, but it must not depend on MCP, LSP, editor, or vendor-specific protocol code.
+- `compiler/src/tooling/` may coordinate stable compiler capabilities, but it must not depend on MCP, LSP, editor, or vendor-specific protocol code. Generated API documentation belongs here: visibility comes from the same module public-surface closure used by semantic architecture validation, `///` descriptions are source tooling metadata, compiler-provided surfaces are labeled explicitly, and renderers consume a protocol-neutral documentation model.
 - Protocol adapters under `tools/` consume compiler tooling services; compiler semantic phases must not depend on those adapters.
 - Expected user compiler failures are represented as structured `CompilerDiagnostic` values and may cross phase boundaries through `CompilerError`; adapters must not recover semantic facts by parsing human exception strings.
 - `checkProject` performs parser + semantic work only and does not invoke HIR emission/backend compilation; unexpected compiler invariant failures remain exceptional rather than being mislabeled as user diagnostics.

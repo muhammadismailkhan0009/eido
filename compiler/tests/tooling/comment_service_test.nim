@@ -1,4 +1,4 @@
-import std/unittest
+import std/[strutils, unittest]
 import tooling/comment_service
 
 suite "Tooling comment ranges":
@@ -43,3 +43,35 @@ var value = 1;
     check source[
       comments[1].startOffset ..< comments[1].endOffset
     ] == "// arena's backing remains valid"
+
+
+  test "collects contiguous documentation comments before declarations":
+    let source = """/// Public process operations.
+/// Available to ordinary Eido programs.
+class Process {
+}
+"""
+    let declarationOffset = source.find("class Process")
+
+    check documentationCommentBefore(source, declarationOffset) ==
+      "Public process operations.\nAvailable to ordinary Eido programs."
+
+  test "ordinary comments and blank lines break documentation attachment":
+    let ordinary = """// implementation note
+class Internal {
+}
+"""
+    check documentationCommentBefore(
+      ordinary,
+      ordinary.find("class Internal")
+    ) == ""
+
+    let separated = """/// Not attached.
+
+class Separate {
+}
+"""
+    check documentationCommentBefore(
+      separated,
+      separated.find("class Separate")
+    ) == ""

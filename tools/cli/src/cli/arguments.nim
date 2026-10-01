@@ -11,6 +11,7 @@ type
     ccVersion,
     ccBuild,
     ccCheck,
+    ccDoc,
     ccRun,
     ccClean,
     ccCompile
@@ -22,6 +23,7 @@ type
     sourcePaths*: seq[string]
     applicationArgs*: seq[string]
     memoryStrategy*: MemoryStrategy
+    documentStdlib*: bool
 
 const
   MemoryOptionPrefix = "--memory="
@@ -32,6 +34,8 @@ proc usage*(): string =
   "Usage:\n" &
   "  eido build [module.yaml] [--memory=gc|manual] [-o <output>]\n" &
   "  eido check [module.yaml]\n" &
+  "  eido doc [module.yaml] [-o <directory>]\n" &
+  "  eido doc --stdlib [-o <directory>]\n" &
   "  eido run [module.yaml] [--memory=gc|manual] [-- <application args...>]\n" &
   "  eido clean [module.yaml]\n" &
   "  eido compile <source.eido>... [--memory=gc|manual] -o <output>\n" &
@@ -94,6 +98,28 @@ proc parseManifestOnly(args: seq[string], command: CliCommand): CliOptions =
   var index = 1
   parseOptionalManifest(args, index, result)
   if index != args.len:
+    raise newException(ValueError, usage())
+
+## Parses project documentation generation with an optional output directory.
+proc parseDoc(args: seq[string]): CliOptions =
+  result.command = ccDoc
+  result.memoryStrategy = msGc
+  var index = 1
+  parseOptionalManifest(args, index, result)
+
+  while index < args.len:
+    if args[index] == "--stdlib":
+      if result.modulePath.len > 0 or result.documentStdlib:
+        raise newException(ValueError, usage())
+      result.documentStdlib = true
+      inc index
+      continue
+    if args[index] == "-o" and index + 1 < args.len:
+      if result.outputPath.len > 0:
+        raise newException(ValueError, usage())
+      result.outputPath = args[index + 1]
+      index += 2
+      continue
     raise newException(ValueError, usage())
 
 ## Parses project execution with memory strategy and application arguments.
@@ -160,6 +186,7 @@ proc parseArgs*(args: seq[string]): CliOptions =
     CliOptions(command: ccVersion, memoryStrategy: msGc)
   of "build": parseBuild(args)
   of "check": parseManifestOnly(args, ccCheck)
+  of "doc": parseDoc(args)
   of "run": parseRun(args)
   of "clean": parseManifestOnly(args, ccClean)
   of "compile": parseCompile(args)

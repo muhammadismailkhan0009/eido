@@ -16,7 +16,11 @@ type
   InterfaceRegistry = Table[string, InterfaceDecl]
   FunctionOwnerRegistry = Table[string, string]
   ModuleRegistry = Table[string, moduleModel.ModuleSpec]
-  SurfaceRegistry = Table[string, HashSet[string]]
+  PublicSurfaceRegistry* = Table[string, HashSet[string]]
+  SurfaceRegistry = PublicSurfaceRegistry
+
+  ModuleArchitectureInfo* = object
+    publicSurfaces*: PublicSurfaceRegistry
 
 ## Builds the canonical semantic identity for one module-owned declaration.
 proc declarationKey(moduleName, localName: string): string =
@@ -100,11 +104,11 @@ proc collectModuleDeclarations(
       )
     functions[key] = sourceFunction.moduleName
 
-## Validates and canonicalizes one parsed module project.
-proc resolveModuleArchitecture*(
+## Validates and canonicalizes one parsed module project while retaining its public API surfaces.
+proc resolveModuleArchitectureWithInfo*(
   source: var Program,
   project: projectModel.EidoProject
-) =
+): ModuleArchitectureInfo =
   if project.modules.len == 0:
     return
 
@@ -131,6 +135,8 @@ proc resolveModuleArchitecture*(
     interfaces,
     project.rootModule
   )
+  result.publicSurfaces = publicSurfaces
+
   let adoptedSurfaces = buildAdoptedSurfaces(
     modules,
     classes,
@@ -257,6 +263,13 @@ proc resolveModuleArchitecture*(
       providedSurfaces,
       false
     )
+
+## Preserves the established architecture-resolution API for compiler callers.
+proc resolveModuleArchitecture*(
+  source: var Program,
+  project: projectModel.EidoProject
+) =
+  discard resolveModuleArchitectureWithInfo(source, project)
 
 ## Preserves the previous validation-only API for callers that do not need the rewritten AST.
 proc validateModuleArchitecture*(

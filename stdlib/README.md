@@ -19,3 +19,14 @@ Backend-specific implementation support lives under `stdlib/native/`. The Nim ba
 ## SDK integration
 
 Every stdlib module has its own `module.yaml`. The bootstrap compiler embeds the root and child manifests plus their source payloads, recursively materializes the same module tree an installed SDK exposes, and adds only `eido.stdlib` as the implicit application dependency. Child ownership and visibility therefore use ordinary Eido module semantics instead of a compiler-only flattened namespace.
+
+
+## API reference
+
+Public SDK declarations use `///` documentation comments. Generate the authoritative reference directly from the embedded SDK module tree:
+
+```text
+eido doc --stdlib
+```
+
+The generated HTML separates public API, module-internal Eido declarations, and compiler-provided API such as `Storage<T>`. Backend/Nim support is implementation-only and is not presented as Eido API. The accompanying `api.json` exposes the same model for tooling.

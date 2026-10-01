@@ -4,7 +4,7 @@ import std/os
 import ../../../compiler/src/diagnostics/[errors, formatting]
 import ../../../compiler/src/project/discovery
 import cli/[
-  arguments, build_command, check_command, clean_command,
+  arguments, build_command, check_command, clean_command, doc_command,
   project_layout, run_command, version
 ]
 
@@ -53,6 +53,25 @@ when isMainModule:
         quit(1)
 
       echo "Check passed"
+
+    of ccDoc:
+      if options.documentStdlib:
+        let outputDirectory =
+          if options.outputPath.len > 0:
+            options.outputPath
+          else:
+            getCurrentDir() / "build" / "docs" / "stdlib"
+        generateStdlibDocumentation(outputDirectory)
+        echo "Documented " & outputDirectory
+      else:
+        let manifestPath = resolvedManifest(options)
+        let outputDirectory =
+          if options.outputPath.len > 0:
+            options.outputPath
+          else:
+            projectLayout(manifestPath).documentationDirectory
+        generateModuleDocumentation(manifestPath, outputDirectory)
+        echo "Documented " & outputDirectory
 
     of ccRun:
       let manifestPath = resolvedManifest(options)

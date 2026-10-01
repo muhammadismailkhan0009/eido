@@ -13,6 +13,7 @@ type ProjectLayout* = object
   buildDirectory*: string
   executablePath*: string
   generatedSourcePath*: string
+  documentationDirectory*: string
 
 ## Converts a module identity into a portable artifact filename.
 ## Project identity remains unchanged; this only protects filesystem/backend artifact names.
@@ -46,7 +47,8 @@ proc projectLayout*(manifestPath: string): ProjectLayout =
     executablePath: buildRoot / "bin" / manifest.name,
     generatedSourcePath:
       buildRoot / "generated" / "nim" /
-        (generatedArtifactName & "_generated.nim")
+        (generatedArtifactName & "_generated.nim"),
+    documentationDirectory: buildRoot / "docs"
   )
 
 ## Creates only the directories owned by the default Eido project build layout.

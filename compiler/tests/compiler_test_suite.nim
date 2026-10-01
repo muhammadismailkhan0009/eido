@@ -106,6 +106,7 @@ import project/module_loader_test
 import semantic/modules/module_architecture_test
 import diagnostics/structured_diagnostics_test
 import tooling/comment_service_test
+import tooling/documentation_service_test
 import tooling/hover_service_test
 import tooling/formatting_service_test
 import tooling/symbol_service_test

@@ -4,6 +4,7 @@
 
 import std/[os, strutils]
 import ../source/source_unit
+import ../project/model as projectModel
 import ../project/modules/[manifest_parser, model]
 
 const
@@ -201,6 +202,36 @@ proc loadEmbeddedStdlibModule(
     )
 
   canonical
+
+## Materializes the embedded SDK stdlib as a standalone library project.
+## Documentation/tooling can inspect the SDK without injecting a second copy.
+proc builtinStdlibProject*(
+  target: projectModel.ProjectTarget = projectModel.ptLibrary
+): projectModel.EidoProject =
+  var sources: seq[SourceUnit]
+  var modules: seq[ModuleSpec]
+  var embeddedSourcePaths: seq[string]
+
+  let rootModule = loadEmbeddedStdlibModule(
+    BuiltinStdlibManifestPath,
+    "",
+    "stdlib",
+    sources,
+    modules,
+    embeddedSourcePaths
+  )
+  if rootModule != BuiltinStdlibModuleName:
+    raise newException(
+      ValueError,
+      "embedded stdlib root must resolve to '" & BuiltinStdlibModuleName & "'"
+    )
+
+  projectModel.initModuleProject(
+    target,
+    sources,
+    modules,
+    rootModule
+  )
 
 ## Adds the recursively manifest-defined SDK stdlib and makes its umbrella root
 ## an implicit dependency of the user project's root module.

@@ -1,5 +1,5 @@
 import std/[os, osproc, strutils, unittest]
-import cli/[arguments, build_command, check_command, project_layout, run_command]
+import cli/[arguments, build_command, check_command, doc_command, project_layout, run_command]
 
 proc freshProject(name: string): string =
   result = getTempDir() / ("eido_cli_" & name & "_" & $getCurrentProcessId())
@@ -19,6 +19,7 @@ suite "CLI project integration":
   test "parses project commands without an explicit manifest":
     check parseArgs(@["build"]).command == ccBuild
     check parseArgs(@["check"]).command == ccCheck
+    check parseArgs(@["doc"]).command == ccDoc
     check parseArgs(@["run", "--", "approve", "Acme"]).command == ccRun
     check parseArgs(@["clean"]).command == ccClean
 
@@ -60,6 +61,7 @@ suite "CLI project integration":
     check layout.buildDirectory == root / "build"
     check layout.executablePath == root / "build" / "bin" / "shop"
     check layout.generatedSourcePath == root / "build" / "generated" / "nim" / "shop_generated.nim"
+    check layout.documentationDirectory == root / "build" / "docs"
 
   test "preserves executable project names while sanitizing backend artifacts":
     let root = freshProject("hyphen_layout")
@@ -164,6 +166,92 @@ suite "CLI project integration":
 
     check options.command == ccCheck
     check options.modulePath == "shop/module.yaml"
+
+  test "parses documentation output directory":
+    let options = parseArgs(@[
+      "doc", "shop/module.yaml", "-o", "site/api"
+    ])
+
+    check options.command == ccDoc
+    check options.modulePath == "shop/module.yaml"
+    check options.outputPath == "site/api"
+
+    let stdlibOptions = parseArgs(@[
+      "doc", "--stdlib", "-o", "site/stdlib"
+    ])
+    check stdlibOptions.command == ccDoc
+    check stdlibOptions.documentStdlib
+    check stdlibOptions.outputPath == "site/stdlib"
+
+    expect ValueError:
+      discard parseArgs(@[
+        "doc", "shop/module.yaml", "--stdlib"
+      ])
+
+  test "generates browsable HTML and JSON API documentation":
+    let root = freshProject("docs")
+    let outputDirectory = root / "site"
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources:
+        - Factory.eido
+        - Order.eido
+      children: []
+      dependencies: []
+      exports:
+        - Factory
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Factory.eido", """
+      /// Public construction surface.
+      class Factory {
+          /// Creates an order.
+          function create(Int id) returns Order {
+              return Order { id = id; };
+          }
+      }
+    """)
+    writeFile(root / "Order.eido", """
+      /// Public order data.
+      class Order {
+          /// Order identifier.
+          Int id;
+      }
+    """)
+
+    generateModuleDocumentation(root / "module.yaml", outputDirectory)
+
+    check fileExists(outputDirectory / "index.html")
+    check fileExists(outputDirectory / "api.json")
+    let html = readFile(outputDirectory / "index.html")
+    let json = readFile(outputDirectory / "api.json")
+    check "Public API" in html
+    check "Public construction surface." in html
+    check "Storage&lt;T&gt;" in html
+    check "\"canonicalName\": \"shop.Order\"" in json
+
+  test "generates standard library documentation from embedded SDK sources":
+    let root = freshProject("stdlib_docs")
+    let outputDirectory = root / "stdlib"
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    generateStdlibDocumentation(outputDirectory)
+
+    let html = readFile(outputDirectory / "index.html")
+    let json = readFile(outputDirectory / "api.json")
+    check "eido.stdlib.process" in html
+    check "Process-wide operations supplied by the active Eido backend/runtime." in html
+    check "Arena&lt;T&gt;" in html
+    check "ManagedGcRuntime" in html
+    check "Module-internal" in html
+    check "\"project\": \"eido.stdlib\"" in json
 
   test "rejects source-file project entrypoints":
     expect ValueError:
