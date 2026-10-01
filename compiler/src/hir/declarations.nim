@@ -14,6 +14,12 @@ type
     sourceName*: string
     typ*: EidoType
 
+  HirClassField* = object
+    span*: SourceSpan
+    sourceName*: string
+    typ*: EidoType
+    initializer*: HirExpr
+
   HirParameter* = object
     span*: SourceSpan
     localId*: LocalId
@@ -69,6 +75,7 @@ type
     typ*: EidoType
     implements*: seq[string]
     fields*: seq[HirField]
+    classFields*: seq[HirClassField]
     invariants*: seq[HirExpr]
     invariantReceiverLocalId*: LocalId
     methods*: seq[HirMethod]

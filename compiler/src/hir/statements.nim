@@ -10,6 +10,7 @@ type
     hskVar,
     hskAssign,
     hskFieldSet,
+    hskClassFieldSet,
     hskCall,
     hskMethodCall,
     hskReturn,
@@ -36,6 +37,10 @@ type
       receiverId*: LocalId
       fieldName*: string
       fieldValue*: HirExpr
+    of hskClassFieldSet:
+      classFieldOwner*: EidoType
+      classFieldName*: string
+      classFieldValue*: HirExpr
     of hskCall:
       call*: HirCall
     of hskMethodCall:

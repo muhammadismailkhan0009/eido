@@ -17,6 +17,9 @@ type
     span*: SourceSpan
     name*: string
     typeRef*: TypeRef
+    isClassOwned*: bool
+    ownerName*: string
+    initializer*: Expr
 
   FunctionResultRefKind* = enum
     frrNone,

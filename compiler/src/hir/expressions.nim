@@ -49,6 +49,7 @@ type
     hekClassRelation,
     hekInterfaceConvert,
     hekFieldAccess,
+    hekClassFieldAccess,
     hekMethodCall,
     hekUnary,
     hekBinary
@@ -116,6 +117,9 @@ type
     of hekFieldAccess:
       target*: HirExpr
       sourceFieldName*: string
+    of hekClassFieldAccess:
+      classFieldOwner*: EidoType
+      classFieldName*: string
     of hekMethodCall:
       methodCall*: HirMethodCall
     of hekUnary:

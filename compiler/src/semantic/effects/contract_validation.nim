@@ -82,7 +82,8 @@ proc validateContractExpr(
     validateContractExpr(expr.left, summary)
     validateContractExpr(expr.right, summary)
 
-  of hekLocal, hekInteger, hekFloating, hekBoolean, hekChar, hekString, hekNone:
+  of hekClassFieldAccess, hekLocal, hekInteger, hekFloating, hekBoolean,
+      hekChar, hekString, hekNone:
     discard
 
 ## Validates every require, ensure, and invariant expression in one checked HIR program.

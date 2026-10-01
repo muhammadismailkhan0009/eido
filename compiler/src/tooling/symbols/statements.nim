@@ -84,6 +84,37 @@ proc visitStmt(
       interfaces, localDefinitions
     )
 
+  of hskClassFieldSet:
+    let ownerName = stmt.classFieldOwner.className
+    let key = fieldKey(ownerName, stmt.classFieldName)
+    let fieldToken = registry.findNameToken(
+      stmt.span,
+      stmt.classFieldName,
+      requireDotBefore = true
+    )
+    if fieldToken.found and key in fieldDefinitions:
+      index.addSymbol(
+        seen,
+        tskProperty,
+        stmt.classFieldName,
+        fieldToken.token.span,
+        fieldDefinitions[key],
+        false,
+        true
+      )
+    index.addTypeUse(
+      seen,
+      registry,
+      typeDefinitions,
+      stmt.span,
+      stmt.classFieldOwner
+    )
+    visitExpr(
+      stmt.classFieldValue, index, seen, registry, typeDefinitions, fieldDefinitions,
+      methodDefinitions, functionDefinitions, interfaceMethodDefinitions,
+      interfaces, localDefinitions
+    )
+
   of hskCall:
     let callName = sourceBaseName(stmt.call.functionName)
     let nameToken = registry.findNameToken(stmt.call.span, callName)

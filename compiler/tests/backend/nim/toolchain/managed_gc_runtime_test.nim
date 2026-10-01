@@ -7,6 +7,10 @@ import support/project_fixture_support
 suite "Managed GC runtime":
   test "collector policy uses Eido Storage API while native bridge never allocates":
     check "Storage<Byte>.allocateRaw(" in BuiltinManagedGcRuntimeSource
+    check "Storage<Byte>.viewAt(" notin BuiltinManagedGcRuntimeSource
+    check "Storage<Int>.viewAt(" in BuiltinManagedGcRuntimeSource
+    check "Storage<Bool>.viewAt(" in BuiltinManagedGcRuntimeSource
+    check "Storage<Byte>.adoptAddress(" in BuiltinManagedGcRuntimeSource
     check "Storage<Byte>.release(" in BuiltinManagedGcRuntimeSource
     check "function mark(" in BuiltinManagedGcRuntimeSource
     check "function sweep()" in BuiltinManagedGcRuntimeSource
@@ -19,6 +23,8 @@ suite "Managed GC runtime":
     check "proc eidoGcCollect" notin BuiltinManagedGcSupportSource
     check "proc eidoGcSweep" notin BuiltinManagedGcSupportSource
     check "proc eidoGcMark" notin BuiltinManagedGcSupportSource
+    check "EidoManagedAllocation" notin BuiltinManagedGcSupportSource
+    check "eido_storage" notin BuiltinManagedGcSupportSource
 
   test "generated runtime executes Eido mark sweep and reclaims unreachable cycles":
     let source = """
@@ -64,7 +70,7 @@ suite "Managed GC runtime":
     # assertion then proves the unreachable cycle was swept by the Eido runtime.
     generated.add """
 when isMainModule:
-  doAssert eidoGcAllocationCount() == 0
+  doAssert eido_gc_runtime_allocationCount() == 0
 """
 
     let outputPath =

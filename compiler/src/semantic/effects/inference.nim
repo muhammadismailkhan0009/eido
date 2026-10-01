@@ -60,7 +60,8 @@ proc collectExprEffects(
     collectExprEffects(expr.left, facts)
     collectExprEffects(expr.right, facts)
 
-  of hekLocal, hekInteger, hekFloating, hekBoolean, hekChar, hekString, hekNone:
+  of hekClassFieldAccess, hekLocal, hekInteger, hekFloating, hekBoolean,
+      hekChar, hekString, hekNone:
     discard
 
 ## Collects observable-effect facts from one HIR statement tree.
@@ -81,6 +82,10 @@ proc collectStmtEffects(
   of hskFieldSet:
     facts.directEffect = true
     collectExprEffects(stmt.fieldValue, facts)
+
+  of hskClassFieldSet:
+    facts.directEffect = true
+    collectExprEffects(stmt.classFieldValue, facts)
 
   of hskCall:
     if stmt.call.isNative:

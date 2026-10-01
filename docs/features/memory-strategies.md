@@ -47,7 +47,7 @@ The compiler lowers strategy-selected roots to stack-owned root descriptors. Par
 
 Generated class trace procedures follow exactly the fields selected by the Eido strategy. Mark walks roots and recursively follows those trace procedures. Sweep destroys unreachable payloads and releases their backing Storage. Cycles therefore do not require special handling: an unreachable cycle is unmarked and swept normally.
 
-The collector algorithm itself now lives in hidden ordinary Eido source: `stdlib/src/managed_gc_runtime.eido`. It owns allocation layout orchestration, mark/root traversal, sweep, live-count/threshold policy, safepoints, and shutdown collection. Physical memory is acquired and reclaimed through the normal public Storage API:
+The collector runtime itself now lives largely in hidden ordinary Eido source: `stdlib/src/managed_gc_runtime.eido`. It owns class-wide heap state, the allocation-header byte layout and fields, mark/root traversal, sweep, live-count/threshold policy, safepoints, invariant depth, and shutdown collection. Header fields are typed views over raw Storage; physical memory is acquired and reclaimed through the same Storage API:
 
 ```eido
 var backing = Storage<Byte>.allocateRaw(1, totalSize);
@@ -69,7 +69,7 @@ Storage<Byte> public Eido API
 eido_storage.nim                 physical Storage mechanics
 ```
 
-`eido_managed_gc.nim` is now a minimal machine bridge only: managed-reference representation, process-global anchors, raw header/root/payload addressing, invariant/protection metadata, and indirect trace/destroy callback invocation. It contains no Storage allocation/release call and no mark/sweep/collect algorithm. A private ABI exception passes `Storage<Byte>` descriptors only for compiler-owned `ManagedGcNative`; user native functions remain unable to accept or return Storage.
+`eido_managed_gc.nim` is now a minimal machine bridge only: managed-reference and precise-root pointer representation, temporary-expression protection depth, payload pointer conversion, and indirect trace/destroy callback invocation. It has no Storage dependency, no GC allocation-header struct, and no heap/mark/sweep policy.
 
 The current collection trigger is intentionally simple: allocation pressure raises a threshold and generated safe points run collection after the threshold is crossed. The collector is currently single-threaded and mark traversal is recursive. Managed finalizers/destructors are not part of v0 semantics.
 

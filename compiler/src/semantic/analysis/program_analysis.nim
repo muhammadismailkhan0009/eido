@@ -12,7 +12,6 @@ import ../../types/model
 import ../../types/function_result
 import ../../types/method_kind
 import ../../types/storage
-import ../../types/managed_gc_runtime
 import ../effects/inference
 import ../effects/contract_validation
 import ../symbols/ids
@@ -32,8 +31,7 @@ import storage_result_provenance
 proc validateNativeSignature(
   sourceFunction: astDeclarations.FunctionDecl,
   parameterTypes: seq[EidoType],
-  functionResult: FunctionResult,
-  allowCompilerStorage: bool = false
+  functionResult: FunctionResult
 ) =
   for index, parameterType in parameterTypes:
     if parameterType.isOptional:
@@ -45,13 +43,11 @@ proc validateNativeSignature(
 
     case parameterType.kind
     of etkClass:
-      if not (allowCompilerStorage and
-          isConcreteStorageTypeName(parameterType.className)):
-        failAt(
-          sourceFunction.parameters[index].typeRef.span,
-          "native function parameters cannot use class type '" &
-            parameterType.className & "'"
-        )
+      failAt(
+        sourceFunction.parameters[index].typeRef.span,
+        "native function parameters cannot use class type '" &
+          parameterType.className & "'"
+      )
     of etkInterface:
       failAt(
         sourceFunction.parameters[index].typeRef.span,
@@ -71,13 +67,11 @@ proc validateNativeSignature(
 
     case functionResult.typ.kind
     of etkClass:
-      if not (allowCompilerStorage and
-          isConcreteStorageTypeName(functionResult.typ.className)):
-        failAt(
-          sourceFunction.result.typeRef.span,
-          "native function results cannot use class type '" &
-            functionResult.typ.className & "'"
-        )
+      failAt(
+        sourceFunction.result.typeRef.span,
+        "native function results cannot use class type '" &
+          functionResult.typ.className & "'"
+      )
     of etkInterface:
       failAt(
         sourceFunction.result.typeRef.span,
@@ -144,6 +138,7 @@ proc analyzeProgram*(
       implements: sourceClass.implements,
       hasInvariant: sourceClass.invariants.len > 0,
       fields: @[],
+      classFields: @[],
       methods: @[],
       span: sourceClass.span
     )
@@ -162,6 +157,12 @@ proc analyzeProgram*(
     var classSymbol = symbols.getClass(sourceClass.name)
     for field in analyzedClass.fields:
       classSymbol.fields.add ClassFieldSymbol(
+        name: field.sourceName,
+        typ: field.typ,
+        span: field.span
+      )
+    for field in analyzedClass.classFields:
+      classSymbol.classFields.add ClassFieldSymbol(
         name: field.sourceName,
         typ: field.typ,
         span: field.span
@@ -188,22 +189,18 @@ proc analyzeProgram*(
       let methodResult = resolveFunctionResult(sourceMethod.result, symbols)
       if sourceMethod.isNative and
           not isConcreteStorageTypeName(sourceClass.name):
-        let allowCompilerStorage =
-          isManagedGcNativeClassName(sourceClass.name) and
-          sourceClass.span.sourcePath.endsWith("managed_gc_native.eido")
         validateNativeSignature(
           sourceMethod,
           parameterTypes,
-          methodResult,
-          allowCompilerStorage
+          methodResult
         )
 
       let storageResultProvenance =
         if isConcreteStorageTypeName(sourceClass.name):
           case sourceMethod.name
-          of "allocate", "allocateRaw", "fromAddress":
+          of "allocate", "allocateRaw", "fromAddress", "adoptAddress":
             svpOwned
-          of "view", "slice":
+          of "view", "viewAt", "slice":
             svpBorrowed
           else:
             svpNotStorage
@@ -283,6 +280,12 @@ proc analyzeProgram*(
     fail(
       MissingMainDiagnosticCode,
       "executable project must declare function main()"
+    )
+
+  # Class-owned field initializers resolve after all callable signatures exist.
+  for classIndex, sourceClass in specializedProgram.classes:
+    analyzeClassFieldInitializers(
+      sourceClass, analyzedClasses[classIndex], functions, symbols
     )
 
   # Class invariants resolve after both method and top-level callable signatures exist.

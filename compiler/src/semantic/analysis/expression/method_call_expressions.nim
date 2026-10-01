@@ -102,10 +102,11 @@ proc analyzeStaticMethodCall(
   if isConcreteStorageTypeName(owner.name):
     if target.name == "release":
       validateStorageReleaseOwner(expr, locals)
-    if target.name == "view" and storageElementName(owner.name) == "String":
+    if target.name in ["view", "viewAt"] and
+        storageElementName(owner.name) == "String":
       failAt(
         expr.span,
-        "Storage<String>.view is unavailable until raw-view initialization tracking is defined"
+        "raw Storage<String> views are unavailable until initialization tracking is defined"
       )
 
   if target.kind != mkStatic:

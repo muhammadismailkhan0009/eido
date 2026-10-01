@@ -142,6 +142,11 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
       )
   of hirExpressions.hekFieldAccess:
     result = renderFieldAccess(expr)
+  of hirExpressions.hekClassFieldAccess:
+    result = classOwnedFieldName(
+      expr.classFieldOwner.className,
+      expr.classFieldName
+    )
   of hirExpressions.hekMethodCall:
     result = renderMethodCall(expr.methodCall)
   of hirExpressions.hekUnary:

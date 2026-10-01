@@ -90,6 +90,11 @@ proc visitExpr(
       expr.sourceFieldName & ": " & toolingTypeName(expr.typ)
     )
     visitExpr(expr.target, sourcePath, offset, best)
+  of hekClassFieldAccess:
+    best.consider(
+      expr.span, sourcePath, offset,
+      expr.classFieldName & ": " & toolingTypeName(expr.typ)
+    )
   of hekCall:
     best.consider(
       expr.span, sourcePath, offset,
@@ -173,6 +178,8 @@ proc visitStmt(
     visitExpr(stmt.assignedValue, sourcePath, offset, best)
   of hskFieldSet:
     visitExpr(stmt.fieldValue, sourcePath, offset, best)
+  of hskClassFieldSet:
+    visitExpr(stmt.classFieldValue, sourcePath, offset, best)
   of hskCall:
     best.consider(
       stmt.span, sourcePath, offset,

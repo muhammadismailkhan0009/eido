@@ -123,9 +123,10 @@ proc renderFieldAccessors(
       renderType(field.typ) & " =\n"
 
     if managed:
-      result.add "  eidoGcPayload[" &
+      result.add "  eidoGcPayloadAt[" &
         classPayloadName(classDecl.sourceName) &
-        "](source)[]." & fieldName(field.sourceName) & "\n\n"
+        "](source, " & managedGcRuntimeMethodName("payloadOffset") &
+        "(eidoGcHandle(source)))[]." & fieldName(field.sourceName) & "\n\n"
     else:
       result.add "  source." & fieldName(field.sourceName) & "\n\n"
 
@@ -136,9 +137,11 @@ proc renderFieldAccessors(
       ", value: " & renderType(field.typ) & ") =\n"
 
     if managed:
-      result.add "  eidoGcPayload[" &
+      result.add "  eidoGcPayloadAt[" &
         classPayloadName(classDecl.sourceName) &
-        "](source)[]." & fieldName(field.sourceName) & " = value\n\n"
+        "](source, " & managedGcRuntimeMethodName("payloadOffset") &
+        "(eidoGcHandle(source)))[]." & fieldName(field.sourceName) &
+        " = value\n\n"
     else:
       result.add "  source." & fieldName(field.sourceName) & " = value\n\n"
 
@@ -157,21 +160,24 @@ proc renderInvariantDepthSupport(
   result.add "proc " & classInvariantEnterName(classDecl.sourceName) &
     "(source: " & sourceType & ") =\n"
   if managed:
-    result.add "  eidoGcInvariantDepth(source) += 1\n\n"
+    result.add "  " & managedGcRuntimeMethodName("invariantEnter") &
+      "(eidoGcHandle(source))\n\n"
   else:
     result.add "  source." & depthField & " += 1\n\n"
 
   result.add "proc " & classInvariantLeaveName(classDecl.sourceName) &
     "(source: " & sourceType & ") =\n"
   if managed:
-    result.add "  eidoGcInvariantDepth(source) -= 1\n\n"
+    result.add "  " & managedGcRuntimeMethodName("invariantLeave") &
+      "(eidoGcHandle(source))\n\n"
   else:
     result.add "  source." & depthField & " -= 1\n\n"
 
   result.add "proc " & classInvariantClearName(classDecl.sourceName) &
     "(source: " & sourceType & "): bool =\n"
   if managed:
-    result.add "  eidoGcInvariantDepth(source) == 0\n\n"
+    result.add "  " & managedGcRuntimeMethodName("invariantClear") &
+      "(eidoGcHandle(source))\n\n"
   else:
     result.add "  source." & depthField & " == 0\n\n"
 

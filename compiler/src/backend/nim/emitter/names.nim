@@ -110,6 +110,10 @@ proc copyContextName*(): string =
 proc fieldName*(sourceName: string): string =
   "eido_field_" & sourceName
 
+## Builds the generated process-wide slot for one class-owned field.
+proc classOwnedFieldName*(ownerName, sourceName: string): string =
+  "eido_class_state_" & nominalName(ownerName) & "_" & sourceName
+
 ## Builds the generated runtime invariant-checker name for one class.
 proc classInvariantName*(sourceName: string): string =
   "eido_invariant_" & nominalName(sourceName)

@@ -106,6 +106,7 @@ proc qualifyModuleProgram(
         sourceClass.span
       )
 
+    var classFieldLocals = initHashSet[string]()
     for field in mitems(sourceClass.fields):
       qualifyTypeRef(
         field.typeRef, sourceClass.moduleName, typeParameters,
@@ -113,6 +114,13 @@ proc qualifyModuleProgram(
         publicSurfaces, adoptedSurfaces, providedSurfaces,
         rootModule
       )
+      if field.isClassOwned and not field.initializer.isNil:
+        qualifyExpr(
+          field.initializer, sourceClass.moduleName, classFieldLocals, typeParameters,
+          modules, classes, interfaces, functions,
+          publicSurfaces, adoptedSurfaces, providedSurfaces,
+          rootModule
+        )
 
     var invariantLocals = initHashSet[string]()
     invariantLocals.incl "self"

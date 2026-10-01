@@ -68,6 +68,14 @@ proc renderStmtAt*(
     if exitContext.gcEnabled:
       result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
 
+  of hirStatements.hskClassFieldSet:
+    result.add pad & classOwnedFieldName(
+      stmt.classFieldOwner.className,
+      stmt.classFieldName
+    ) & " = " & renderExpr(stmt.classFieldValue) & "\n"
+    if exitContext.gcEnabled:
+      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+
   of hirStatements.hskCall:
     if stmt.call.result.kind == frNone:
       result.add pad & renderCall(stmt.call) & "\n"

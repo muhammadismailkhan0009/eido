@@ -72,6 +72,30 @@ suite "Class field access execution":
     # Then
     check output == "10"
 
+
+  test "class-owned state is shared while instance state stays per object":
+    let source = """
+      class Counter {
+        Int value;
+        Int Counter.count = 0;
+
+        function increment() {
+          set self.value = self.value + 1;
+          set Counter.count = Counter.count + 1;
+        }
+      }
+
+      function main() returns Int {
+        var first = Counter { value = 0; };
+        var second = Counter { value = 0; };
+        first.increment();
+        second.increment();
+        return first.value + second.value + Counter.count;
+      }
+    """
+
+    check runFeatureSource(source, "class_owned_state") == "4"
+
 suite "Class field access validation":
   test "rejects unknown fields and primitive receivers":
     # Given
@@ -94,6 +118,30 @@ suite "Class field access validation":
       discard analyzeSource(unknown)
     expect ValueError:
       discard analyzeSource(primitive)
+
+
+  test "keeps class-owned and instance field access explicit":
+    let classThroughSelf = """
+      class Counter {
+        Int value;
+        Int Counter.count = 0;
+        function invalid() returns Int {
+          return self.count;
+        }
+      }
+      function main() {}
+    """
+    let instanceThroughClass = """
+      class Counter { Int value; }
+      function main() returns Int {
+        return Counter.value;
+      }
+    """
+
+    expect ValueError:
+      discard analyzeSource(classThroughSelf)
+    expect ValueError:
+      discard analyzeSource(instanceThroughClass)
 
 suite "Class field access representation boundaries":
   test "class-valued field access cannot create an implicit alias or copy":

@@ -1,5 +1,5 @@
 ## Validates named class construction and lowers it to typed HIR.
-## Every declared field must appear exactly once; source field order is semantically irrelevant.
+## Every declared instance field must appear exactly once; class-owned state is not constructed.
 
 ## Analyzes one complete class construction expression.
 proc analyzeConstruction(

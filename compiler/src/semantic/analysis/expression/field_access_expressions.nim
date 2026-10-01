@@ -9,6 +9,25 @@ proc analyzeFieldAccess(
   functions: FunctionSymbols,
   classes: NominalSymbols
 ): hirExpressions.HirExpr =
+  if expr.target.kind == astExpressions.ekIdentifier and
+      not locals.contains(expr.target.name) and
+      classes.containsClass(expr.target.name):
+    let owner = classes.getClass(expr.target.name)
+    for field in owner.classFields:
+      if field.name == expr.fieldName:
+        return HirExpr(
+          kind: hekClassFieldAccess,
+          span: expr.span,
+          typ: field.typ,
+          classFieldOwner: owner.typ,
+          classFieldName: field.name
+        )
+    failAt(
+      expr.span,
+      "class '" & owner.name & "' has no class-owned field '" &
+        expr.fieldName & "'"
+    )
+
   let target = analyzeExpr(expr.target, locals, functions, classes)
 
   if target.typ.isOptional:

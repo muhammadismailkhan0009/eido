@@ -27,6 +27,38 @@ suite "Class declaration parsing":
     check program.classes[0].fields[1].typeRef.name == "Int"
     check program.classes[0].fields[1].name == "y"
 
+
+  test "parses an explicitly class-owned field":
+    let source = """
+      class Counter {
+        Int value;
+        Int Counter.count = 0;
+      }
+
+      function main() {}
+    """
+
+    let counter = parseSource(source).classes[0]
+
+    check counter.fields.len == 2
+    check not counter.fields[0].isClassOwned
+    check counter.fields[1].isClassOwned
+    check counter.fields[1].ownerName == "Counter"
+    check counter.fields[1].name == "count"
+    check not counter.fields[1].initializer.isNil
+
+  test "requires the owning class qualifier on class-owned fields":
+    let source = """
+      class Counter {
+        Int Other.count = 0;
+      }
+
+      function main() {}
+    """
+
+    expect ValueError:
+      discard parseSource(source)
+
   test "parses an empty class":
     # Given
     let source = """

@@ -63,9 +63,10 @@ proc renderInterfaceDispatchers*(
       result.add " =\n"
 
       if managedRuntime:
-        result.add "  let payload = eidoGcPayload[" &
+        result.add "  let payload = eidoGcPayloadAt[" &
           interfacePayloadName(interfaceDecl.sourceName) &
-          "](source)\n"
+          "](source, " & managedGcRuntimeMethodName("payloadOffset") &
+          "(eidoGcHandle(source)))\n"
         result.add "  "
         if methodDecl.result.kind == frSingle:
           result.add "return "
@@ -163,8 +164,10 @@ proc renderClassInterfaceAdapter(
     result.add "  result = " & interfaceAllocateName(
       interfaceDecl.sourceName
     ) & "()\n"
-    result.add "  let payload = eidoGcPayload[" &
-      interfacePayloadName(interfaceDecl.sourceName) & "](result)\n"
+    result.add "  let payload = eidoGcPayloadAt[" &
+      interfacePayloadName(interfaceDecl.sourceName) &
+      "](result, " & managedGcRuntimeMethodName("payloadOffset") &
+      "(eidoGcHandle(result)))\n"
     result.add "  payload[].eido_receiver = source\n"
 
     for contract in interfaceDecl.methods:
@@ -257,10 +260,14 @@ proc renderInterfaceUpcasts*(
         result.add "  result = " & interfaceAllocateName(
           target.sourceName
         ) & "()\n"
-        result.add "  let sourcePayload = eidoGcPayload[" &
-          interfacePayloadName(source.sourceName) & "](source)\n"
-        result.add "  let targetPayload = eidoGcPayload[" &
-          interfacePayloadName(target.sourceName) & "](result)\n"
+        result.add "  let sourcePayload = eidoGcPayloadAt[" &
+          interfacePayloadName(source.sourceName) &
+          "](source, " & managedGcRuntimeMethodName("payloadOffset") &
+          "(eidoGcHandle(source)))\n"
+        result.add "  let targetPayload = eidoGcPayloadAt[" &
+          interfacePayloadName(target.sourceName) &
+          "](result, " & managedGcRuntimeMethodName("payloadOffset") &
+          "(eidoGcHandle(result)))\n"
         result.add "  targetPayload[].eido_receiver = " &
           "sourcePayload[].eido_receiver\n"
         for methodDecl in target.methods:

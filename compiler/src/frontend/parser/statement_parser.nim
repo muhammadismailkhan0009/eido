@@ -35,11 +35,24 @@ proc parseVarStmt*(parser: var Parser): Stmt =
 proc parseSetTarget(parser: var Parser): Expr =
   if parser.check(tkIdentifier):
     let target = parser.advance()
-    return Expr(
+    let targetExpr = Expr(
       kind: ekIdentifier,
       span: target.span,
       name: target.lexeme
     )
+    if parser.check(tkDot):
+      discard parser.advance()
+      let field = parser.consume(
+        tkIdentifier,
+        "expected field name after class qualifier"
+      )
+      return Expr(
+        kind: ekFieldAccess,
+        span: coverSpan(target.span, field.span),
+        target: targetExpr,
+        fieldName: field.lexeme
+      )
+    return targetExpr
 
   if parser.check(tkSelf):
     let receiver = parser.advance()
@@ -57,7 +70,7 @@ proc parseSetTarget(parser: var Parser): Expr =
       fieldName: field.lexeme
     )
 
-  failAt(parser.peek.span, "expected local name or 'self.<field>' after 'set'")
+  failAt(parser.peek.span, "expected local, 'self.<field>', or 'Class.field' after 'set'")
 
 ## Parses explicit mutation of an existing binding or own-class field.
 ## Example: `set salary = 6000;` and `set self.balance = 0;`.

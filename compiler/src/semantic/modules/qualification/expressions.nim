@@ -66,12 +66,43 @@ proc qualifyExpr(
     )
 
   of ekFieldAccess:
-    qualifyExpr(
-      source.target, currentModule, locals, typeParameters,
-      modules, classes, interfaces, functions,
-      publicSurfaces, adoptedSurfaces, providedSurfaces,
-      rootModule
-    )
+    let path = nominalPath(source.target)
+    let canBeType = path.len > 0 and pathRoot(path) notin locals
+
+    if canBeType:
+      let resolved = resolveVisibleNominal(
+        path,
+        currentModule,
+        modules,
+        classes,
+        interfaces,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces,
+        rootModule,
+        source.target.span,
+        false
+      )
+      if resolved.len > 0 and resolved in classes:
+        source.target = Expr(
+          kind: ekIdentifier,
+          span: source.target.span,
+          name: resolved
+        )
+      else:
+        qualifyExpr(
+          source.target, currentModule, locals, typeParameters,
+          modules, classes, interfaces, functions,
+          publicSurfaces, adoptedSurfaces, providedSurfaces,
+          rootModule
+        )
+    else:
+      qualifyExpr(
+        source.target, currentModule, locals, typeParameters,
+        modules, classes, interfaces, functions,
+        publicSurfaces, adoptedSurfaces, providedSurfaces,
+        rootModule
+      )
 
   of ekMethodCall:
     let path = nominalPath(source.receiver)

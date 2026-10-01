@@ -1,11 +1,160 @@
 // Compiler-private managed-memory runtime policy.
 //
-// This is ordinary Eido code. It deliberately allocates and releases physical
-// backing through the public Storage API so collector policy does not depend on
-// the Nim allocator or Storage implementation internals.
+// Heap state, allocation-header layout, marking, sweeping, and physical memory
+// ownership are ordinary Eido code over the public Storage API.
 class ManagedGcRuntime {
+    Int ManagedGcRuntime.heapHead = 0;
+    Int ManagedGcRuntime.liveAllocations = 0;
+    Int ManagedGcRuntime.collectionThreshold = 64;
+
     function alignUp(Int value, Int alignment) returns Int {
         return ((value + alignment - 1) / alignment) * alignment;
+    }
+
+    function headerAlignment() returns Int {
+        var alignment = Storage<Int>.alignment();
+        if (Storage<Bool>.alignment() > alignment) {
+            set alignment = Storage<Bool>.alignment();
+        }
+        return alignment;
+    }
+
+    function nextOffset() returns Int {
+        return 0;
+    }
+
+    function markedOffset() returns Int {
+        return ManagedGcRuntime.alignUp(
+            ManagedGcRuntime.nextOffset() + Storage<Int>.size(),
+            Storage<Bool>.alignment()
+        );
+    }
+
+    function invariantDepthOffset() returns Int {
+        return ManagedGcRuntime.alignUp(
+            ManagedGcRuntime.markedOffset() + Storage<Bool>.size(),
+            Storage<Int>.alignment()
+        );
+    }
+
+    function payloadOffsetFieldOffset() returns Int {
+        return ManagedGcRuntime.invariantDepthOffset() + Storage<Int>.size();
+    }
+
+    function payloadSizeOffset() returns Int {
+        return ManagedGcRuntime.payloadOffsetFieldOffset() + Storage<Int>.size();
+    }
+
+    function totalSizeOffset() returns Int {
+        return ManagedGcRuntime.payloadSizeOffset() + Storage<Int>.size();
+    }
+
+    function traceAddressOffset() returns Int {
+        return ManagedGcRuntime.totalSizeOffset() + Storage<Int>.size();
+    }
+
+    function destroyAddressOffset() returns Int {
+        return ManagedGcRuntime.traceAddressOffset() + Storage<Int>.size();
+    }
+
+    function headerSize() returns Int {
+        return ManagedGcRuntime.alignUp(
+            ManagedGcRuntime.destroyAddressOffset() + Storage<Int>.size(),
+            ManagedGcRuntime.headerAlignment()
+        );
+    }
+
+    function header(Int allocation) returns Storage<Byte> {
+        return Storage<Byte>.fromAddress(
+            allocation,
+            1,
+            ManagedGcRuntime.headerSize()
+        );
+    }
+
+    function readInt(Int allocation, Int offset) returns Int {
+        var raw = ManagedGcRuntime.header(allocation);
+        var slot = Storage<Int>.viewAt(raw, offset);
+        return Storage<Int>.read(slot, 0);
+    }
+
+    function writeInt(Int allocation, Int offset, Int value) {
+        var raw = ManagedGcRuntime.header(allocation);
+        var slot = Storage<Int>.viewAt(raw, offset);
+        Storage<Int>.write(slot, 0, value);
+    }
+
+    function readBool(Int allocation, Int offset) returns Bool {
+        var raw = ManagedGcRuntime.header(allocation);
+        var slot = Storage<Bool>.viewAt(raw, offset);
+        return Storage<Bool>.read(slot, 0);
+    }
+
+    function writeBool(Int allocation, Int offset, Bool value) {
+        var raw = ManagedGcRuntime.header(allocation);
+        var slot = Storage<Bool>.viewAt(raw, offset);
+        Storage<Bool>.write(slot, 0, value);
+    }
+
+    function initializeHeader(
+        Storage<Byte> backing,
+        Int payloadOffset,
+        Int payloadSize,
+        Int totalSize,
+        Int traceAddress,
+        Int destroyAddress
+    ) returns Int {
+        var allocation = Storage<Byte>.address(backing);
+
+        var nextSlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.nextOffset()
+        );
+        Storage<Int>.write(nextSlot, 0, ManagedGcRuntime.heapHead);
+
+        var markedSlot = Storage<Bool>.viewAt(
+            backing,
+            ManagedGcRuntime.markedOffset()
+        );
+        Storage<Bool>.write(markedSlot, 0, false);
+
+        var invariantSlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.invariantDepthOffset()
+        );
+        Storage<Int>.write(invariantSlot, 0, 0);
+
+        var payloadOffsetSlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.payloadOffsetFieldOffset()
+        );
+        Storage<Int>.write(payloadOffsetSlot, 0, payloadOffset);
+
+        var payloadSizeSlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.payloadSizeOffset()
+        );
+        Storage<Int>.write(payloadSizeSlot, 0, payloadSize);
+
+        var totalSizeSlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.totalSizeOffset()
+        );
+        Storage<Int>.write(totalSizeSlot, 0, totalSize);
+
+        var traceSlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.traceAddressOffset()
+        );
+        Storage<Int>.write(traceSlot, 0, traceAddress);
+
+        var destroySlot = Storage<Int>.viewAt(
+            backing,
+            ManagedGcRuntime.destroyAddressOffset()
+        );
+        Storage<Int>.write(destroySlot, 0, destroyAddress);
+
+        return allocation;
     }
 
     function allocate(
@@ -15,14 +164,14 @@ class ManagedGcRuntime {
         Int destroyAddress
     ) returns Int {
         var effectiveAlignment = payloadAlignment + 0;
-        var headerAlignment = ManagedGcNative.headerAlignment();
+        var headerAlignment = ManagedGcRuntime.headerAlignment();
 
         if (effectiveAlignment < headerAlignment) {
             set effectiveAlignment = headerAlignment;
         }
 
         var payloadOffset = ManagedGcRuntime.alignUp(
-            ManagedGcNative.headerSize(),
+            ManagedGcRuntime.headerSize(),
             effectiveAlignment
         );
         var totalSize = payloadOffset + payloadSize;
@@ -32,24 +181,71 @@ class ManagedGcRuntime {
         }
 
         var backing = Storage<Byte>.allocateRaw(1, totalSize);
-        var allocation = ManagedGcNative.initialize(
+        var allocation = ManagedGcRuntime.initializeHeader(
             backing,
             payloadOffset,
             payloadSize,
+            totalSize,
             traceAddress,
             destroyAddress
         );
 
-        ManagedGcNative.setNext(
-            allocation,
-            ManagedGcNative.heapHead()
-        );
-        ManagedGcNative.setHeapHead(allocation);
-        ManagedGcNative.setLiveAllocations(
-            ManagedGcNative.liveAllocations() + 1
-        );
+        set ManagedGcRuntime.heapHead = allocation;
+        set ManagedGcRuntime.liveAllocations =
+            ManagedGcRuntime.liveAllocations + 1;
 
         return allocation;
+    }
+
+    function next(Int allocation) returns Int {
+        return ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.nextOffset()
+        );
+    }
+
+    function setNext(Int allocation, Int nextAllocation) {
+        ManagedGcRuntime.writeInt(
+            allocation,
+            ManagedGcRuntime.nextOffset(),
+            nextAllocation
+        );
+    }
+
+    function marked(Int allocation) returns Bool {
+        return ManagedGcRuntime.readBool(
+            allocation,
+            ManagedGcRuntime.markedOffset()
+        );
+    }
+
+    function setMarked(Int allocation, Bool value) {
+        ManagedGcRuntime.writeBool(
+            allocation,
+            ManagedGcRuntime.markedOffset(),
+            value
+        );
+    }
+
+    function payloadOffset(Int allocation) returns Int {
+        return ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.payloadOffsetFieldOffset()
+        );
+    }
+
+    function traceAddress(Int allocation) returns Int {
+        return ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.traceAddressOffset()
+        );
+    }
+
+    function destroyAddress(Int allocation) returns Int {
+        return ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.destroyAddressOffset()
+        );
     }
 
     function mark(Int allocation) {
@@ -57,12 +253,16 @@ class ManagedGcRuntime {
             return;
         }
 
-        if (ManagedGcNative.marked(allocation)) {
+        if (ManagedGcRuntime.marked(allocation)) {
             return;
         }
 
-        ManagedGcNative.setMarked(allocation, true);
-        ManagedGcNative.trace(allocation);
+        ManagedGcRuntime.setMarked(allocation, true);
+        ManagedGcNative.trace(
+            allocation,
+            ManagedGcRuntime.payloadOffset(allocation),
+            ManagedGcRuntime.traceAddress(allocation)
+        );
     }
 
     function markRoots() {
@@ -78,33 +278,38 @@ class ManagedGcRuntime {
 
     function sweep() {
         var previous = 0;
-        var current = ManagedGcNative.heapHead();
+        var current = ManagedGcRuntime.heapHead;
 
         while (current != 0) {
-            var nextAllocation = ManagedGcNative.next(current);
+            var nextAllocation = ManagedGcRuntime.next(current);
 
-            if (ManagedGcNative.marked(current)) {
-                ManagedGcNative.setMarked(current, false);
+            if (ManagedGcRuntime.marked(current)) {
+                ManagedGcRuntime.setMarked(current, false);
                 set previous = current;
             } else {
                 if (previous == 0) {
-                    ManagedGcNative.setHeapHead(nextAllocation);
+                    set ManagedGcRuntime.heapHead = nextAllocation;
                 } else {
-                    ManagedGcNative.setNext(
-                        previous,
-                        nextAllocation
-                    );
+                    ManagedGcRuntime.setNext(previous, nextAllocation);
                 }
 
-                ManagedGcNative.destroy(current);
-
-                // Ownership of this descriptor was transferred into the native
-                // allocation header by initialize(). Recover it and release the
-                // physical backing through the normal Eido Storage API.
-                var backing = ManagedGcNative.backing(current);
-                ManagedGcNative.setLiveAllocations(
-                    ManagedGcNative.liveAllocations() - 1
+                ManagedGcNative.destroy(
+                    current,
+                    ManagedGcRuntime.payloadOffset(current),
+                    ManagedGcRuntime.destroyAddress(current)
                 );
+
+                var totalSize = ManagedGcRuntime.readInt(
+                    current,
+                    ManagedGcRuntime.totalSizeOffset()
+                );
+                var backing = Storage<Byte>.adoptAddress(
+                    current,
+                    1,
+                    totalSize
+                );
+                set ManagedGcRuntime.liveAllocations =
+                    ManagedGcRuntime.liveAllocations - 1;
                 Storage<Byte>.release(backing);
             }
 
@@ -116,24 +321,58 @@ class ManagedGcRuntime {
         ManagedGcRuntime.markRoots();
         ManagedGcRuntime.sweep();
 
-        var nextThreshold =
-            ManagedGcNative.liveAllocations() * 2 + 1;
+        var nextThreshold = ManagedGcRuntime.liveAllocations * 2 + 1;
 
         if (nextThreshold < 64) {
             set nextThreshold = 64;
         }
 
-        ManagedGcNative.setCollectionThreshold(nextThreshold);
+        set ManagedGcRuntime.collectionThreshold = nextThreshold;
     }
 
     function safepoint() {
         if (
             ManagedGcNative.protectionDepth() == 0 and
-            ManagedGcNative.liveAllocations() >=
-                ManagedGcNative.collectionThreshold()
+            ManagedGcRuntime.liveAllocations >=
+                ManagedGcRuntime.collectionThreshold
         ) {
             ManagedGcRuntime.collect();
         }
+    }
+
+    function invariantEnter(Int allocation) {
+        var depth = ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.invariantDepthOffset()
+        );
+        ManagedGcRuntime.writeInt(
+            allocation,
+            ManagedGcRuntime.invariantDepthOffset(),
+            depth + 1
+        );
+    }
+
+    function invariantLeave(Int allocation) {
+        var depth = ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.invariantDepthOffset()
+        );
+        ManagedGcRuntime.writeInt(
+            allocation,
+            ManagedGcRuntime.invariantDepthOffset(),
+            depth - 1
+        );
+    }
+
+    function invariantClear(Int allocation) returns Bool {
+        return ManagedGcRuntime.readInt(
+            allocation,
+            ManagedGcRuntime.invariantDepthOffset()
+        ) == 0;
+    }
+
+    function allocationCount() returns Int {
+        return ManagedGcRuntime.liveAllocations;
     }
 
     function shutdown() {

@@ -17,6 +17,7 @@ import invariant_emitter
 import storage_support
 import gc_metadata_emitter
 import managed_class_emitter
+import class_state_emitter
 
 ## Renders the full HIR program plus validated compilation strategy decisions
 ## to compilable Nim source.
@@ -86,6 +87,7 @@ proc emitNim*(
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
+  result.add renderClassState(program.classes)
   result.add renderClassRuntimeSupport(ordinaryClasses, plan.memory)
   if managedRuntime:
     result.add renderManagedInterfaceSupport(program.interfaces)

@@ -34,8 +34,10 @@ proc renderStorageClassSupport(
   let elementType = renderType(element)
   let allocateName = storageMethodName(classDecl.sourceName, "allocate")
   let viewName = storageMethodName(classDecl.sourceName, "view")
+  let viewAtName = storageMethodName(classDecl.sourceName, "viewAt")
   let sliceName = storageMethodName(classDecl.sourceName, "slice")
   let capacityName = storageMethodName(classDecl.sourceName, "capacity")
+  let addressName = storageMethodName(classDecl.sourceName, "address")
   let readName = storageMethodName(classDecl.sourceName, "read")
   let writeName = storageMethodName(classDecl.sourceName, "write")
   let releaseName = storageMethodName(classDecl.sourceName, "release")
@@ -49,6 +51,7 @@ proc renderStorageClassSupport(
   if element == etByte:
     let allocateRawName = storageMethodName(classDecl.sourceName, "allocateRaw")
     let fromAddressName = storageMethodName(classDecl.sourceName, "fromAddress")
+    let adoptAddressName = storageMethodName(classDecl.sourceName, "adoptAddress")
     result.add "proc " & allocateRawName &
       "(allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
     result.add "  eidoStorageAllocateRaw(allocations, bytesPerAllocation)\n\n"
@@ -56,10 +59,18 @@ proc renderStorageClassSupport(
       "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " &
       storageType & " =\n"
     result.add "  eidoStorageFromAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
+    result.add "proc " & adoptAddressName &
+      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " &
+      storageType & " =\n"
+    result.add "  eidoStorageAdoptAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
 
   result.add "proc " & viewName & "(storage: " & byteStorageType &
     ", start: int64): " & storageType & " =\n"
   result.add "  eidoStorageView[" & elementType & "](storage, start)\n\n"
+
+  result.add "proc " & viewAtName & "(storage: " & byteStorageType &
+    ", byteOffset: int64): " & storageType & " =\n"
+  result.add "  eidoStorageViewAt[" & elementType & "](storage, byteOffset)\n\n"
 
   result.add "proc " & sliceName & "(storage: " & storageType &
     ", start: int64, count: int64): " & storageType & " =\n"
@@ -69,6 +80,10 @@ proc renderStorageClassSupport(
   result.add "proc " & capacityName & "(storage: " & storageType &
     "): int64 =\n"
   result.add "  eidoStorageCapacity[" & elementType & "](storage)\n\n"
+
+  result.add "proc " & addressName & "(storage: " & storageType &
+    "): int64 =\n"
+  result.add "  eidoStorageAddress[" & elementType & "](storage)\n\n"
 
   result.add "proc " & readName & "(storage: " & storageType &
     ", index: int64): " & elementType & " =\n"

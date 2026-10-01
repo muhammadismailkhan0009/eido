@@ -1,17 +1,45 @@
 ## Parses class declarations containing fields and class-owned functions.
 ## Static versus instance behavior is inferred later from explicit self dependency.
 
-## Parses one semicolon-terminated field declaration.
-proc parseFieldDecl(parser: var Parser): FieldDecl =
+## Parses one instance field or explicitly class-owned field declaration.
+## Int value; is instance state while Int Counter.count = 0; is class state.
+proc parseFieldDecl(parser: var Parser, className: string): FieldDecl =
   let typeRef = parser.parseFieldTypeRef()
-  let name = parser.consume(tkIdentifier, "expected field name")
+  let firstName = parser.consume(tkIdentifier, "expected field name")
+
+  if parser.check(tkDot):
+    discard parser.advance()
+    if firstName.lexeme != className:
+      failAt(
+        firstName.span,
+        "class-owned field must be qualified by '" & className & "'"
+      )
+    let name = parser.consume(tkIdentifier, "expected class-owned field name")
+    discard parser.consume(
+      tkEqual,
+      "expected '=' after class-owned field name"
+    )
+    let initializer = parser.parseExpression()
+    let semicolon =
+      parser.consume(tkSemicolon, "expected ';' after field declaration")
+    return FieldDecl(
+      span: coverSpan(typeRef.span, semicolon.span),
+      name: name.lexeme,
+      typeRef: typeRef,
+      isClassOwned: true,
+      ownerName: className,
+      initializer: initializer
+    )
+
   let semicolon =
     parser.consume(tkSemicolon, "expected ';' after field declaration")
-
   FieldDecl(
     span: coverSpan(typeRef.span, semicolon.span),
-    name: name.lexeme,
-    typeRef: typeRef
+    name: firstName.lexeme,
+    typeRef: typeRef,
+    isClassOwned: false,
+    ownerName: "",
+    initializer: nil
   )
 
 ## Parses one class declaration. Fields and methods may appear in either order.
@@ -79,7 +107,7 @@ proc parseClass*(parser: var Parser): ClassDecl =
     elif parser.check(tkFunction):
       methods.add parser.parseFunction()
     else:
-      fields.add parser.parseFieldDecl()
+      fields.add parser.parseFieldDecl(name.lexeme)
 
   let closeBrace = parser.consume(tkRBrace, "expected '}' after class body")
 

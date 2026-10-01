@@ -63,6 +63,21 @@ proc specializeStorageClass*(
     ],
     FunctionResultRef(kind: frrSingle, typeRef: storageType)
   )
+  let viewAtMethod = storageMethod(
+    span,
+    "viewAt",
+    @[
+      Parameter(span: span, name: "storage", typeRef: byteStorageType),
+      Parameter(span: span, name: "byteOffset", typeRef: intType)
+    ],
+    FunctionResultRef(kind: frrSingle, typeRef: storageType)
+  )
+  let addressMethod = storageMethod(
+    span,
+    "address",
+    @[Parameter(span: span, name: "storage", typeRef: storageType)],
+    FunctionResultRef(kind: frrSingle, typeRef: intType)
+  )
   let sliceMethod = storageMethod(
     span,
     "slice",
@@ -120,8 +135,10 @@ proc specializeStorageClass*(
   var methods = @[
     allocateMethod,
     viewMethod,
+    viewAtMethod,
     sliceMethod,
     capacityMethod,
+    addressMethod,
     readMethod,
     writeMethod,
     releaseMethod,
@@ -148,6 +165,16 @@ proc specializeStorageClass*(
       ],
       FunctionResultRef(kind: frrSingle, typeRef: storageType)
     ), 2)
+    methods.insert(storageMethod(
+      span,
+      "adoptAddress",
+      @[
+        Parameter(span: span, name: "startingAddress", typeRef: intType),
+        Parameter(span: span, name: "allocations", typeRef: intType),
+        Parameter(span: span, name: "bytesPerAllocation", typeRef: intType)
+      ],
+      FunctionResultRef(kind: frrSingle, typeRef: storageType)
+    ), 3)
 
   ClassDecl(
     span: span,

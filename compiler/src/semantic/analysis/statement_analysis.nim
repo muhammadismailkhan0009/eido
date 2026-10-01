@@ -43,7 +43,7 @@ proc storageBorrowOwner(
   if analyzed.typ.kind != etkClass or
       not isConcreteStorageTypeName(analyzed.typ.className) or
       source.kind != astExpressions.ekMethodCall or
-      source.methodName notin ["view", "slice"] or
+      source.methodName notin ["view", "viewAt", "slice"] or
       source.methodArguments.len == 0:
     return ""
 
@@ -224,11 +224,31 @@ proc analyzeStmt*(
         )
 
     of astExpressions.ekFieldAccess:
+      let target = analyzeExpr(stmt.target, locals, functions, classes)
+
+      if target.kind == hekClassFieldAccess:
+        let value = analyzeExprExpected(
+          stmt.assignedValue,
+          target.typ,
+          locals,
+          functions,
+          classes
+        )
+        return HirStmt(
+          kind: hskClassFieldSet,
+          span: stmt.span,
+          classFieldOwner: target.classFieldOwner,
+          classFieldName: target.classFieldName,
+          classFieldValue: value
+        )
+
       if stmt.target.target.kind != astExpressions.ekIdentifier or
           stmt.target.target.name != "self":
-        failAt(stmt.target.span, "field mutation requires a self.<field> target")
+        failAt(
+          stmt.target.span,
+          "instance field mutation requires a self.<field> target"
+        )
 
-      let target = analyzeExpr(stmt.target, locals, functions, classes)
       if target.kind != hekFieldAccess or target.target.kind != hekLocal:
         raise newException(
           ValueError,

@@ -57,6 +57,8 @@ proc managedConstruction(
     return managedConstruction(expr.interfaceValue)
   of hekFieldAccess:
     return managedConstruction(expr.target)
+  of hekClassFieldAccess:
+    discard
   of hekMethodCall:
     if expr.methodCall.kind == mkInstance:
       let found = managedConstruction(expr.methodCall.receiver)
@@ -88,6 +90,8 @@ proc managedConstruction(
       result = managedConstruction(stmt.assignedValue)
     of hskFieldSet:
       result = managedConstruction(stmt.fieldValue)
+    of hskClassFieldSet:
+      result = managedConstruction(stmt.classFieldValue)
     of hskCall:
       for argument in stmt.call.arguments:
         result = managedConstruction(argument)

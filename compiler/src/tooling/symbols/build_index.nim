@@ -132,6 +132,25 @@ proc buildSymbolIndex*(
           true
         )
 
+    for field in classDecl.classFields:
+      let fieldToken = registry.findNameToken(
+        field.span,
+        field.sourceName,
+        chooseLast = true
+      )
+      if fieldToken.found:
+        fieldDefinitions[fieldKey(canonicalName, field.sourceName)] =
+          fieldToken.token.span
+        result.addSymbol(
+          seen,
+          tskProperty,
+          field.sourceName,
+          fieldToken.token.span,
+          fieldToken.token.span,
+          true,
+          true
+        )
+
     for methodDecl in classDecl.methods:
       let methodToken = registry.findDeclarationNameToken(
         methodDecl.span,

@@ -418,7 +418,14 @@ proc specializeClass(
     fields.add FieldDecl(
       span: field.span,
       name: field.name,
-      typeRef: specializeTypeRef(context, field.typeRef, bindings)
+      typeRef: specializeTypeRef(context, field.typeRef, bindings),
+      isClassOwned: field.isClassOwned,
+      ownerName:
+        if field.isClassOwned: name
+        else: "",
+      initializer:
+        if field.initializer.isNil: nil
+        else: specializeExpr(context, field.initializer, bindings)
     )
 
   var invariants: seq[Expr]
@@ -624,6 +631,8 @@ proc validateTemplateShape(
       failAt(field.span, "duplicate field '" & field.name & "'")
     fieldNames.incl field.name
     validateTypeRef(context, field.typeRef, parameterNames)
+    if field.isClassOwned and not field.initializer.isNil:
+      validateExprTypeRefs(context, field.initializer, parameterNames)
 
   for clause in source.invariants:
     validateExprTypeRefs(context, clause, parameterNames)

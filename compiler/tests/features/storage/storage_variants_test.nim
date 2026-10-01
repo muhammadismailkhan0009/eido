@@ -110,6 +110,37 @@ suite "Storage execution":
 
     check runNativeFeatureSource(source, "storage_typed_view") == "55"
 
+
+  test "creates typed views at byte offsets inside one raw block":
+    let source = """
+      function main() returns Int {
+        var raw = Storage<Byte>.allocateRaw(1, 16);
+        var first = Storage<Int>.viewAt(raw, 0);
+        var second = Storage<Int>.viewAt(raw, 8);
+        Storage<Int>.write(first, 0, 20);
+        Storage<Int>.write(second, 0, 22);
+        var resultValue = Storage<Int>.read(first, 0) +
+          Storage<Int>.read(second, 0);
+        Storage<Byte>.release(raw);
+        return resultValue;
+      }
+    """
+
+    check runNativeFeatureSource(source, "storage_byte_offset_view") == "42"
+
+  test "can explicitly recover raw Storage ownership from its address":
+    let source = """
+      function main() returns Int {
+        var original = Storage<Byte>.allocateRaw(1, 8);
+        var address = Storage<Byte>.address(original);
+        var recovered = Storage<Byte>.adoptAddress(address, 1, 8);
+        Storage<Byte>.release(recovered);
+        return 42;
+      }
+    """
+
+    check runNativeFeatureSource(source, "storage_adopt_address") == "42"
+
   test "slices typed storage without allocating backing memory":
     let source = """
       function main() returns Int {

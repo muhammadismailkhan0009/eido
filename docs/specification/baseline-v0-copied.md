@@ -2893,9 +2893,10 @@ backend.
 The distinction is represented explicitly as semantic `mkStatic` versus
 `mkInstance`; the backend does not re-infer it.
 
-Fields remain instance state. Merely declaring fields on a class does not make
-a self-free method instance-bound, and this feature does not introduce static
-fields, mutable class state, or class initialization semantics.
+Unqualified fields remain ordinary instance state. Class-owned mutable state is
+explicitly declared with a containing-class qualifier, e.g. `Int Counter.count = 0;`,
+and is accessed as `Counter.count`; it never becomes part of an instance payload or
+construction. This keeps common instance fields simple without adding `static`.
 
 ## API evolution consequence
 

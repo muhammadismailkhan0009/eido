@@ -97,6 +97,32 @@ proc visitExpr(
           false
         )
 
+  of hekClassFieldAccess:
+    let ownerName = expr.classFieldOwner.className
+    let key = fieldKey(ownerName, expr.classFieldName)
+    let fieldToken = registry.findNameToken(
+      expr.span,
+      expr.classFieldName,
+      requireDotBefore = true
+    )
+    if fieldToken.found and key in fieldDefinitions:
+      index.addSymbol(
+        seen,
+        tskProperty,
+        expr.classFieldName,
+        fieldToken.token.span,
+        fieldDefinitions[key],
+        false,
+        true
+      )
+    index.addTypeUse(
+      seen,
+      registry,
+      typeDefinitions,
+      expr.span,
+      expr.classFieldOwner
+    )
+
   of hekMethodCall:
     if expr.methodCall.kind == mkInstance:
       visitExpr(

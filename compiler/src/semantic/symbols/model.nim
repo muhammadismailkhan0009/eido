@@ -69,5 +69,6 @@ type
     implements*: seq[string]
     hasInvariant*: bool
     fields*: seq[ClassFieldSymbol]
+    classFields*: seq[ClassFieldSymbol]
     methods*: seq[MethodSymbol]
     span*: SourceSpan
