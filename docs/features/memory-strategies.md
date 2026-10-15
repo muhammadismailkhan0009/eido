@@ -6,13 +6,15 @@ The SDK CLI currently accepts:
 
 ```text
 eido build --memory=gc
+eido build --memory=eido.stdlib.memory.rc
 eido build --memory=none
 eido build --memory=myproject.memory.custom
 eido run --memory=gc
+eido run --memory=eido.stdlib.memory.rc
 eido compile Main.eido --memory=myproject.memory.custom -o app
 ```
 
-`gc` is a CLI alias for the SDK module `eido.stdlib.memory.managed` and is the default. `manual` remains accepted as a compatibility alias for `none`: both mean that no automatic memory policy is selected. A custom value names a memory-policy module.
+`gc` is a CLI alias for the SDK module `eido.stdlib.memory.managed` and is the default. The SDK also ships `eido.stdlib.memory.rc`, selected through the ordinary module-name path rather than a special compiler strategy. `manual` remains accepted as a compatibility alias for `none`: both mean that no automatic memory policy is selected. Any other value names a memory-policy module.
 
 ## Policy module contract
 
@@ -174,6 +176,14 @@ ManagedGcRuntime         headers, mark/sweep and collection policy
 
 The compiler does not identify those classes or call them by name.
 
+## Standard reference-counting policy
+
+The SDK also ships `eido.stdlib.memory.rc` under `stdlib/memory/rc/`. It is a deferred/recounting reference-counting implementation written entirely in Eido over `Storage<T>` and selected explicitly with `--memory=eido.stdlib.memory.rc`.
+
+At each stable execution boundary it recomputes incoming counts from active identity bindings plus compiler-described object identity fields, then repeatedly releases objects whose count is zero. Acyclic unreachable graphs are reclaimed during execution. Unreachable cycles keep positive internal counts and therefore survive until process shutdown, matching the expected limitation of simple reference counting.
+
+The RC policy uses the same `policySources`, generic `MemoryPolicy` event contracts, object-layout metadata, runtime-source injection, and `Storage<T>` substrate as the managed GC. The compiler and Nim backend contain no RC algorithm or RC-specific strategy branch.
+
 ## No-policy mode
 
 With `--memory=none` (or compatibility alias `manual`) there is no automatic policy module and therefore no policy runtime or instrumentation.
@@ -192,4 +202,4 @@ The Nim backend memory-manager option (`--mm:none` in backend tests) is separate
 
 The current API is deliberately sized to what the implemented GC architecture requires. It is not pretending to model every future ownership system today.
 
-If a future RC, region, or Rust-like policy requires an additional compiler-known fact—such as a generic move/borrow/control-flow fact—the policy API should be extended at that time. The new API must describe program semantics generically rather than hard-coding the requesting policy.
+If a future immediate retain/release RC, region, or Rust-like policy requires an additional compiler-known fact—such as a generic field-mutation, move, borrow, or control-flow fact—the policy API should be extended at that time. The new API must describe program semantics generically rather than hard-coding the requesting policy.

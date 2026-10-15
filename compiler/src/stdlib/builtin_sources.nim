@@ -15,6 +15,7 @@ const
   BuiltinTextModuleName* = "eido.stdlib.text"
   BuiltinRuntimeModuleName* = "eido.stdlib.runtime"
   BuiltinManagedGcModuleName* = "eido.stdlib.memory.managed"
+  BuiltinRcModuleName* = "eido.stdlib.memory.rc"
 
   BuiltinStdlibManifestPath* = "<eido-sdk>/stdlib/module.yaml"
   BuiltinProcessManifestPath* = "<eido-sdk>/stdlib/process/module.yaml"
@@ -24,6 +25,7 @@ const
   BuiltinRuntimeManifestPath* = "<eido-sdk>/stdlib/runtime/module.yaml"
   BuiltinManagedGcManifestPath* =
     "<eido-sdk>/stdlib/memory/managed/module.yaml"
+  BuiltinRcManifestPath* = "<eido-sdk>/stdlib/memory/rc/module.yaml"
 
   BuiltinStdlibManifestSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/module.yaml"
@@ -47,6 +49,9 @@ const
     currentSourcePath().parentDir /
       "../../../stdlib/memory/managed/module.yaml"
   )
+  BuiltinRcManifestSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/memory/rc/module.yaml"
+  )
 
   BuiltinProcessSourcePath* = "eido://stdlib/process/process.eido"
   BuiltinConsoleSourcePath* = "eido://stdlib/io/console.eido"
@@ -64,6 +69,14 @@ const
     "eido://stdlib/memory/managed/memory_runtime.eido"
   BuiltinManagedPolicySourcePath* =
     "eido://stdlib/memory/managed/policy.eido"
+  BuiltinRcValueRegistrySourcePath* =
+    "eido://stdlib/memory/rc/rc_value_registry.eido"
+  BuiltinRcTypeRegistrySourcePath* =
+    "eido://stdlib/memory/rc/rc_type_registry.eido"
+  BuiltinRcRuntimeSourcePath* = "eido://stdlib/memory/rc/rc_runtime.eido"
+  BuiltinRcPolicyRuntimeSourcePath* =
+    "eido://stdlib/memory/rc/rc_policy_runtime.eido"
+  BuiltinRcPolicySourcePath* = "eido://stdlib/memory/rc/policy.eido"
 
   BuiltinProcessSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/process/process.eido"
@@ -101,6 +114,21 @@ const
     currentSourcePath().parentDir /
       "../../../stdlib/memory/managed/policy.eido"
   )
+  BuiltinRcValueRegistrySource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/memory/rc/rc_value_registry.eido"
+  )
+  BuiltinRcTypeRegistrySource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/memory/rc/rc_type_registry.eido"
+  )
+  BuiltinRcRuntimeSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/memory/rc/rc_runtime.eido"
+  )
+  BuiltinRcPolicyRuntimeSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/memory/rc/rc_policy_runtime.eido"
+  )
+  BuiltinRcPolicySource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/memory/rc/policy.eido"
+  )
 
   BuiltinNativeSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native.nim"
@@ -126,6 +154,8 @@ proc embeddedStdlibManifest(manifestPath: string): string =
     BuiltinRuntimeManifestSource
   of BuiltinManagedGcManifestPath:
     BuiltinManagedGcManifestSource
+  of BuiltinRcManifestPath:
+    BuiltinRcManifestSource
   else:
     raise newException(
       ValueError,
@@ -160,6 +190,16 @@ proc embeddedStdlibSource(
     (BuiltinMemoryRuntimeSourcePath, BuiltinMemoryRuntimeSource)
   of BuiltinManagedGcManifestPath & "|policy.eido":
     (BuiltinManagedPolicySourcePath, BuiltinManagedPolicySource)
+  of BuiltinRcManifestPath & "|rc_value_registry.eido":
+    (BuiltinRcValueRegistrySourcePath, BuiltinRcValueRegistrySource)
+  of BuiltinRcManifestPath & "|rc_type_registry.eido":
+    (BuiltinRcTypeRegistrySourcePath, BuiltinRcTypeRegistrySource)
+  of BuiltinRcManifestPath & "|rc_runtime.eido":
+    (BuiltinRcRuntimeSourcePath, BuiltinRcRuntimeSource)
+  of BuiltinRcManifestPath & "|rc_policy_runtime.eido":
+    (BuiltinRcPolicyRuntimeSourcePath, BuiltinRcPolicyRuntimeSource)
+  of BuiltinRcManifestPath & "|policy.eido":
+    (BuiltinRcPolicySourcePath, BuiltinRcPolicySource)
   else:
     raise newException(
       ValueError,

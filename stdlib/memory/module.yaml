@@ -4,6 +4,7 @@ sources: []
 
 children:
   managed: { path: managed }
+  rc: { path: rc }
 
 dependencies: []
 exports: []

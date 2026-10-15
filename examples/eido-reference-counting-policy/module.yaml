@@ -1,7 +1,6 @@
 module: eido_reference_counting_policy
 sources: []
 children:
-  rc: { path: rc }
   app: { path: app }
 dependencies: []
 exports: []

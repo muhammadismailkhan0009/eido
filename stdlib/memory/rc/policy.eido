@@ -1,4 +1,4 @@
-// External reference-counting memory policy built only from public compiler events.
+// SDK reference-counting memory policy built only from public compiler events.
 function main() {
     MemoryPolicy.bindingEnter("RcPolicyRuntime.valueEnter");
     MemoryPolicy.bindingWrite("RcPolicyRuntime.valueWrite");

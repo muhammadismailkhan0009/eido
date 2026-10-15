@@ -78,6 +78,7 @@ import semantic/analysis/expression/boolean_operator_analysis_test
 import backend/nim/toolchain/artifacts_test
 import backend/nim/toolchain/native_support_test
 import backend/nim/toolchain/managed_gc_runtime_test
+import backend/nim/toolchain/reference_counting_runtime_test
 import backend/nim/emitter/nim_emitter_test
 import backend/nim/emitter/contract_emitter_test
 import backend/nim/emitter/native_function_emitter_test

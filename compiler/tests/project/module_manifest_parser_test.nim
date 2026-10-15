@@ -109,8 +109,9 @@ suite "Module manifest parsing":
     )
     check memoryManifest.name == "memory"
     check memoryManifest.sources.len == 0
-    check memoryManifest.children.len == 1
+    check memoryManifest.children.len == 2
     check memoryManifest.children[0].name == "managed"
+    check memoryManifest.children[1].name == "rc"
     check memoryManifest.exports.len == 0
 
     let managedManifest = parseModuleManifest(
@@ -118,3 +119,9 @@ suite "Module manifest parsing":
       BuiltinManagedGcManifestPath
     )
     check managedManifest.policySources == @["policy.eido"]
+
+    let rcManifest = parseModuleManifest(
+      BuiltinRcManifestSource,
+      BuiltinRcManifestPath
+    )
+    check rcManifest.policySources == @["policy.eido"]

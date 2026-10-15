@@ -94,9 +94,7 @@ adopts: []
 
 `policy.eido` executes only during compilation and binds generic program lifecycle
 events through `MemoryPolicy`. `runtime.eido` is analyzed/emitted only when this
-module is selected through the compilation memory-policy option. The SDK default
-`eido.stdlib.memory.managed` uses exactly this schema; custom policies are not a
-separate compiler extension mechanism.
+module is selected through the compilation memory-policy option. The SDK policies `eido.stdlib.memory.managed` and `eido.stdlib.memory.rc` use exactly this schema; custom policies are not a separate compiler extension mechanism.
 
 Policy source is intentionally separate from target source so build-machine
 inspection code and compiler API declarations cannot leak into the executable.

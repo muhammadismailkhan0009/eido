@@ -1,21 +1,23 @@
 # Eido reference-counting memory policy
 
-This example is an architecture proof: a memory-management policy other than the SDK GC is implemented entirely as ordinary Eido code and selected through the public compiler memory-policy API. No compiler or Nim implementation change is required.
+This example exercises the SDK reference-counting memory policy `eido.stdlib.memory.rc` against ordinary class/object code.
+
+The policy implementation itself lives under `stdlib/memory/rc/` and is written entirely in Eido over `Storage<T>`. The compiler/backend contains no RC algorithm.
 
 ## Run
 
 ```bash
-eido run module.yaml --memory=eido_reference_counting_policy.rc
+eido run module.yaml --memory=eido.stdlib.memory.rc
 ```
 
 The demo prints `42`.
 
-## Policy structure
+## Runtime architecture
 
 ```text
 compiler generic events
         ↓
-rc/policy.eido
+eido.stdlib.memory.rc/policy.eido
         ↓
 RcPolicyRuntime
         ↓
@@ -26,25 +28,23 @@ Storage<T>
 physical backend allocation
 ```
 
-`policy.eido` binds only generic compiler events. It contains no compiler-specific implementation code and the compiler contains no knowledge of `RcRuntime`.
-
 ## Algorithm
 
-This is deferred/recounting reference counting. The current generic API reports lexical/class-owned binding lifetimes and object layout metadata, but it does not report each object-field write. Rather than add an RC-specific compiler hook, the policy uses the existing stable execution boundary:
+The SDK RC policy uses deferred/recounting reference counting. The existing generic memory API reports lexical/class-owned binding lifetimes, object layout metadata, and stable execution boundaries, so no RC-specific compiler hook is required.
 
-1. Set every live object's reference count to zero.
-2. Count active identity-bearing bindings from `bindingEnter`/`bindingWrite`/`bindingLeave` state.
-3. Scan each live object's compiler-described identity fields and count those incoming references.
-4. Release objects whose incoming count is zero.
-5. Repeat until no more zero-count objects can be released.
+At a stable execution boundary the policy:
 
-This is reference counting, not reachability tracing: every incoming edge contributes independently to a count. In particular, an unreachable cycle retains positive internal counts and is not reclaimed during execution.
+1. resets every live object's reference count;
+2. counts active identity-bearing bindings;
+3. scans compiler-described identity fields and counts incoming object references;
+4. releases objects whose incoming count is zero;
+5. repeats until no additional zero-count objects remain.
 
-At process shutdown all bindings are cleared, acyclic objects are reclaimed normally, and any objects still retained solely by cycles are released unconditionally because the process is ending.
+This is reference counting rather than reachability tracing. An unreachable cycle therefore keeps positive internal counts and is not reclaimed during normal execution. Remaining objects are released unconditionally at process shutdown.
 
-## What the proof demonstrated
+## Verified behavior
 
-The acyclic demo allocates a `Parent` containing a `Child`, lets both leave scope, and reclaims both at the caller's next stable execution boundary. Targeted generated-code assertions observed:
+For an acyclic `Parent -> Child` graph, targeted generated-code assertions observed:
 
 ```text
 live objects after shutdown       = 0
@@ -52,17 +52,17 @@ reclaimed at normal boundaries    = 2
 forced releases at shutdown       = 0
 ```
 
-A separate two-node cycle test observed:
+For a two-node cycle:
 
 ```text
 reclaimed at normal boundaries    = 0
 forced releases at shutdown       = 2
 ```
 
-That cycle behavior is the expected limitation of simple reference counting and distinguishes this policy from the tracing GC.
+The cycle behavior is the expected limitation of simple reference counting and distinguishes this policy from the tracing GC.
 
 ## Architectural conclusion
 
-The same class/object program can therefore run with either the SDK mark/sweep GC or this external RC policy without changing compiler or backend implementation code. Allocation and lifetime policy are genuinely supplied by Eido; the compiler supplies only semantic facts/events and `Storage<T>` supplies physical memory.
+The same class/object program can run with either `eido.stdlib.memory.managed` or `eido.stdlib.memory.rc`. Both use the same compiler-facing memory-policy API and `Storage<T>` substrate; only the Eido policy/runtime implementation changes.
 
-An immediate retain/release RC implementation would benefit from a generic object-field mutation event so it could update counts incrementally instead of recounting at stable boundaries. This example deliberately does **not** add such an event: it proves a useful second policy using the API exactly as it exists today.
+An immediate retain/release RC could later use a generic object-field mutation event to update counts incrementally, but the current deferred RC demonstrates that the existing API is already sufficient for a useful second policy.

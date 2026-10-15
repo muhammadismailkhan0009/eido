@@ -4,6 +4,10 @@ Namespace for standard memory-management policy implementations.
 
 This module intentionally exports no ordinary application API. Eido's low-level memory capability is compiler-provided `Storage<T>`, and memory-policy authors receive the compiler-facing build-time API under `compiler/compile_time/api/memory_policy/`.
 
-The `managed/` child is the SDK's default automatic GC policy/runtime. It declares `policySources` for compile-time policy bindings and ordinary Eido runtime sources for allocation, metadata registries, tracing, collection, and shutdown.
+Standard policy children:
+- `managed/` — the default tracing GC selected by `--memory=gc`.
+- `rc/` — an optional deferred/recounting reference-counting policy selected explicitly as `eido.stdlib.memory.rc`.
 
-Applications normally do not import `eido.stdlib.memory.managed`; the compiler selects it through the default `--memory=gc` policy alias. A project may instead select another module that declares its own `policySources` and implements its runtime over `Storage<T>`.
+Both policies declare `policySources` for compile-time event bindings and ordinary Eido target runtime sources for their allocation/lifetime algorithms. Neither policy has a privileged compiler path; both consume the same generic compiler-facing memory API and allocate through `Storage<T>`.
+
+Applications normally do not import these modules. The compiler selects one through the compilation memory-policy option. Custom project modules may declare their own `policySources` and use the same mechanism.

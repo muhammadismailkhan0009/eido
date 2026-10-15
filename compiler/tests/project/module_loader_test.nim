@@ -53,7 +53,7 @@ suite "Module project loading":
     let project = loadModuleProject(root / "module.yaml", ptExecutable)
 
     check project.rootModule == "shop"
-    check project.modules.len == 9
+    check project.modules.len == 10
     check project.modules[0].canonicalName == "shop"
     check project.modules[1].canonicalName == "shop.payments"
 
@@ -79,7 +79,10 @@ suite "Module project loading":
     check project.modules[4].sourcePaths == @[BuiltinConsoleSourcePath]
     check project.modules[5].canonicalName == BuiltinMemoryModuleName
     check project.modules[5].sourcePaths.len == 0
-    check project.modules[5].children == @[BuiltinManagedGcModuleName]
+    check project.modules[5].children == @[
+      BuiltinManagedGcModuleName,
+      BuiltinRcModuleName
+    ]
     check project.modules[6].canonicalName == BuiltinManagedGcModuleName
     check project.modules[6].sourcePaths == @[
       BuiltinMemoryValueRegistrySourcePath,
@@ -93,36 +96,47 @@ suite "Module project loading":
     check project.modules[6].policySources[0].entry == "policy.eido"
     check project.modules[6].policySources[0].path == BuiltinManagedPolicySourcePath
     check "MemoryPolicy.objectAcquire" in project.modules[6].policySources[0].text
-    check project.modules[7].canonicalName == BuiltinTextModuleName
-    check project.modules[7].sourcePaths == @[BuiltinStringRuntimeSourcePath]
+    check project.modules[7].canonicalName == BuiltinRcModuleName
+    check project.modules[7].sourcePaths == @[
+      BuiltinRcValueRegistrySourcePath,
+      BuiltinRcTypeRegistrySourcePath,
+      BuiltinRcRuntimeSourcePath,
+      BuiltinRcPolicyRuntimeSourcePath
+    ]
     check project.modules[7].exports.len == 0
-    check project.modules[8].canonicalName == BuiltinRuntimeModuleName
-    check project.modules[8].sourcePaths == @[BuiltinCopyRuntimeSourcePath]
+    check project.modules[7].policySources.len == 1
+    check project.modules[7].policySources[0].entry == "policy.eido"
+    check project.modules[7].policySources[0].path == BuiltinRcPolicySourcePath
+    check "MemoryPolicy.objectAcquire" in project.modules[7].policySources[0].text
+    check project.modules[8].canonicalName == BuiltinTextModuleName
+    check project.modules[8].sourcePaths == @[BuiltinStringRuntimeSourcePath]
     check project.modules[8].exports.len == 0
+    check project.modules[9].canonicalName == BuiltinRuntimeModuleName
+    check project.modules[9].sourcePaths == @[BuiltinCopyRuntimeSourcePath]
+    check project.modules[9].exports.len == 0
 
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 11
+    check project.sources.len == 15
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
     check project.sources[3].moduleName == BuiltinIoModuleName
-    check project.sources[4].moduleName == BuiltinManagedGcModuleName
-    check project.sources[5].moduleName == BuiltinManagedGcModuleName
-    check project.sources[6].moduleName == BuiltinManagedGcModuleName
-    check project.sources[7].moduleName == BuiltinManagedGcModuleName
-    check project.sources[8].moduleName == BuiltinManagedGcModuleName
-    check project.sources[9].moduleName == BuiltinTextModuleName
-    check project.sources[10].moduleName == BuiltinRuntimeModuleName
+    for index in 4 .. 8:
+      check project.sources[index].moduleName == BuiltinManagedGcModuleName
+    for index in 9 .. 12:
+      check project.sources[index].moduleName == BuiltinRcModuleName
+    check project.sources[13].moduleName == BuiltinTextModuleName
+    check project.sources[14].moduleName == BuiltinRuntimeModuleName
     for index in 0 .. 3:
       check project.sources[index].origin == soOrdinary
       check project.sources[index].runtimeCapability == lrcNone
-    for index in 4 .. 8:
+    for index in 4 .. 12:
       check project.sources[index].origin == soMemoryPolicyRuntime
       check project.sources[index].runtimeCapability == lrcNone
-    check project.sources[9].origin == soLanguageRuntime
-    check project.sources[9].runtimeCapability == lrcString
-    check project.sources[10].origin == soLanguageRuntime
-    check project.sources[10].runtimeCapability == lrcClassCopy
+    check project.sources[13].origin == soLanguageRuntime
+    check project.sources[13].runtimeCapability == lrcString
+    check project.sources[14].origin == soLanguageRuntime
+    check project.sources[14].runtimeCapability == lrcClassCopy
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":
