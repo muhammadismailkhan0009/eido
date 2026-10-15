@@ -1,7 +1,15 @@
 import std/[strutils, unittest]
 import support/compiler_test_support
+import stdlib/builtin_sources
 
 suite "Class copy emission":
+  test "copy memo runtime owns scratch backing through Storage":
+    check "Storage<Byte>.allocateRaw(" in BuiltinCopyRuntimeSource
+    check "Storage<Int>.view(" in BuiltinCopyRuntimeSource
+    check "Storage<Byte>.adoptAddress(" in BuiltinCopyRuntimeSource
+    check "Storage<Byte>.release(" in BuiltinCopyRuntimeSource
+    check "seq[" notin BuiltinCopyRuntimeSource
+
   test "emits a generated copier and copy call":
     let source = """
       class Account { Int balance; }
@@ -16,6 +24,12 @@ suite "Class copy emission":
 
     check "proc eido_copy_Account(" in generated
     check "eido_copy_Account(eido_local_0_account)" in generated
+    check "eido_copy_memo_begin()" in generated
+    check "eido_copy_memo_lookup(" in generated
+    check "eido_copy_memo_remember(" in generated
+    check "eido_copy_memo_end()" in generated
+    check "seq[tuple" notin generated
+    check "eido_copy_context" notin generated
 
   test "recursively copies class-valued fields":
     let source = """
@@ -34,3 +48,5 @@ suite "Class copy emission":
     check "eido_copy_Account_internal(" in generated
     check "eido_copy_Order_internal(" in generated
     check "eido_set_Order_account(result, eido_copy_Account_internal(" in generated
+    check "context:" notin generated
+    check ".add((source:" notin generated

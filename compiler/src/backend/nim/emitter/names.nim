@@ -94,13 +94,21 @@ proc classCopyName*(sourceName: string): string =
 proc classCopyInternalName*(sourceName: string): string =
   "eido_copy_" & nominalName(sourceName) & "_internal"
 
-## Builds the generated memo field name for one copied class type.
-proc classCopyTableName*(sourceName: string): string =
-  "eido_copies_" & nominalName(sourceName)
+## Builds the generated graph-copy memo begin wrapper name.
+proc copyMemoBeginName*(): string =
+  "eido_copy_memo_begin"
 
-## Builds the generated copy-context type name.
-proc copyContextName*(): string =
-  "eido_copy_context"
+## Builds the generated graph-copy memo lookup wrapper name.
+proc copyMemoLookupName*(): string =
+  "eido_copy_memo_lookup"
+
+## Builds the generated graph-copy memo insertion wrapper name.
+proc copyMemoRememberName*(): string =
+  "eido_copy_memo_remember"
+
+## Builds the generated graph-copy memo end wrapper name.
+proc copyMemoEndName*(): string =
+  "eido_copy_memo_end"
 
 ## Builds the generated Nim name for one Eido class field.
 proc fieldName*(sourceName: string): string =

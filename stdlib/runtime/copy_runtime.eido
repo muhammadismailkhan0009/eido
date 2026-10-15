@@ -1,0 +1,113 @@
+// Compiler-private detached graph-copy memo implemented in Eido over Storage.
+// One operation owns one raw block of source/target identity pairs and releases
+// that scratch backing when the public copy operation completes.
+class CopyRuntime {
+    Int CopyRuntime.memoAddress = 0;
+    Int CopyRuntime.memoCapacity = 0;
+    Int CopyRuntime.memoUsed = 0;
+
+    function slotCount(Int capacity) returns Int {
+        return capacity * 2;
+    }
+
+    function rawView() returns Storage<Byte> {
+        require {
+            CopyRuntime.memoAddress != 0;
+            CopyRuntime.memoCapacity > 0;
+        }
+        return Storage<Byte>.fromAddress(
+            CopyRuntime.memoAddress,
+            CopyRuntime.slotCount(CopyRuntime.memoCapacity),
+            Storage<Int>.size()
+        );
+    }
+
+    function pairs() returns Storage<Int> {
+        var raw = CopyRuntime.rawView();
+        return Storage<Int>.view(raw, 0);
+    }
+
+    function copyMemoBegin() {
+        require { CopyRuntime.memoAddress == 0; }
+        var initialCapacity = 4;
+        var backing = Storage<Byte>.allocateRaw(
+            CopyRuntime.slotCount(initialCapacity),
+            Storage<Int>.size()
+        );
+        set CopyRuntime.memoAddress = Storage<Byte>.address(backing);
+        set CopyRuntime.memoCapacity = initialCapacity;
+        set CopyRuntime.memoUsed = 0;
+    }
+
+    function grow() {
+        var oldCapacity = CopyRuntime.memoCapacity;
+        var newCapacity = oldCapacity * 2;
+        var oldPairs = CopyRuntime.pairs();
+        var newBacking = Storage<Byte>.allocateRaw(
+            CopyRuntime.slotCount(newCapacity),
+            Storage<Int>.size()
+        );
+        var newPairs = Storage<Int>.view(newBacking, 0);
+        var index = 0;
+        while (index < CopyRuntime.memoUsed * 2) {
+            Storage<Int>.write(
+                newPairs,
+                index,
+                Storage<Int>.read(oldPairs, index)
+            );
+            set index = index + 1;
+        }
+
+        var oldBacking = Storage<Byte>.adoptAddress(
+            CopyRuntime.memoAddress,
+            CopyRuntime.slotCount(oldCapacity),
+            Storage<Int>.size()
+        );
+        Storage<Byte>.release(oldBacking);
+        set CopyRuntime.memoAddress = Storage<Byte>.address(newBacking);
+        set CopyRuntime.memoCapacity = newCapacity;
+    }
+
+    function copyMemoLookup(Int source) returns Int {
+        require { source != 0; CopyRuntime.memoAddress != 0; }
+        var values = CopyRuntime.pairs();
+        var index = 0;
+        while (index < CopyRuntime.memoUsed) {
+            var offset = index * 2;
+            if (Storage<Int>.read(values, offset) == source) {
+                return Storage<Int>.read(values, offset + 1);
+            }
+            set index = index + 1;
+        }
+        return 0;
+    }
+
+    function copyMemoRemember(Int source, Int target) {
+        require {
+            source != 0;
+            target != 0;
+            CopyRuntime.memoAddress != 0;
+        }
+        if (CopyRuntime.memoUsed >= CopyRuntime.memoCapacity) {
+            CopyRuntime.grow();
+        }
+        var values = CopyRuntime.pairs();
+        var offset = CopyRuntime.memoUsed * 2;
+        Storage<Int>.write(values, offset, source);
+        Storage<Int>.write(values, offset + 1, target);
+        set CopyRuntime.memoUsed = CopyRuntime.memoUsed + 1;
+    }
+
+    function copyMemoEnd() {
+        require { CopyRuntime.memoAddress != 0; }
+        var backing = Storage<Byte>.adoptAddress(
+            CopyRuntime.memoAddress,
+            CopyRuntime.slotCount(CopyRuntime.memoCapacity),
+            Storage<Int>.size()
+        );
+        Storage<Byte>.release(backing);
+        set CopyRuntime.memoAddress = 0;
+        set CopyRuntime.memoCapacity = 0;
+        set CopyRuntime.memoUsed = 0;
+    }
+}

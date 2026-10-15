@@ -303,3 +303,24 @@ suite "Compiler pipeline":
     check "eido_string_allocate" notin generated
     check "eido_string_shutdown" notin generated
     check "StringRuntime" notin generated
+
+  test "language runtime capabilities are injected independently":
+    let stringGenerated = compileToNim(
+      "function main() returns String { return \"text\"; }"
+    )
+    check "eido_string_allocate" in stringGenerated
+    check "eido_copy_memo_begin" notin stringGenerated
+    check "CopyRuntime" notin stringGenerated
+
+    let copyGenerated = compileToNim("""
+      class Box { Int value; }
+      function main() returns Int {
+        var box = Box { value = 7; };
+        var detached = copy box;
+        return detached.value;
+      }
+    """)
+    check "eido_copy_memo_begin" in copyGenerated
+    check "eido_copy_memo_lookup" in copyGenerated
+    check "eido_string_allocate" notin copyGenerated
+    check "StringRuntime" notin copyGenerated

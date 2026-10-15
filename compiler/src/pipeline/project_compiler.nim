@@ -6,7 +6,7 @@ import ../source/source_unit
 import ../stdlib/builtin_sources
 import ../frontend/parser/project_parser
 import ../hir/program as hirProgram
-import ../hir/string_usage
+import ../hir/[copy_usage, string_usage]
 import ../compile_time/[instrumentation_model, phase_runner, runtime_policy_phase]
 import options
 import ../compilation/plan
@@ -15,31 +15,31 @@ import ../semantic/modules/architecture_validation
 import ../backend/nim/emitter/program_emitter
 
 
-## Reports whether one hidden runtime origin is selected for target compilation.
-proc runtimeOriginSelected(
-  origin: SourceOrigin,
-  includeLanguageRuntime, includePolicyRuntime: bool
+## Reports whether one hidden runtime source is selected for target compilation.
+proc runtimeSourceSelected(
+  source: SourceUnit,
+  languageCapabilities: set[LanguageRuntimeCapability],
+  includePolicyRuntime: bool
 ): bool =
-  case origin
+  case source.origin
   of soOrdinary:
     true
   of soLanguageRuntime:
-    includeLanguageRuntime
+    source.runtimeCapability in languageCapabilities
   of soCompilerRuntime:
     includePolicyRuntime
 
 ## Filters hidden runtime sources without exposing their implementation class names.
 proc selectRuntimeSources(
   project: EidoProject,
-  includeLanguageRuntime, includePolicyRuntime: bool
+  languageCapabilities: set[LanguageRuntimeCapability],
+  includePolicyRuntime: bool
 ): EidoProject =
   result = project
   var excludedPaths: seq[string]
   result.sources = @[]
   for source in project.sources:
-    if runtimeOriginSelected(
-      source.origin, includeLanguageRuntime, includePolicyRuntime
-    ):
+    if runtimeSourceSelected(source, languageCapabilities, includePolicyRuntime):
       result.sources.add source
     else:
       excludedPaths.add source.path
@@ -54,10 +54,11 @@ proc selectRuntimeSources(
 ## Adds selected hidden SDK runtime sources when raw source projects do not carry them.
 proc withSelectedRuntime(
   project: EidoProject,
-  includeLanguageRuntime, includePolicyRuntime: bool
+  languageCapabilities: set[LanguageRuntimeCapability],
+  includePolicyRuntime: bool
 ): EidoProject =
   result = selectRuntimeSources(
-    project, includeLanguageRuntime, includePolicyRuntime
+    project, languageCapabilities, includePolicyRuntime
   )
 
   var nextSourceId = 0
@@ -69,8 +70,8 @@ proc withSelectedRuntime(
   let sdk = builtinStdlibProject(ptLibrary)
   for sdkSource in sdk.sources:
     if sdkSource.origin == soOrdinary or
-        not runtimeOriginSelected(
-          sdkSource.origin, includeLanguageRuntime, includePolicyRuntime
+        not runtimeSourceSelected(
+          sdkSource, languageCapabilities, includePolicyRuntime
         ) or sdkSource.path in existingPaths:
       continue
 
@@ -79,7 +80,8 @@ proc withSelectedRuntime(
       sdkSource.path,
       sdkSource.text,
       sdkSource.moduleName,
-      sdkSource.origin
+      sdkSource.origin,
+      sdkSource.runtimeCapability
     )
     inc nextSourceId
     existingPaths.add sdkSource.path
@@ -102,19 +104,23 @@ proc compileProjectToNim*(
   project: EidoProject,
   options: CompilationOptions = DefaultCompilationOptions
 ): string =
-  let baseProject = project.selectRuntimeSources(false, false)
+  let baseProject = project.selectRuntimeSources({}, false)
   let baseProgram = analyzeProject(baseProject)
   let memoryMetadata = runStandardCompileTimePhases(
     baseProgram,
     options.memoryStrategy
   )
-  let needsLanguageRuntime = baseProgram.usesString
+  var languageCapabilities: set[LanguageRuntimeCapability]
+  if baseProgram.usesString:
+    languageCapabilities.incl lrcString
+  if baseProgram.usesClassCopy:
+    languageCapabilities.incl lrcClassCopy
   let needsPolicyRuntime =
     options.memoryStrategy == msGc and memoryMetadata.types.len > 0
 
-  if needsLanguageRuntime or needsPolicyRuntime:
+  if languageCapabilities != {} or needsPolicyRuntime:
     let runtimeProject = project.withSelectedRuntime(
-      needsLanguageRuntime, needsPolicyRuntime
+      languageCapabilities, needsPolicyRuntime
     )
     let runtimeProgram = analyzeProject(runtimeProject)
     let instrumentation =

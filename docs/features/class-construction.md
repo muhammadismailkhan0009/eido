@@ -97,9 +97,7 @@ identity marker.
 
 ## Representation boundary
 
-The Nim backend currently lowers classes to generated `ref object` types and
-uses generated graph copiers for `copy`. Those are backend choices, not a
-commitment to GC, RC, heap allocation, or another memory-management model.
+The active runtime-backed Nim path lowers class identity to opaque payload-address handles and uses generated graph traversal for `copy`. The traversal owns detached-copy semantics only; hidden Eido `CopyRuntime` owns the growable source→target memo over Storage and releases its scratch backing after each successful copy. Bootstrap/manual fallback representation remains a backend detail, not a commitment to GC, RC, heap allocation, or another memory-management model.
 
 Class equality remains outside the current slice. Class-valued own fields may
 now be replaced through `set self.field = ...` using the same relationship rule:

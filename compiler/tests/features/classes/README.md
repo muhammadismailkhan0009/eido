@@ -65,8 +65,9 @@ same-name top-level function separation, and invalid receiver contexts.
 
 `class_copy_ref_variants_test.nim` covers explicit ref aliasing, detached copy,
 class parameters preserving identity, copy/ref construction fields, recursive
-detachment with internal sharing preservation, detached class returns, and
-class relationship replacement through `set` for locals and own class fields.
+detachment with internal sharing/cycle preservation, Storage-backed memo growth
+and per-operation reset, detached class returns, and class relationship
+replacement through `set` for locals and own class fields.
 
 
 `gc_management_variants_test.nim` covers automatic managed class lifetime under the default GC strategy:

@@ -13,6 +13,7 @@ const
   BuiltinIoModuleName* = "eido.stdlib.io"
   BuiltinMemoryModuleName* = "eido.stdlib.memory"
   BuiltinTextModuleName* = "eido.stdlib.text"
+  BuiltinRuntimeModuleName* = "eido.stdlib.runtime"
   BuiltinManagedGcModuleName* = "eido.stdlib.memory.managed"
 
   BuiltinStdlibManifestPath* = "<eido-sdk>/stdlib/module.yaml"
@@ -20,6 +21,7 @@ const
   BuiltinIoManifestPath* = "<eido-sdk>/stdlib/io/module.yaml"
   BuiltinMemoryManifestPath* = "<eido-sdk>/stdlib/memory/module.yaml"
   BuiltinTextManifestPath* = "<eido-sdk>/stdlib/text/module.yaml"
+  BuiltinRuntimeManifestPath* = "<eido-sdk>/stdlib/runtime/module.yaml"
   BuiltinManagedGcManifestPath* =
     "<eido-sdk>/stdlib/memory/managed/module.yaml"
 
@@ -38,6 +40,9 @@ const
   BuiltinTextManifestSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/text/module.yaml"
   )
+  BuiltinRuntimeManifestSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/runtime/module.yaml"
+  )
   BuiltinManagedGcManifestSource* = staticRead(
     currentSourcePath().parentDir /
       "../../../stdlib/memory/managed/module.yaml"
@@ -48,6 +53,7 @@ const
   BuiltinMemorySourcePath* = "eido://stdlib/memory/memory.eido"
   BuiltinArenaSourcePath* = "eido://stdlib/memory/arena.eido"
   BuiltinStringRuntimeSourcePath* = "eido://stdlib/text/string_runtime.eido"
+  BuiltinCopyRuntimeSourcePath* = "eido://stdlib/runtime/copy_runtime.eido"
   BuiltinMemoryValueRegistrySourcePath* =
     "eido://stdlib/memory/managed/memory_value_registry.eido"
   BuiltinMemoryTypeRegistrySourcePath* =
@@ -73,6 +79,9 @@ const
   )
   BuiltinStringRuntimeSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/text/string_runtime.eido"
+  )
+  BuiltinCopyRuntimeSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/runtime/copy_runtime.eido"
   )
   BuiltinMemoryValueRegistrySource* = staticRead(
     currentSourcePath().parentDir /
@@ -115,6 +124,8 @@ proc embeddedStdlibManifest(manifestPath: string): string =
     BuiltinMemoryManifestSource
   of BuiltinTextManifestPath:
     BuiltinTextManifestSource
+  of BuiltinRuntimeManifestPath:
+    BuiltinRuntimeManifestSource
   of BuiltinManagedGcManifestPath:
     BuiltinManagedGcManifestSource
   else:
@@ -141,6 +152,8 @@ proc embeddedStdlibSource(
     (BuiltinArenaSourcePath, BuiltinArenaSource)
   of BuiltinTextManifestPath & "|string_runtime.eido":
     (BuiltinStringRuntimeSourcePath, BuiltinStringRuntimeSource)
+  of BuiltinRuntimeManifestPath & "|copy_runtime.eido":
+    (BuiltinCopyRuntimeSourcePath, BuiltinCopyRuntimeSource)
   of BuiltinManagedGcManifestPath & "|memory_value_registry.eido":
     (BuiltinMemoryValueRegistrySourcePath, BuiltinMemoryValueRegistrySource)
   of BuiltinManagedGcManifestPath & "|memory_type_registry.eido":
@@ -209,17 +222,28 @@ proc loadEmbeddedStdlibModule(
       )
     embeddedSourcePaths.add embedded.path
     modules[ownIndex].sourcePaths.add embedded.path
+    let origin =
+      if manifestPath == BuiltinManagedGcManifestPath:
+        soCompilerRuntime
+      elif manifestPath == BuiltinTextManifestPath or
+          manifestPath == BuiltinRuntimeManifestPath:
+        soLanguageRuntime
+      else:
+        soOrdinary
+    let runtimeCapability =
+      if manifestPath == BuiltinTextManifestPath:
+        lrcString
+      elif manifestPath == BuiltinRuntimeManifestPath:
+        lrcClassCopy
+      else:
+        lrcNone
     sources.add initSourceUnit(
       sources.len,
       embedded.path,
       embedded.text,
       canonical,
-      if manifestPath == BuiltinManagedGcManifestPath:
-        soCompilerRuntime
-      elif manifestPath == BuiltinTextManifestPath:
-        soLanguageRuntime
-      else:
-        soOrdinary
+      origin,
+      runtimeCapability
     )
 
   for child in manifest.children:

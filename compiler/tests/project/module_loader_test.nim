@@ -53,7 +53,7 @@ suite "Module project loading":
     let project = loadModuleProject(root / "module.yaml", ptExecutable)
 
     check project.rootModule == "shop"
-    check project.modules.len == 8
+    check project.modules.len == 9
     check project.modules[0].canonicalName == "shop"
     check project.modules[1].canonicalName == "shop.payments"
 
@@ -65,7 +65,8 @@ suite "Module project loading":
       BuiltinProcessModuleName,
       BuiltinIoModuleName,
       BuiltinMemoryModuleName,
-      BuiltinTextModuleName
+      BuiltinTextModuleName,
+      BuiltinRuntimeModuleName
     ]
     check project.modules[2].exports == @[
       "process.Process",
@@ -95,9 +96,12 @@ suite "Module project loading":
     check project.modules[7].canonicalName == BuiltinTextModuleName
     check project.modules[7].sourcePaths == @[BuiltinStringRuntimeSourcePath]
     check project.modules[7].exports.len == 0
+    check project.modules[8].canonicalName == BuiltinRuntimeModuleName
+    check project.modules[8].sourcePaths == @[BuiltinCopyRuntimeSourcePath]
+    check project.modules[8].exports.len == 0
 
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 12
+    check project.sources.len == 13
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
@@ -110,11 +114,17 @@ suite "Module project loading":
     check project.sources[9].moduleName == BuiltinManagedGcModuleName
     check project.sources[10].moduleName == BuiltinManagedGcModuleName
     check project.sources[11].moduleName == BuiltinTextModuleName
+    check project.sources[12].moduleName == BuiltinRuntimeModuleName
     for index in 0 .. 5:
       check project.sources[index].origin == soOrdinary
+      check project.sources[index].runtimeCapability == lrcNone
     for index in 6 .. 10:
       check project.sources[index].origin == soCompilerRuntime
+      check project.sources[index].runtimeCapability == lrcNone
     check project.sources[11].origin == soLanguageRuntime
+    check project.sources[11].runtimeCapability == lrcString
+    check project.sources[12].origin == soLanguageRuntime
+    check project.sources[12].runtimeCapability == lrcClassCopy
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

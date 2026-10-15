@@ -150,6 +150,64 @@ suite "Class copy/ref execution":
 
     check runFeatureSource(source, "copy_preserves_sharing") == "100080"
 
+  test "copy preserves cycles inside the detached graph":
+    let source = """
+      class Node {
+        Node? next;
+        Int value;
+        function link(Node other) { set self.next = ref other; }
+        function bump() { set self.value = self.value + 1; }
+      }
+
+      function main() returns Int {
+        var left = Node { next = none; value = 1; };
+        var right = Node { next = none; value = 2; };
+        left.link(right);
+        right.link(left);
+        var detached = copy left;
+        if detached.next exists {
+          if detached.next.next exists {
+            detached.next.next.bump();
+          }
+        }
+        return left.value * 100 + detached.value;
+      }
+    """
+
+    check runFeatureSource(source, "copy_preserves_cycle") == "102"
+
+  test "copy memo grows and resets between operations":
+    let source = """
+      class Node {
+        Node? next;
+        Int value;
+        function link(Node other) { set self.next = ref other; }
+        function sum() returns Int {
+          if self.next exists { return self.value + self.next.sum(); }
+          return self.value;
+        }
+      }
+
+      function main() returns Int {
+        var one = Node { next = none; value = 1; };
+        var two = Node { next = none; value = 2; };
+        var three = Node { next = none; value = 3; };
+        var four = Node { next = none; value = 4; };
+        var five = Node { next = none; value = 5; };
+        var six = Node { next = none; value = 6; };
+        one.link(two);
+        two.link(three);
+        three.link(four);
+        four.link(five);
+        five.link(six);
+        var firstCopy = copy one;
+        var secondCopy = copy one;
+        return firstCopy.sum() * 100 + secondCopy.sum();
+      }
+    """
+
+    check runFeatureSource(source, "copy_memo_growth_reset") == "2121"
+
 suite "Class return detachment execution":
   test "mutate original then return detached snapshot":
     let source = """

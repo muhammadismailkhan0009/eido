@@ -44,4 +44,4 @@ suite "Generic class emission":
     # Then
     check generated.count(" = ref object") == 2
     check "eido_field_value: int64" in generated
-    check "eido_field_value: string" in generated
+    check "eido_field_value: string" notin generated

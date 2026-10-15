@@ -14,6 +14,16 @@ type
     equal*: string
     shutdown*: string
 
+## Reports whether the selected hidden language runtime includes String support.
+proc hasStringRuntime*(program: hirProgram.HirProgram): bool =
+  for classDecl in program.classes:
+    if not classDecl.span.isLanguageRuntime:
+      continue
+    for methodDecl in classDecl.methods:
+      if methodDecl.sourceName == "stringAllocate":
+        return true
+  false
+
 ## Resolves one uniquely named built-in String runtime operation.
 proc resolveStringRuntimeMethod(
   program: hirProgram.HirProgram,

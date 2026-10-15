@@ -88,9 +88,9 @@ There is no dedicated `eido_managed_gc.nim` support module.
 
 The hidden sources owned by `eido.stdlib.memory.managed` carry `soCompilerRuntime` source origin and are exported nowhere. Initial metadata analysis filters hidden runtime origins. When the selected automatic memory policy requires managed support, target compilation analyzes those policy sources with the ordinary program.
 
-Hidden language-runtime facilities are selected independently. Built-in String support lives under `eido.stdlib.text` with `soLanguageRuntime` origin and is injected only when user HIR actually uses String, regardless of whether the selected memory strategy is GC or manual. This keeps language-runtime storage services separate from collector policy.
+Hidden language-runtime facilities are selected independently by semantic capability. Built-in String support lives under `eido.stdlib.text` (`lrcString`), while detached-copy memo support lives under `eido.stdlib.runtime` (`lrcClassCopy`); both carry generic `soLanguageRuntime` origin. Target compilation injects only the capabilities required by user HIR, independently of GC/manual policy.
 
-The compiler does not identify hidden runtime implementation classes for semantics. The selected Eido memory policy provides ordinary method names for generic event bindings; String runtime operations likewise resolve to normal semantic `MethodId`s from language-runtime source.
+The compiler does not identify hidden runtime implementation classes for semantics. The selected Eido memory policy provides ordinary method names for generic event bindings; String and detached-copy runtime operations likewise resolve to normal semantic `MethodId`s from capability-selected language-runtime source.
 
 ## Manual mode
 
@@ -106,4 +106,4 @@ The Nim backend still necessarily emits representation mechanics required by the
 
 Allocation ownership, runtime metadata state, lifetime interpretation, collection, and reclamation remain Eido code above `Storage`.
 
-String backing is no longer one of those exceptions: opaque String handles point to immutable UTF-8 allocations owned by hidden Eido language-runtime code over `Storage<Byte>`, and pure String operations are covered under Nim `--mm:none`. Remaining target-runtime dependencies include generated helper containers such as graph-copy memo tables and the current Nim exception/trap machinery, so this still does not claim unrestricted whole-program `--mm:none` readiness.
+String backing and detached-copy scratch are no longer backend-container exceptions: opaque String handles point to Storage-owned UTF-8 allocations, and copy memo pairs live in an explicitly released raw Storage block owned by hidden Eido `CopyRuntime`. The current Nim exception/trap machinery and other documented bootstrap/platform paths still prevent an unrestricted every-path `--mm:none` claim.

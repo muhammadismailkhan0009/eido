@@ -2,6 +2,7 @@
 
 import ../../../hir/program as hirProgram
 import ../../../hir/declarations as hirDeclarations
+import ../../../hir/copy_usage
 import ../../../compilation/plan
 import ../../../semantic/symbols/ids
 import ../../../types/[function_result, model, storage]
@@ -18,6 +19,9 @@ import memory_metadata_emitter
 import object_runtime_emitter
 import class_state_emitter
 import runtime_bindings
+import copy_runtime_bindings
+import copy_runtime_emitter
+import string_runtime_bindings
 import string_runtime_emitter
 
 ## Renders the full HIR program plus generic compiler memory metadata to Nim source.
@@ -35,15 +39,16 @@ proc emitNim*(
 
   var ordinaryClasses: seq[hirDeclarations.HirClass]
   var runtimeClasses: seq[hirDeclarations.HirClass]
-  var hasStringRuntime = false
   for classDecl in program.classes:
-    if classDecl.span.isLanguageRuntime:
-      hasStringRuntime = true
     if classDecl.span.isHiddenRuntime and
         not isConcreteStorageTypeName(classDecl.sourceName):
       runtimeClasses.add classDecl
     else:
       ordinaryClasses.add classDecl
+
+  let stringRuntimeEnabled = program.hasStringRuntime
+  let copyRuntimeEnabled = program.hasCopyRuntime
+  let copySupportRequired = program.usesClassCopy
 
   var hasStorage = false
   for classDecl in program.classes:
@@ -92,8 +97,10 @@ proc emitNim*(
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
-  if hasStringRuntime:
+  if stringRuntimeEnabled:
     result.add renderStringRuntimeSupport(program)
+  if copyRuntimeEnabled:
+    result.add renderCopyRuntimeSupport(program)
   if runtimeBackedObjects:
     result.add "template eidoMemoryPayloadAt(T: typedesc, identity: untyped): untyped =\n"
     result.add "  cast[ptr T](cast[uint](identity))\n"
@@ -125,7 +132,8 @@ proc emitNim*(
     runtimeBackedObjects,
     runtimeBindings
   )
-  result.add renderClassCopiers(ordinaryClasses, plan.memory)
+  if copySupportRequired:
+    result.add renderClassCopiers(ordinaryClasses, plan.memory)
 
   result.add renderClassInvariantCheckers(ordinaryClasses)
   result.add renderInterfaceUpcasts(
@@ -185,10 +193,10 @@ proc emitNim*(
     result.add "when isMainModule:\n"
     if mainFn.result.kind == frNone:
       result.add "  " & mainName & "()\n"
-    elif hasStringRuntime and mainFn.result.typ.kind == etkString:
+    elif stringRuntimeEnabled and mainFn.result.typ.kind == etkString:
       result.add "  let eido_runtime_main_result = " & mainName & "()\n"
       result.add "  echo " & stringToNativeName() & "(eido_runtime_main_result)\n"
-    elif runtimeBackedObjects or hasStringRuntime:
+    elif runtimeBackedObjects or stringRuntimeEnabled:
       result.add "  let eido_runtime_main_result = " & mainName & "()\n"
       result.add "  echo eido_runtime_main_result\n"
     else:
@@ -196,7 +204,7 @@ proc emitNim*(
 
     if runtimeBackedObjects and runtimeBindings.programExit.len > 0:
       result.add "  " & runtimeBindings.programExit & "()\n"
-    if hasStringRuntime:
+    if stringRuntimeEnabled:
       result.add "  " & stringShutdownName() & "()\n"
 
 ## Preserves low-level emitter tests/callers that intentionally bypass compiler metadata execution.

@@ -1,0 +1,10 @@
+module: runtime
+
+sources:
+  - copy_runtime.eido
+
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

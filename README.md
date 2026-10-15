@@ -156,7 +156,7 @@ eido --version
 - Generic classes with compiler specialization.
 - Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>.allocateRaw` is the single physical owned-allocation path; typed allocation adopts that raw backing, typed `view`/`viewAt`/`slice` capabilities are allocation-free, and `size`/`alignment` expose target layout through Storage itself. Target memory-management policy and mutable bookkeeping live above this substrate in Eido. The compiler may describe **what exists** (layout and identity-bearing fields/values) and expose generic semantic event points, but the selected Eido policy decides which events matter and **how values live** (GC roots/tracing, retain/release, arenas, collection triggers, or allocator policy).
 - Built-in immutable `String` now follows the same ownership boundary: target values are opaque machine-word handles, while UTF-8 bytes are allocated and reclaimed by hidden Eido language-runtime code over `Storage<Byte>`. Literals, concatenation, and equality do not use Nim-managed String backing; native/platform text is copied across the ABI boundary. Pure String computation is covered under Nim `--mm:none`.
-- Explicit class graph `copy` / `ref` semantics and detached class-valued returns.
+- Explicit class graph `copy` / `ref` semantics and detached class-valued returns. Generated copy traversal preserves sharing/cycles while hidden Eido `CopyRuntime` owns the source→target memo in a growable raw Storage block and releases that scratch backing after each successful copy.
 - No class inheritance.
 
 ### Interfaces

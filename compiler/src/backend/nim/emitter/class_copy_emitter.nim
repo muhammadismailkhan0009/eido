@@ -1,5 +1,5 @@
 ## Generates detached graph copiers for nominal classes.
-## Copy allocations use the same representation-neutral class allocation helpers.
+## Graph topology is compiler semantics; memo storage belongs to hidden Eido runtime code.
 
 import ../../../compile_time/model
 import ../../../hir/declarations as hirDeclarations
@@ -7,27 +7,34 @@ import ../../../types/model
 import ../../../types/storage
 import names
 
-## Renders the heterogeneous per-class memo state used during one graph copy.
-proc renderCopyContext(classes: seq[hirDeclarations.HirClass]): string =
-  if classes.len == 0:
-    return ""
+## Renders one class value as the generic integer identity consumed by copy memo runtime.
+proc renderCopyIdentity(
+  value: string,
+  classSourceName: string,
+  plan: CompileTimeMemoryMetadata
+): string =
+  if plan.hasObjectLayout(classSourceName):
+    value
+  else:
+    "int64(cast[uint](" & value & "))"
 
-  result.add "type\n"
-  result.add "  " & copyContextName() & " = object\n"
-  for classDecl in classes:
-    let sourceType = className(classDecl.sourceName)
-    result.add "    " & classCopyTableName(classDecl.sourceName) &
-      ": seq[tuple[source: " & sourceType & ", target: " &
-      sourceType & "]]\n"
-  result.add "\n"
+## Renders one memoized integer identity back to the active class representation.
+proc renderCopiedIdentity(
+  identity: string,
+  classSourceName: string,
+  plan: CompileTimeMemoryMetadata
+): string =
+  if plan.hasObjectLayout(classSourceName):
+    identity
+  else:
+    "cast[" & className(classSourceName) & "](uint(" & identity & "))"
 
 ## Renders forward declarations so recursive class graphs can call peer copiers.
 proc renderCopyDeclarations(classes: seq[hirDeclarations.HirClass]): string =
   for classDecl in classes:
     let sourceType = className(classDecl.sourceName)
     result.add "proc " & classCopyInternalName(classDecl.sourceName) &
-      "(source: " & sourceType & ", context: var " & copyContextName() &
-      "): " & sourceType & "\n"
+      "(source: " & sourceType & "): " & sourceType & "\n"
     result.add "proc " & classCopyName(classDecl.sourceName) &
       "(source: " & sourceType & "): " & sourceType & "\n"
   result.add "\n"
@@ -38,22 +45,28 @@ proc renderInternalCopier(
   plan: CompileTimeMemoryMetadata
 ): string =
   let sourceType = className(classDecl.sourceName)
-  let tableName = classCopyTableName(classDecl.sourceName)
   result.add "proc " & classCopyInternalName(classDecl.sourceName) &
-    "(source: " & sourceType & ", context: var " & copyContextName() &
-    "): " & sourceType & " =\n"
+    "(source: " & sourceType & "): " & sourceType & " =\n"
   if plan.hasObjectLayout(classDecl.sourceName):
     result.add "  if not eidoMemoryPresent(source):\n"
     result.add "    return default(" & sourceType & ")\n"
   else:
     result.add "  if source.isNil:\n"
     result.add "    return nil\n"
-  result.add "  for entry in context." & tableName & ":\n"
-  result.add "    if entry.source == source:\n"
-  result.add "      return entry.target\n"
+
+  let sourceIdentity = renderCopyIdentity(
+    "source", classDecl.sourceName, plan
+  )
+  result.add "  let eido_copy_existing = " & copyMemoLookupName() &
+    "(" & sourceIdentity & ")\n"
+  result.add "  if eido_copy_existing != int64(0):\n"
+  result.add "    return " & renderCopiedIdentity(
+    "eido_copy_existing", classDecl.sourceName, plan
+  ) & "\n"
+
   result.add "  result = " & classAllocateName(classDecl.sourceName) & "()\n"
-  result.add "  context." & tableName &
-    ".add((source: source, target: result))\n"
+  result.add "  " & copyMemoRememberName() & "(" & sourceIdentity & ", " &
+    renderCopyIdentity("result", classDecl.sourceName, plan) & ")\n"
 
   for field in classDecl.fields:
     let getter = classFieldGetName(classDecl.sourceName, field.sourceName)
@@ -68,7 +81,7 @@ proc renderInternalCopier(
         result.add "  if eidoMemoryPresent(" & sourceValue & "):\n"
         result.add "    " & setter & "(result, " &
           classCopyInternalName(field.typ.className) &
-          "(" & sourceValue & ", context))\n"
+          "(" & sourceValue & "))\n"
         result.add "  else:\n"
         result.add "    " & setter & "(result, default(" &
           className(field.typ.className) & "))\n"
@@ -76,28 +89,29 @@ proc renderInternalCopier(
         result.add "  if isSome(" & sourceValue & "):\n"
         result.add "    " & setter & "(result, some(" &
           classCopyInternalName(field.typ.className) &
-          "(get(" & sourceValue & "), context)))\n"
+          "(get(" & sourceValue & "))))\n"
         result.add "  else:\n"
         result.add "    " & setter & "(result, none(" &
           className(field.typ.className) & "))\n"
       else:
         result.add "  " & setter & "(result, " &
           classCopyInternalName(field.typ.className) &
-          "(" & sourceValue & ", context))\n"
+          "(" & sourceValue & "))\n"
     else:
       result.add "  " & setter & "(result, " & sourceValue & ")\n"
   result.add "\n"
 
-## Renders the public copy entry point that creates an empty memo context.
+## Renders the public copy entry point around one explicitly owned memo lifetime.
 proc renderPublicCopier(
   classDecl: hirDeclarations.HirClass
 ): string =
   let sourceType = className(classDecl.sourceName)
   result.add "proc " & classCopyName(classDecl.sourceName) &
     "(source: " & sourceType & "): " & sourceType & " =\n"
-  result.add "  var context: " & copyContextName() & "\n"
+  result.add "  " & copyMemoBeginName() & "()\n"
   result.add "  result = " & classCopyInternalName(classDecl.sourceName) &
-    "(source, context)\n\n"
+    "(source)\n"
+  result.add "  " & copyMemoEndName() & "()\n\n"
 
 ## Renders all copy support needed by the program's nominal classes.
 proc renderClassCopiers*(
@@ -112,7 +126,6 @@ proc renderClassCopiers*(
   if copyableClasses.len == 0:
     return ""
 
-  result.add renderCopyContext(copyableClasses)
   result.add renderCopyDeclarations(copyableClasses)
   for classDecl in copyableClasses:
     result.add renderInternalCopier(classDecl, plan)

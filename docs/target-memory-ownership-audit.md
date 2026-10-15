@@ -3,9 +3,9 @@
 Date: 2026-10-15
 Baseline commit: `d273232` (`decouple memory policy from compiler`)
 
-Remediation status: **P0 String ownership resolved after the baseline audit.** Eido String target backing is now Storage-owned hidden language-runtime state; native text is copied at ABI boundaries; pure String computation is covered under Nim `--mm:none`.
+Remediation status: **P0 String ownership and P1 graph-copy memo ownership are resolved after the baseline audit.** String backing and detached-copy scratch state are now owned by hidden Eido language-runtime code over `Storage`; native text is copied at ABI boundaries; generated copy traversal no longer owns a Nim container.
 
-Remediation validation used targeted suites only (not the full suite): String feature execution, String optional presence, `Storage<String>`, native function/class-method boundaries, managed GC runtime, module loading, Nim emission, compiler architecture, and compiler pipeline. The pipeline includes a manual-memory + Nim `--mm:none` String test and a native String-result copy test.
+Remediation validation used targeted suites only (not the full suite): String feature execution, String optional presence, `Storage<String>`, native function/class-method boundaries, managed GC runtime, class copy/ref execution, copy emitter, module loading, Nim emission, compiler architecture, and compiler pipeline. Copy coverage includes sharing, cycles, memo growth, back-to-back operations, Storage ownership, and independent language-runtime capability injection.
 
 ## Purpose
 
@@ -19,7 +19,7 @@ The core memory architecture is substantially correct. Managed object payloads, 
 
 There is **no general local/parameter/result ownership problem**. Primitive values, object identities, Storage descriptors, and most optional values are inline/register/ABI representations. A backend may spill them to a machine stack slot, but that does not create an independent logical memory owner.
 
-The original audit found two normal-success-path Eido-visible ownership gaps. **String has since been remediated.** The remaining normal-success-path gap is class graph-copy memoization: generated `copy` support still uses `seq[tuple[source, target]]`, which grows through the Nim memory manager.
+The original audit found two normal-success-path Eido-visible ownership gaps: String backing and graph-copy memoization. **Both have since been remediated.** No known normal-success-path Eido-visible dynamic backing is currently owned by a parallel Nim allocator/container.
 
 A separate gap remains on exceptional paths: Storage validation, contracts, and optional unwrap failures construct Nim exception objects. This is not ordinary successful-program state, but it prevents complete target-runtime memory-manager independence.
 ## Audit boundary
@@ -63,7 +63,7 @@ No full Eido build/test suite was run as part of this audit; conclusions are bas
 | Class-owned source field | one-slot `EidoStorage[T]` | Storage | compliant |
 | Storage descriptor | inline pointer/counters/flags | no backing allocation by descriptor itself | compliant | none |
 | Arena backing | `Storage<T>` root + borrowed slices | Eido Arena -> Storage | compliant | none |
-| Graph-copy memo | Nim `seq[tuple[source,target]]` | Nim memory manager | **gap** | move scratch state to Storage/Eido |
+| Graph-copy memo | paired source/target `Int` identities in one raw Storage block | hidden Eido `CopyRuntime` -> `Storage<Byte>` | **compliant (remediated)** | none for ownership; failure cleanup follows trap work |
 | Contracts/Storage failures | Nim exception object | Nim runtime | **gap, exceptional path** | non-Nim/Eido trap model |
 | `Process.argument()` result | foreign Nim `string` copied immediately to Eido String handle | Eido `StringRuntime` -> Storage after ABI bridge | **compliant (remediated)** | none |
 | Console internal buffers | native/Nim/OS I/O implementation | platform | boundary-acceptable | no Eido-visible ownership |
@@ -91,21 +91,24 @@ The remediation replaced that representation end-to-end:
 
 This closes the broad normal-success-path String ownership gap. Future String work such as interning, reference counting, or earlier reclamation is an optimization/lifetime-policy question, not required to restore the Storage ownership invariant.
 
-## Finding F2 — graph-copy memo state bypasses Storage
+## Finding F2 — graph-copy memo ownership violation **resolved**
 
-**Priority: P1**
+**Original priority: P1 — remediated after the baseline audit.**
 
-Evidence: `compiler/src/backend/nim/emitter/class_copy_emitter.nim` emits a per-class field of type `seq[tuple[source, target]]` inside the generated copy context, and appends entries with `.add(...)`.
+The baseline compiler emitted one Nim `seq[tuple[source,target]]` per class inside a generated copy context. That target-runtime container grew through the Nim memory manager even though copied object payloads themselves were Eido-managed.
 
-This allocation occurs at target runtime when `copy` traverses a class graph. The copied object payloads themselves use normal Eido object allocation, but the memoization structure that preserves sharing/cycles is owned by Nim.
+The remediation separates copy semantics from scratch ownership:
 
-This is a real normal-success-path ownership violation, although it is narrower than String because it appears only when class graph `copy` executes.
+- compiler-generated recursive copiers still define detached graph-copy semantics;
+- generated copiers carry no memo container and call only `copyMemoBegin`, `copyMemoLookup`, `copyMemoRemember`, and `copyMemoEnd` wrappers;
+- hidden `eido.stdlib.runtime/copy_runtime.eido` implements those operations in ordinary Eido;
+- one heterogeneous memo is sufficient because runtime-backed object identities are globally unique `Int` handles across class types;
+- the memo uses one raw `Storage<Byte>` block viewed as paired `Storage<Int>` source/target identities;
+- capacity grows by allocating replacement Storage, copying live pairs, adopting/releasing the old raw owner, then switching addresses;
+- every successful public copy operation explicitly releases its scratch block in `copyMemoEnd`;
+- generated target code contains no `seq[tuple...]`, copy context object, or `.add(...)` memo allocation.
 
-### Required end state
-
-Copy bookkeeping should use Storage-backed scratch state, preferably behind an ordinary Eido/runtime abstraction. The compiler may continue generating graph-copy semantics, but it should not select Nim `seq` as the storage owner.
-
-A minimal implementation can use growable Storage arrays of source/target identity pairs. A more general future scratch-map abstraction is reasonable only if another feature also needs it.
+Targeted execution verifies detached sharing, cyclic topology, growth beyond initial capacity, and consecutive copy operations after teardown/reset. The remaining abnormal-exit cleanup question is part of the general trap/failure boundary: Eido currently has no recoverable exception semantics, so a failure during copy terminates through the same backend trap machinery audited in F3.
 
 ## Finding F3 — failure/trap handling still depends on Nim-managed exceptions
 
@@ -254,13 +257,15 @@ All ownership acceptance criteria from the baseline audit are now satisfied:
 
 The current program-lifetime reclamation policy is intentionally simple and may be optimized later without changing the ownership result.
 
-### P1 — move graph-copy memoization to Storage/Eido
+### P1 — move graph-copy memoization to Storage/Eido — **completed**
 
-Acceptance criteria:
+All ownership acceptance criteria are now satisfied:
 
 - generated target code contains no `seq[tuple[source,target]]` copy tables;
-- cyclic/shared graph copy still preserves identity topology;
-- scratch backing is explicitly released or owned by an Eido lifetime policy.
+- cyclic/shared graph copy preserves identity topology;
+- memo growth remains Storage-backed;
+- successful copy operations explicitly release scratch backing;
+- copy and String language runtimes are injected independently by capability.
 
 ### P1/P2 — replace target Nim exception allocation with a trap/failure boundary
 
@@ -291,11 +296,10 @@ Delete the unused `class_emitter.nim` and ensure `ref object` / closure fallback
 
 The memory redesign is not missing a large automatic/local-memory layer. The major work already completed—object payloads, GC state, roots, metadata, interfaces, class-owned values, heap allocation, and arenas—is genuinely Storage-centered.
 
-String P0 is now closed. The remaining architecture debt is narrow and identifiable:
+String P0 and graph-copy P1 are now closed. The remaining architecture debt is narrow and identifiable:
 
-- **P1:** Nim-owned graph-copy memo `seq`;
 - **P1/P2:** Nim exception/trap allocation on failure paths;
 - **P2:** Storage address ownership provenance safety;
 - **P3:** bootstrap `ref object`/closure cleanup and recursive-stack robustness.
 
-With String backing migrated, the only known normal-success-path Eido-visible dynamic ownership bypass is graph-copy scratch memoization. After copy scratch state and target failure handling are migrated, a strict whole-target ownership claim will be much more defensible. Further memory work should then be driven by new language requirements (large inline values, embedded deterministic stack policy, new allocators, concurrency, etc.), not by a presumed need to route every local variable through Storage.
+With String backing and graph-copy scratch migrated, the audit finds no known normal-success-path Eido-visible dynamic ownership bypass. Target failure handling still prevents a strict every-path whole-target ownership claim. Further memory work should then be driven by new language requirements (large inline values, embedded deterministic stack policy, new allocators, concurrency, etc.), not by a presumed need to route every local variable through Storage.
