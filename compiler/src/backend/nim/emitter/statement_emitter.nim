@@ -78,8 +78,8 @@ proc renderStmtAt*(
       stmt.classFieldOwner.className,
       stmt.classFieldName
     )
-    result.add pad & "eidoStorageWrite(" & classSlot & ", int64(0), " &
-      renderExpr(stmt.classFieldValue) & ")\n"
+    result.add pad & classSlot & " = " &
+      renderExpr(stmt.classFieldValue) & "\n"
     if exitContext.instrumentationEnabled and
         stmt.classFieldValue.typ.isIdentityNominalType and
         exitContext.runtimeBindings.bindingWrite.len > 0:
@@ -87,7 +87,7 @@ proc renderStmtAt*(
         classOwnedFieldMemoryValueName(
           stmt.classFieldOwner.className,
           stmt.classFieldName
-        ) & ", eidoStorageRead(" & classSlot & ", int64(0)))\n"
+        ) & ", " & classSlot & ")\n"
     result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskCall:

@@ -33,11 +33,11 @@ proc initSourceSpan*(
 
 ## Reports whether this source span belongs to any compiler-injected hidden runtime code.
 proc isHiddenRuntime*(span: SourceSpan): bool =
-  span.sourceOrigin in {soLanguageRuntime, soCompilerRuntime}
+  span.sourceOrigin in {soLanguageRuntime, soMemoryPolicyRuntime}
 
 ## Reports whether this source span belongs to the selected memory-policy runtime.
-proc isCompilerRuntime*(span: SourceSpan): bool =
-  span.sourceOrigin == soCompilerRuntime
+proc isMemoryPolicyRuntime*(span: SourceSpan): bool =
+  span.sourceOrigin == soMemoryPolicyRuntime
 
 ## Reports whether this source span belongs to the built-in language runtime.
 proc isLanguageRuntime*(span: SourceSpan): bool =

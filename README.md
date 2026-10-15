@@ -121,15 +121,15 @@ eido clean
 
 ```text
 eido check [module.yaml]
-eido build [module.yaml] [--memory=gc|manual] [-o <output>]
-eido run [module.yaml] [--memory=gc|manual] [-- <application args...>]
+eido build [module.yaml] [--memory=gc|none|<policy-module>] [-o <output>]
+eido run [module.yaml] [--memory=gc|none|<policy-module>] [-- <application args...>]
 eido clean [module.yaml]
-eido compile <source.eido>... [--memory=gc|manual] -o <output>
+eido compile <source.eido>... [--memory=gc|none|<policy-module>] -o <output>
 eido --help
 eido --version
 ```
 
-`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default runtime policy; its hidden Eido implementation builds target-memory state over `Storage`. The compiler does **not** plan GC: it produces policy-neutral memory metadata (layout and identity-bearing fields/values) plus generic language event points. A private Eido compile-time policy chooses which event points need target instrumentation and which ordinary Eido runtime methods handle them. Class construction remains compiler semantics, while storage acquisition is one such policy-selected event. Runtime implementation classes and GC concepts remain opaque to the compiler. `--memory=manual` currently rejects identity-bearing class representation/construction until the explicit manual object model is implemented.
+`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default CLI alias for the SDK policy module `eido.stdlib.memory.managed`; `--memory=none` selects no automatic policy, and `--memory=<module>` selects any loaded module that declares `policySources`. The compiler does **not** plan GC or allocate target object addresses: it produces policy-neutral layout/identity facts and generic lifecycle events. The selected Eido policy binds those events to its ordinary Eido runtime methods, and its `objectAcquire(size, alignment, typeId)` handler obtains actual storage—normally through `Storage`. The standard GC uses exactly the same policy-module path as a user policy.
 
 `compile` is the lower-level standalone source path. Normal application development should currently prefer a `module.yaml` project because project compilation also provides the implicit SDK standard library and module architecture.
 
@@ -152,7 +152,7 @@ eido --version
 - Named-field construction.
 - Explicit `self` receiver semantics.
 - Static/type-associated methods inferred when `self` is not required; no `static` keyword.
-- Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; every class-owned value is lowered to a one-slot Storage-backed capability rather than a standalone backend value. Identity-bearing class/interface slots report their process-lifetime value identity through the same generic memory metadata boundary used by ordinary locals and parameters; the selected Eido policy decides what that means.
+- Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; the process-lifetime slot itself is inline backend representation and performs no dynamic allocation. If the value refers to dynamic backing (Storage, String, class/interface identity), that backing remains owned by the corresponding Eido runtime/policy. Identity-bearing class/interface slots report their value through the same generic lifecycle boundary used by ordinary bindings.
 - Generic classes with compiler specialization.
 - Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>.allocateRaw` is the single physical owned-allocation path; typed allocation adopts that raw backing, typed `view`/`viewAt`/`slice` capabilities are allocation-free, and `size`/`alignment` expose target layout through Storage itself. Target memory-management policy and mutable bookkeeping live above this substrate in Eido. The compiler may describe **what exists** (layout and identity-bearing fields/values) and expose generic semantic event points, but the selected Eido policy decides which events matter and **how values live** (GC roots/tracing, retain/release, arenas, collection triggers, or allocator policy).
 - Built-in immutable `String` now follows the same ownership boundary: target values are opaque machine-word handles, while UTF-8 bytes are allocated and reclaimed by hidden Eido language-runtime code over `Storage<Byte>`. Literals, concatenation, and equality do not use Nim-managed String backing; native/platform text is copied across the ABI boundary. Pure String computation is covered under Nim `--mm:none`.
@@ -267,7 +267,7 @@ The example README documents the deliberate failure scenarios as well.
 
 ## Memory-management demo
 
-[`examples/eido-memory-management`](examples/eido-memory-management) demonstrates the post-freeze memory architecture using only ordinary Eido plus the public `Storage<T>` substrate. It contains a uniquely named internal `heap_runtime` module (avoiding collisions with the implicit `eido.stdlib.memory` module) whose `HeapState` lives in Storage-backed class-owned state, while allocation, alignment, accounting, reset, and release policy stays in Eido.
+[`examples/eido-memory-management`](examples/eido-memory-management) demonstrates the post-freeze memory architecture using only ordinary Eido plus the public `Storage<T>` substrate. It contains a uniquely named internal `heap_runtime` module (avoiding collisions with the implicit `eido.stdlib.memory` module) whose class-owned `HeapState` handle is process-lifetime state while the heap backing itself is Storage-owned; allocation, alignment, accounting, reset, and release policy stays in Eido.
 
 ```bash
 cd examples/eido-memory-management
@@ -275,7 +275,7 @@ eido check
 eido run
 ```
 
-The example is intentionally a small bump heap rather than a second GC; its purpose is to make the Eido-owned runtime architecture visible and executable. The default `gc` policy consumes the same generic compiler facts and, in its own private Eido compile-time phase, binds the generic lifetime/boundary/construction events it needs. `MemoryValueRegistry` stores the resulting live identity-value reports, `MemoryTypeRegistry` stores field/layout metadata, and only `ManagedGcRuntime` interprets those facts as roots/traversal for mark-and-sweep. Physical backing remains delegated to `ManagedHeapAllocator` over `Storage<Byte>`. Current runtime-backed identities point directly at payload storage; the GC recovers its private header through an Eido-managed Storage back-pointer, so generated field/interface access requires no GC payload-offset callback.
+The example is intentionally a small bump heap rather than a second GC; its purpose is to make the Eido-owned runtime architecture visible and executable. The default `gc` module declares `stdlib/memory/managed/policy.eido` as `policySources`; that build-machine Eido code binds generic lifetime/boundary/construction events through the same `MemoryPolicy` API available to custom modules. `MemoryValueRegistry` stores the resulting live identity reports, `MemoryTypeRegistry` stores field/layout metadata, and only `ManagedGcRuntime` interprets those facts as roots/traversal for mark-and-sweep. Physical backing remains delegated to `ManagedHeapAllocator` over `Storage<Byte>`. Current runtime-backed identities point directly at payload storage; the GC recovers its private header through an Eido-managed Storage back-pointer.
 
 ## Editor/tooling support
 

@@ -1,4 +1,4 @@
-// Private callable-handle queries for compiler-standard compile-time phases.
+// Public callable-handle inspection API available to memory-policy modules.
 class CallableInfo {
     native function parameterCount(Int callable) returns Int;
     native function parameterAt(Int callable, Int index) returns Int;

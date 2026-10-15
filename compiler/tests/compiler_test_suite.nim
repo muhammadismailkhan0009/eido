@@ -96,7 +96,8 @@ import backend/nim/emitter/statement/while_statement_emitter_test
 import backend/nim/emitter/statement/for_statement_emitter_test
 import backend/nim/emitter/statement/loop_control_statement_emitter_test
 import backend/nim/emitter/statement/set_statement_emitter_test
-import compile_time/memory_strategy_test
+import compile_time/memory_policy_test
+import compile_time/memory_policy_plugin_test
 import pipeline/compiler_pipeline_test
 import project/project_compilation_test
 import project/storage_project_test

@@ -84,6 +84,38 @@ suite "Compiler architecture":
     check not fileExists(compilerRoot / "types" / "managed_gc_runtime.nim")
     check not fileExists(compilerRoot / "compile_time" / "gc_memory_strategy.nim")
 
+  test "loads memory policy modules without compiler-owned strategy algorithms":
+    let optionsSource = readFile(compilerRoot / "pipeline" / "options.nim")
+    let policyPhaseSource = readFile(
+      compilerRoot / "compile_time" / "runtime_policy_phase.nim"
+    )
+    let standardPolicy =
+      projectRoot / "stdlib" / "memory" / "managed" / "policy.eido"
+    let publicPolicyApi =
+      projectRoot / "compiler" / "compile_time" / "api" /
+        "memory_policy" / "MemoryPolicy.eido"
+
+    check "MemoryStrategy" notin optionsSource
+    check "msGc" notin optionsSource
+    check "msManual" notin optionsSource
+    check "memory_policy_gc" notin policyPhaseSource
+    check "ManagedGcRuntime" notin policyPhaseSource
+    check "MemoryValueRegistry" notin policyPhaseSource
+    check fileExists(standardPolicy)
+    check fileExists(publicPolicyApi)
+    check not dirExists(
+      projectRoot / "compiler" / "compile_time" / "phases" / "memory_policy_gc"
+    )
+
+  test "does not initiate dynamic target allocation outside the Storage API boundary":
+    let emitterRoot = compilerRoot / "backend" / "nim" / "emitter"
+    for path in nimSources(emitterRoot):
+      if path.extractFilename == "storage_support.nim":
+        continue
+      let source = readFile(path)
+      check "eidoStorageAllocate[" notin source
+      check "eidoStorageAllocateRaw(" notin source
+
   test "keeps compiler memory metadata policy-neutral":
     # Memory-specific compiler code may describe identity/layout/lifetime facts,
     # but collector policy words belong only to Eido runtime implementations.

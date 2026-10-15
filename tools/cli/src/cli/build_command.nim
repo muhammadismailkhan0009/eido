@@ -13,7 +13,7 @@ import ../../../../compiler/src/backend/nim/toolchain/compiler as nimCompiler
 proc buildFiles*(
   sourcePaths: seq[string],
   outputPath: string,
-  memoryStrategy: MemoryStrategy = msGc
+  memoryPolicy: MemoryPolicySelection = DefaultMemoryPolicy
 ) =
   var sources: seq[SourceUnit]
   for index, sourcePath in sourcePaths:
@@ -21,7 +21,7 @@ proc buildFiles*(
 
   let nimSource = compileProject(
     initProject(ptExecutable, sources),
-    CompilationOptions(memoryStrategy: memoryStrategy)
+    CompilationOptions(memoryPolicy: memoryPolicy)
   )
   nimCompiler.compileWithNim(nimSource, outputPath)
 
@@ -30,12 +30,12 @@ proc buildModuleFile*(
   manifestPath,
   outputPath: string,
   generatedSourcePath: string = "",
-  memoryStrategy: MemoryStrategy = msGc
+  memoryPolicy: MemoryPolicySelection = DefaultMemoryPolicy
 ) =
   let project = loadModuleProject(manifestPath, ptExecutable)
   let nimSource = compileProject(
     project,
-    CompilationOptions(memoryStrategy: memoryStrategy)
+    CompilationOptions(memoryPolicy: memoryPolicy)
   )
   nimCompiler.compileWithNim(nimSource, outputPath, generatedSourcePath)
 
@@ -43,6 +43,6 @@ proc buildModuleFile*(
 proc buildFile*(
   sourcePath,
   outputPath: string,
-  memoryStrategy: MemoryStrategy = msGc
+  memoryPolicy: MemoryPolicySelection = DefaultMemoryPolicy
 ) =
-  buildFiles(@[sourcePath], outputPath, memoryStrategy)
+  buildFiles(@[sourcePath], outputPath, memoryPolicy)

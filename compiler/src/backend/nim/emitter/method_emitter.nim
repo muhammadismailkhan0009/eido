@@ -53,13 +53,13 @@ proc renderMethod*(
 
   # Compiler-runtime implementation methods consume metadata; they must not
   # recursively report their own lexical lifetime/boundary events.
-  let isCompilerRuntimeMethod = methodDecl.span.isHiddenRuntime
+  let isHiddenRuntimeMethod = methodDecl.span.isHiddenRuntime
   let identityValues =
-    if isCompilerRuntimeMethod:
+    if isHiddenRuntimeMethod:
       @[]
     else:
       memoryMetadata.identityValuesForMethod(methodDecl.methodId)
-  if memoryMetadata.types.len > 0 and not isCompilerRuntimeMethod:
+  if memoryMetadata.types.len > 0 and not isHiddenRuntimeMethod:
     result.add renderMethodValuePreamble(methodDecl, identityValues, runtimeBindings)
 
   let hasInvariant = enforceInvariant and methodDecl.kind == mkInstance
@@ -94,7 +94,7 @@ proc renderMethod*(
       if hasInvariant: methodDecl.ownerType.className else: "",
     invariantReceiver: receiverName,
     ownerClassName: methodDecl.ownerType.className,
-    instrumentationEnabled: memoryMetadata.types.len > 0 and not isCompilerRuntimeMethod,
+    instrumentationEnabled: memoryMetadata.types.len > 0 and not isHiddenRuntimeMethod,
     identityValueIds: identityValues.identityValueIds,
     resultIdentityValueId: resultIdentityValueId,
     runtimeBindings: runtimeBindings

@@ -1,0 +1,17 @@
+// Standard managed-memory policy. This is an ordinary selectable Eido memory policy.
+// It binds policy-neutral compiler events to the runtime methods in this module.
+function main() {
+    MemoryPolicy.bindingEnter("MemoryRuntime.memoryValueEnter");
+    MemoryPolicy.bindingWrite("MemoryRuntime.memoryValueUpdate");
+    MemoryPolicy.bindingLeave("MemoryRuntime.memoryValueLeave");
+    MemoryPolicy.typeMetadata("MemoryRuntime.memoryTypeRegister");
+    MemoryPolicy.fieldMetadata("MemoryRuntime.memoryTypeSetField");
+    MemoryPolicy.objectAcquire("MemoryRuntime.memoryObjectAllocate");
+    MemoryPolicy.temporaryEnter("MemoryRuntime.memoryTemporaryEnter");
+    MemoryPolicy.temporaryLeave("MemoryRuntime.memoryTemporaryLeave");
+    MemoryPolicy.executionBoundary("MemoryRuntime.memoryExecutionBoundary");
+    MemoryPolicy.invariantEnter("MemoryRuntime.memoryObjectInvariantEnter");
+    MemoryPolicy.invariantLeave("MemoryRuntime.memoryObjectInvariantLeave");
+    MemoryPolicy.invariantClear("MemoryRuntime.memoryObjectInvariantClear");
+    MemoryPolicy.programExit("MemoryRuntime.memoryShutdown");
+}

@@ -25,7 +25,7 @@ suite "Inferred static method emission":
       generated.split("proc eido_method_0_Calculator_add(")[1].split(")")[0]
     check "return eido_method_0_Calculator_add(int64(20), int64(22))" in generated
 
-  test "routes class-owned state through Storage-backed slots":
+  test "keeps class-owned slots inline without compiler-initiated allocation":
     let source = """
       class Counter {
         Int Counter.count = 1;
@@ -41,8 +41,9 @@ suite "Inferred static method emission":
 
     let generated = emitSource(source)
 
-    check "import eido_storage" in generated
-    check "var eido_class_state_Counter_count: EidoStorage[int64]" in generated
-    check "eido_class_state_Counter_count = eidoStorageAllocate[int64](int64(1))" in generated
-    check "eidoStorageWrite(eido_class_state_Counter_count, int64(0), int64(1))" in generated
-    check "eidoStorageRead(eido_class_state_Counter_count, int64(0))" in generated
+    check "var eido_class_state_Counter_count: int64" in generated
+    check "eido_class_state_Counter_count = int64(1)" in generated
+    check "eido_class_state_Counter_count = (eido_class_state_Counter_count + int64(1))" in generated
+    check "eidoStorageAllocate" notin generated
+    check "eidoStorageRead(eido_class_state_Counter_count" notin generated
+    check "eidoStorageWrite(eido_class_state_Counter_count" notin generated

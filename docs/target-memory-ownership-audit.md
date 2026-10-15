@@ -3,7 +3,7 @@
 Date: 2026-10-15
 Baseline commit: `d273232` (`decouple memory policy from compiler`)
 
-Remediation status: **P0 String ownership and P1 graph-copy memo ownership are resolved after the baseline audit.** String backing and detached-copy scratch state are now owned by hidden Eido language-runtime code over `Storage`; native text is copied at ABI boundaries; generated copy traversal no longer owns a Nim container.
+Remediation status: **P0 String ownership and P1 graph-copy memo ownership are resolved after the baseline audit.** String backing and detached-copy scratch state are now owned by hidden Eido language-runtime code over `Storage`; native text is copied at ABI boundaries; generated copy traversal no longer owns a Nim container. The automatic memory-policy boundary has also been generalized: the SDK GC is now an ordinary selectable Eido module with `policySources`, and user modules can bind the same generic compiler events and provide their own Storage-backed target runtime.
 
 Remediation validation used targeted suites only (not the full suite): String feature execution, String optional presence, `Storage<String>`, native function/class-method boundaries, managed GC runtime, class copy/ref execution, copy emitter, module loading, Nim emission, compiler architecture, and compiler pipeline. Copy coverage includes sharing, cycles, memo growth, back-to-back operations, Storage ownership, and independent language-runtime capability injection.
 
@@ -15,7 +15,7 @@ The audit is intentionally deeper than a normal code review. It covers generated
 
 ## Executive conclusion
 
-The core memory architecture is substantially correct. Managed object payloads, GC headers, heap bookkeeping, roots, runtime type metadata, interface boxes, arenas, and class-owned source state are all routed through Eido code and `Storage`.
+The core memory architecture is substantially correct. Managed object payloads, GC headers, heap bookkeeping, root/type registries, interface boxes, arenas, String backing, and copy scratch are routed through Eido code and `Storage`. Fixed process-lifetime class-owned slots are inline backend representation and own no dynamic backing themselves.
 
 There is **no general local/parameter/result ownership problem**. Primitive values, object identities, Storage descriptors, and most optional values are inline/register/ABI representations. A backend may spill them to a machine stack slot, but that does not create an independent logical memory owner.
 
@@ -60,7 +60,7 @@ No full Eido build/test suite was run as part of this audit; conclusions are bas
 | Managed heap backing | `Storage<Byte>` | Eido `ManagedHeapAllocator` -> Storage | compliant | none |
 | Live identity registry | `Storage<Int>` + `Storage<Bool>` | Eido runtime -> Storage | compliant | none |
 | Runtime type/field registry | Storage arrays | Eido runtime -> Storage | compliant | none |
-| Class-owned source field | one-slot `EidoStorage[T]` | Storage | compliant |
+| Class-owned source field slot | inline process-lifetime backend value/handle/descriptor | no dynamic backing owned by slot | compliant |
 | Storage descriptor | inline pointer/counters/flags | no backing allocation by descriptor itself | compliant | none |
 | Arena backing | `Storage<T>` root + borrowed slices | Eido Arena -> Storage | compliant | none |
 | Graph-copy memo | paired source/target `Int` identities in one raw Storage block | hidden Eido `CopyRuntime` -> `Storage<Byte>` | **compliant (remediated)** | none for ownership; failure cleanup follows trap work |
@@ -130,7 +130,7 @@ Define a backend-neutral Eido trap/panic/failure boundary. The hosted backend ca
 For current ordinary target programs this does **not** constitute a live ownership violation:
 
 - GC mode generates object metadata whenever ordinary identity-bearing classes or object construction require runtime representation.
-- manual mode rejects identity-bearing class declarations and class construction before code generation.
+- no-policy mode rejects identity-bearing class declarations and class construction before code generation; any selected policy module must provide the generic object-acquisition capability required by runtime-backed classes.
 - the empty-plan path is used by compiler-standard build-machine Eido phase compilation and by declarations that do not require object identity.
 
 However, these fallbacks are dangerous architectural fossils. If manual object support or another strategy grows without tightening this path, Nim `ref object`/closure allocation could silently re-enter target semantics.
@@ -148,17 +148,15 @@ The current API contract says the address must originate from an owning Storage 
 This does not create a second allocator—the resulting owner is still Storage—but it weakens memory safety and can make Storage free memory it never acquired.
 
 Recommendation: when borrow/lifetime/provenance analysis matures, track ownership tokens/addresses strongly enough to prove `adoptAddress` provenance, or restrict this operation to trusted/runtime code if general source does not need it.
-## Finding F6 — class-owned Storage slots are compliant but intentionally process-lifetime
+## Finding F6 — class-owned slots are inline representation, not dynamic owners
 
-**Priority: P3 lifecycle hygiene**
+**Status: compliant.**
 
-Every class-owned source value is represented by a one-slot `EidoStorage[T]`, including runtime bookkeeping fields. This satisfies the ownership invariant: the backing allocation is obtained through Storage.
+Class-owned source slots have process lifetime, so the backend now represents the slot itself inline rather than dynamically allocating a one-slot Storage wrapper. This is analogous to a static ABI/data-segment location: it stores a scalar, String/object identity handle, or Storage descriptor but owns no separate dynamic backing merely by existing.
 
-Those outer one-slot capabilities are not generally released before process exit. Runtime shutdown releases the GC heap and the inner registry Storage arrays, but the class-owned wrapper slots themselves remain process-lifetime allocations.
+Any dynamic memory reachable through the value still follows the normal ownership boundary: Storage values own/refer to Storage backing, String handles refer to StringRuntime-owned Storage, and class/interface identities refer to storage acquired by the selected memory policy. Identity-bearing class-owned slots are reported as process-lifetime bindings to policies such as the standard GC.
 
-This is not a policy violation and matches static/class lifetime semantics. It is worth documenting because leak detectors may report these allocations even though they are deliberately rooted until process termination.
-
-If deterministic teardown becomes a requirement for embedded hosts, reusable runtimes, or in-process Eido instances, add explicit class-state teardown. It is not necessary for the current executable process model.
+This removes the previous compiler-emitted one-slot allocation and makes the architectural claim sharper: compiler/backend representation may provide fixed process-lifetime slots, while dynamic target allocation is initiated by Eido runtime/policy code.
 
 ## Finding F7 — the temporary main harness and native I/O still depend on backend runtime services
 
@@ -209,7 +207,7 @@ Runtime interface boxes use the same policy-selected object acquisition and are 
 
 ### Class-owned state
 
-Source class-owned values live in one-slot Storage backing. Backend globals hold Storage descriptors and generic value-slot IDs only; they are not parallel source-value owners.
+Source class-owned slots are inline process-lifetime backend representation. They may contain Storage descriptors or identity handles, but any dynamic backing those values reference is owned by Storage or the selected Eido runtime/policy; the slot itself performs no allocation.
 ### Storage substrate
 
 `EidoStorage[T]` is an allocation-free descriptor. `eidoStorageAllocateRaw` is the single hosted owned-backing allocation path and uses `alloc0`; `eidoStorageRelease` returns owned backing with `dealloc`. Typed allocate/view/slice operations compose or reinterpret that descriptor rather than acquiring a second hidden region.
@@ -294,7 +292,7 @@ Delete the unused `class_emitter.nim` and ensure `ref object` / closure fallback
 
 ## Final verdict
 
-The memory redesign is not missing a large automatic/local-memory layer. The major work already completed—object payloads, GC state, roots, metadata, interfaces, class-owned values, heap allocation, and arenas—is genuinely Storage-centered.
+The memory redesign is not missing a large automatic/local-memory layer. The major dynamic-memory work already completed—object payloads, GC state, registries, interface boxes, heap allocation, Strings, copy scratch, and arenas—is genuinely Storage-centered, while fixed local/static representation slots do not create parallel dynamic owners.
 
 String P0 and graph-copy P1 are now closed. The remaining architecture debt is narrow and identifiable:
 

@@ -58,28 +58,24 @@ suite "Managed GC runtime":
 
     let generated = compileProjectToNim(
       fixtureProject(source),
-      CompilationOptions(memoryStrategy: msGc)
+      CompilationOptions(memoryPolicy: DefaultMemoryPolicy)
     )
 
     let valueEnter = generated.find("_memoryValueEnter(int64(0))")
-    let slotAllocation = generated.find(
-      "eido_class_state_Registry_current = eidoStorageAllocate["
-    )
     let initializer = generated.find(
-      "eidoStorageWrite(eido_class_state_Registry_current, int64(0),"
+      "eido_class_state_Registry_current = eidoMemoryTemporaryScope("
     )
     let valueUpdate = generated.find(
       "_memoryValueUpdate(eido_class_memory_value_Registry_current"
     )
     check valueEnter >= 0
-    check slotAllocation >= 0
     check initializer >= 0
     check valueUpdate >= 0
-    check valueEnter < slotAllocation
-    check slotAllocation < initializer
+    check valueEnter < initializer
     check initializer < valueUpdate
-    check "var eido_class_state_Registry_current: EidoStorage[eido_class_Box]" in generated
-    check "eidoStorageRead(eido_class_state_Registry_current, int64(0))" in generated
+    check "var eido_class_state_Registry_current: eido_class_Box" in generated
+    check "eido_class_state_Registry_current = eidoStorageAllocate" notin generated
+    check "eidoStorageRead(eido_class_state_Registry_current" notin generated
     check "runtimeRoot" notin generated
     check "eidoGcPushRoot" notin generated
     check "import eido_managed_gc" notin generated
@@ -108,7 +104,7 @@ suite "Managed GC runtime":
 
     var generated = compileProjectToNim(
       fixtureProject(source),
-      CompilationOptions(memoryStrategy: msGc)
+      CompilationOptions(memoryPolicy: DefaultMemoryPolicy)
     )
 
     check "_memoryObjectAllocate(" in generated

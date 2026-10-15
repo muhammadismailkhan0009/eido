@@ -19,6 +19,13 @@ suite "Compiler-standard Eido memory metadata":
         }
       """)
 
+    expect ValueError:
+      discard analyzeSource("""
+        function main() {
+          MemoryPolicy.objectAcquire("Runtime.acquire");
+        }
+      """)
+
   test "builds policy-neutral object layout and identity-field metadata":
     let source = """
       class Child { Int value; }
@@ -31,7 +38,7 @@ suite "Compiler-standard Eido memory metadata":
     """
 
     let program = analyzeSource(source)
-    let metadata = runStandardCompileTimePhases(program, msGc)
+    let metadata = runStandardCompileTimePhases(program, DefaultMemoryPolicy)
 
     check metadata.types.len == 2
     var totalFields = 0
@@ -92,7 +99,7 @@ suite "Compiler-standard Eido memory metadata":
     """
 
     let program = analyzeSource(source)
-    let metadata = runStandardCompileTimePhases(program, msGc)
+    let metadata = runStandardCompileTimePhases(program, DefaultMemoryPolicy)
 
     var sawFunctionValues = false
     var sawMethodValues = false
@@ -133,7 +140,7 @@ suite "Compiler-standard Eido memory metadata":
 
     let generated = compileProjectToNim(
       fixtureProject(source),
-      CompilationOptions(memoryStrategy: msGc)
+      CompilationOptions(memoryPolicy: DefaultMemoryPolicy)
     )
 
     check "eido_class_Parent_memory_payload_size = int64(24)" in generated
@@ -164,8 +171,7 @@ suite "Compiler-standard Eido memory metadata":
         "memory_metadata" / "MemoryMetadataBuilder.eido"
     )
     let gcPolicy = readFile(
-      projectRoot / "compiler" / "compile_time" / "phases" /
-        "memory_policy_gc" / "runner.eido"
+      projectRoot / "stdlib" / "memory" / "managed" / "policy.eido"
     )
     let bindingResolver = readFile(
       projectRoot / "compiler" / "src" / "backend" / "nim" / "emitter" /
@@ -188,7 +194,7 @@ suite "Compiler-standard Eido memory metadata":
     check "memoryObjectAllocate" notin bindingResolver
     check "memoryExecutionBoundary" notin bindingResolver
 
-  test "manual strategy accepts primitive and Storage-only programs":
+  test "no automatic policy accepts primitive and Storage-only programs":
     let source = """
       function main() returns Int {
         var storage = Storage<Int>.allocate(2);
@@ -201,14 +207,14 @@ suite "Compiler-standard Eido memory metadata":
 
     let generated = compileProjectToNim(
       fixtureProject(source),
-      CompilationOptions(memoryStrategy: msManual)
+      CompilationOptions(memoryPolicy: NoMemoryPolicy)
     )
 
     check "when isMainModule" in generated
     check "_memory_payload_size" notin generated
     check "memoryTypeRegister" notin generated
 
-  test "manual strategy rejects even zero-field class construction":
+  test "no automatic policy rejects even zero-field class construction":
     let source = """
       class Token {}
       function main() { var token = Token {}; }
@@ -217,10 +223,10 @@ suite "Compiler-standard Eido memory metadata":
     expect ValueError:
       discard compileProjectToNim(
         fixtureProject(source),
-        CompilationOptions(memoryStrategy: msManual)
+        CompilationOptions(memoryPolicy: NoMemoryPolicy)
       )
 
-  test "manual strategy rejects identity-bearing class declarations":
+  test "no automatic policy rejects identity-bearing class declarations":
     let source = """
       class Account { Int balance; }
       function main() { var account = Account { balance = 1; }; }
@@ -229,7 +235,7 @@ suite "Compiler-standard Eido memory metadata":
     expect ValueError:
       discard compileProjectToNim(
         fixtureProject(source),
-        CompilationOptions(memoryStrategy: msManual)
+        CompilationOptions(memoryPolicy: NoMemoryPolicy)
       )
 
   test "compile-time metadata contracts do not leak into target code":
@@ -240,7 +246,7 @@ suite "Compiler-standard Eido memory metadata":
 
     let generated = compileProjectToNim(
       fixtureProject(source),
-      CompilationOptions(memoryStrategy: msGc)
+      CompilationOptions(memoryPolicy: DefaultMemoryPolicy)
     )
 
     check "StorageInfo" notin generated

@@ -1,4 +1,4 @@
-// Private type-handle queries for compiler-standard memory metadata.
+// Public type-handle inspection API available to memory-policy modules.
 class TypeInfo {
     native function isIdentity(Int type) returns Bool;
     native function fieldCount(Int type) returns Int;

@@ -12,7 +12,7 @@ type
   SourceOrigin* = enum
     soOrdinary,
     soLanguageRuntime,
-    soCompilerRuntime
+    soMemoryPolicyRuntime
 
   SourceUnit* = object
     id*: SourceId

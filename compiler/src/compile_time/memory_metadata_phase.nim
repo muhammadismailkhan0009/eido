@@ -34,22 +34,22 @@ const
     currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/module.yaml"
   )
   CompilerPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/Compiler.eido"
+    currentSourcePath().parentDir / "../../compile_time/api/memory_policy/Compiler.eido"
   )
   TypeInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/TypeInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/api/memory_policy/TypeInfo.eido"
   )
   CallableInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/CallableInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/api/memory_policy/CallableInfo.eido"
   )
   ValueInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/ValueInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/api/memory_policy/ValueInfo.eido"
   )
   FieldInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/FieldInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/api/memory_policy/FieldInfo.eido"
   )
   StorageInfoPhaseSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/StorageInfo.eido"
+    currentSourcePath().parentDir / "../../compile_time/api/memory_policy/StorageInfo.eido"
   )
   MemoryMetadataPhaseSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/MemoryMetadata.eido"
@@ -272,12 +272,12 @@ proc runMemoryMetadataPhase*(
     CompileTimeNativeSupportSource,
     semanticSnapshot.compileTimeSnapshotJson(),
     @[
-      CompileTimePhaseSource(entry: "Compiler.eido", text: CompilerPhaseSource),
-      CompileTimePhaseSource(entry: "TypeInfo.eido", text: TypeInfoPhaseSource),
-      CompileTimePhaseSource(entry: "CallableInfo.eido", text: CallableInfoPhaseSource),
-      CompileTimePhaseSource(entry: "ValueInfo.eido", text: ValueInfoPhaseSource),
-      CompileTimePhaseSource(entry: "FieldInfo.eido", text: FieldInfoPhaseSource),
-      CompileTimePhaseSource(entry: "StorageInfo.eido", text: StorageInfoPhaseSource),
+      CompileTimePhaseSource(entry: "../../api/memory_policy/Compiler.eido", text: CompilerPhaseSource),
+      CompileTimePhaseSource(entry: "../../api/memory_policy/TypeInfo.eido", text: TypeInfoPhaseSource),
+      CompileTimePhaseSource(entry: "../../api/memory_policy/CallableInfo.eido", text: CallableInfoPhaseSource),
+      CompileTimePhaseSource(entry: "../../api/memory_policy/ValueInfo.eido", text: ValueInfoPhaseSource),
+      CompileTimePhaseSource(entry: "../../api/memory_policy/FieldInfo.eido", text: FieldInfoPhaseSource),
+      CompileTimePhaseSource(entry: "../../api/memory_policy/StorageInfo.eido", text: StorageInfoPhaseSource),
       CompileTimePhaseSource(entry: "MemoryMetadata.eido", text: MemoryMetadataPhaseSource),
       CompileTimePhaseSource(
         entry: "MemoryMetadataBuilder.eido",

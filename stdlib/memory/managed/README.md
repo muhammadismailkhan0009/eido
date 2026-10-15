@@ -1,17 +1,22 @@
 # eido.stdlib.memory.managed
 
-Compiler-private default managed-memory implementation. This SDK module exports nothing to ordinary applications.
+The SDK's default managed-memory policy and runtime, written in Eido. It is the implementation selected by the CLI alias `--memory=gc`; it is **not** privileged compiler logic.
 
-- `MemoryValueRegistry` stores Storage-backed live identity reports selected by the GC policy.
-- `MemoryTypeRegistry` stores compiler-provided generic field/layout facts in Storage.
-- `ManagedHeapAllocator` owns physical managed-object backing over `Storage<Byte>`.
-- `ManagedGcRuntime` owns private headers, heap links, mark/sweep, collection triggers, temporary protection, invariant depth, and shutdown in ordinary Eido.
-- `MemoryRuntime` contains ordinary Eido methods that the GC compile-time policy chooses as handlers for generic compiler event points.
+`module.yaml` declares two roles:
 
-The compiler does not know roots, tracing, safepoints, collection, or these implementation classes. It provides policy-neutral metadata and generic semantic event points. `compiler/compile_time/phases/memory_policy_gc` chooses which events the GC needs and binds them to ordinary Eido methods; `ManagedGcRuntime` then gives those generic reports their GC meaning.
+- `policySources: [policy.eido]` — build-machine policy code that binds generic compiler lifecycle events through the public `MemoryPolicy` API.
+- `sources:` — target-runtime Eido code injected only when this module is the selected policy.
 
-Runtime-backed identity currently points directly at object payload storage. `ManagedGcRuntime` keeps its private header before the payload and stores a Storage-backed header back-pointer immediately before the payload. Generated class/interface access therefore performs only a direct typed payload cast and does not call GC code to locate the payload.
+The runtime contains:
 
-There is no dedicated native managed-GC support module. All target-memory ownership and GC policy remain Eido code above `Storage`; the Nim backend supplies physical Storage mechanics and representation glue only.
+- `MemoryValueRegistry` — Storage-backed live identity reports selected by this policy.
+- `MemoryTypeRegistry` — Storage-backed generic field/layout facts.
+- `ManagedHeapAllocator` — managed-object backing over `Storage<Byte>`.
+- `ManagedGcRuntime` — private headers, heap links, mark/sweep, collection triggers, temporary protection, invariant depth, and shutdown.
+- `MemoryRuntime` — typed handlers bound by `policy.eido` to generic compiler events.
 
-These hidden Eido sources carry generic compiler-runtime source origin. Initial metadata analysis filters that origin; when the selected automatic policy needs runtime support, target compilation analyzes the original project with those sources present. Primitive-only/manual targets therefore pay no collector/allocator runtime cost.
+The compiler knows none of those implementation classes or GC concepts. It exposes program/type metadata and neutral events such as binding enter/write/leave, object storage acquisition, temporary scopes, execution boundaries, invariant lifecycle, and program exit. The selected policy decides whether and how to use them.
+
+A project may select another module with its own `policySources` and runtime sources instead. Such a module goes through the same compiler path as this standard policy and may acquire physical memory only through normal Eido capabilities such as `Storage<T>`.
+
+Runtime-backed identity currently points directly at object payload storage. This managed implementation keeps its private header before the payload and stores a Storage-backed header back-pointer immediately before the payload. Generated class/interface access therefore performs only representation glue; allocation and lifetime remain policy-owned Eido code.

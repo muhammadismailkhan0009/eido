@@ -93,6 +93,10 @@ suite "Module project loading":
       BuiltinMemoryRuntimeSourcePath
     ]
     check project.modules[6].exports.len == 0
+    check project.modules[6].policySources.len == 1
+    check project.modules[6].policySources[0].entry == "policy.eido"
+    check project.modules[6].policySources[0].path == BuiltinManagedPolicySourcePath
+    check "MemoryPolicy.objectAcquire" in project.modules[6].policySources[0].text
     check project.modules[7].canonicalName == BuiltinTextModuleName
     check project.modules[7].sourcePaths == @[BuiltinStringRuntimeSourcePath]
     check project.modules[7].exports.len == 0
@@ -119,7 +123,7 @@ suite "Module project loading":
       check project.sources[index].origin == soOrdinary
       check project.sources[index].runtimeCapability == lrcNone
     for index in 6 .. 10:
-      check project.sources[index].origin == soCompilerRuntime
+      check project.sources[index].origin == soMemoryPolicyRuntime
       check project.sources[index].runtimeCapability == lrcNone
     check project.sources[11].origin == soLanguageRuntime
     check project.sources[11].runtimeCapability == lrcString

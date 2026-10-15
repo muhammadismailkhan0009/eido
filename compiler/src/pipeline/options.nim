@@ -1,35 +1,23 @@
-## Defines compilation-policy options that are independent of source/module architecture.
-## Example: the same Eido project may compile with GC planning or explicit manual memory.
+## Defines compilation-policy options independently of any particular memory strategy.
+## Memory policy is selected by module identity; an empty identity means no automatic policy.
 
 type
-  MemoryStrategy* = enum
-    msGc,
-    msManual
+  MemoryPolicySelection* = object
+    moduleName*: string
 
   CompilationOptions* = object
-    memoryStrategy*: MemoryStrategy
+    memoryPolicy*: MemoryPolicySelection
 
 const
-  DefaultCompilationOptions* = CompilationOptions(memoryStrategy: msGc)
+  DefaultMemoryPolicyModule* = "eido.stdlib.memory.managed"
+  DefaultMemoryPolicy* = MemoryPolicySelection(moduleName: DefaultMemoryPolicyModule)
+  NoMemoryPolicy* = MemoryPolicySelection(moduleName: "")
+  DefaultCompilationOptions* = CompilationOptions(memoryPolicy: DefaultMemoryPolicy)
 
-## Parses the stable CLI spelling of one compiler memory strategy.
-## Example: gc selects the current precise mark-and-sweep strategy.
-proc parseMemoryStrategy*(name: string): MemoryStrategy =
-  case name
-  of "gc":
-    msGc
-  of "manual":
-    msManual
-  else:
-    raise newException(
-      ValueError,
-      "unknown Eido memory strategy '" & name &
-        "'; expected gc or manual"
-    )
+## Creates a generic memory-policy selection from one canonical module identity.
+proc selectMemoryPolicy*(moduleName: string): MemoryPolicySelection =
+  MemoryPolicySelection(moduleName: moduleName)
 
-## Returns the stable CLI spelling of one compiler memory strategy.
-## Example: msManual renders as manual.
-proc memoryStrategyName*(strategy: MemoryStrategy): string =
-  case strategy
-  of msGc: "gc"
-  of msManual: "manual"
+## Reports whether automatic memory policy is selected for this compilation.
+proc isSelected*(selection: MemoryPolicySelection): bool =
+  selection.moduleName.len > 0

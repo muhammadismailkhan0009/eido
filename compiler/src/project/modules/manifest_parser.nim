@@ -7,7 +7,7 @@ import model
 
 const TopLevelKeys = [
   "module", "sources", "children", "dependencies",
-  "exports", "provides", "adopts"
+  "exports", "provides", "adopts", "policySources"
 ]
 
 ## Documents the unquote module helper behavior.
@@ -91,6 +91,7 @@ proc addSequenceValue(
   of "dependencies": manifest.dependencies.add item
   of "exports": manifest.exports.add item
   of "adopts": manifest.adopts.add item
+  of "policySources": manifest.policySources.add item
   else:
     failAt(
       path, lineNumber, 1,
@@ -146,7 +147,7 @@ proc parseModuleManifest*(text, path: string): ModuleManifest =
           failAt(path, lineNumber, 1, "module name cannot be empty")
       elif pair.value.len > 0:
         case pair.key
-        of "sources", "dependencies", "exports", "adopts":
+        of "sources", "dependencies", "exports", "adopts", "policySources":
           if pair.value != "[]":
             failAt(path, lineNumber, 1, "'" & pair.key & "' must be a YAML sequence")
         of "children", "provides":

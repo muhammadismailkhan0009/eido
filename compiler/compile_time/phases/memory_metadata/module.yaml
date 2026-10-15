@@ -1,12 +1,12 @@
 module: memory_metadata
 
 sources:
-  - Compiler.eido
-  - TypeInfo.eido
-  - CallableInfo.eido
-  - ValueInfo.eido
-  - FieldInfo.eido
-  - StorageInfo.eido
+  - ../../api/memory_policy/Compiler.eido
+  - ../../api/memory_policy/TypeInfo.eido
+  - ../../api/memory_policy/CallableInfo.eido
+  - ../../api/memory_policy/ValueInfo.eido
+  - ../../api/memory_policy/FieldInfo.eido
+  - ../../api/memory_policy/StorageInfo.eido
   - MemoryMetadata.eido
   - MemoryMetadataBuilder.eido
   - runner.eido

@@ -10,6 +10,11 @@ type
     contract*: string
     by*: string
 
+  ModulePolicySource* = object
+    entry*: string
+    path*: string
+    text*: string
+
   ModuleManifest* = object
     name*: string
     sources*: seq[string]
@@ -18,6 +23,7 @@ type
     exports*: seq[string]
     provides*: seq[ModuleProvideManifest]
     adopts*: seq[string]
+    policySources*: seq[string]
 
   ModuleProvision* = object
     contract*: string
@@ -35,3 +41,4 @@ type
     exports*: seq[string]
     provides*: seq[ModuleProvision]
     adopts*: seq[string]
+    policySources*: seq[ModulePolicySource]

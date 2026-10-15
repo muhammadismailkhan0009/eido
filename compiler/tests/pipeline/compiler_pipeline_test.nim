@@ -241,7 +241,7 @@ suite "Compiler pipeline":
     nimCompiler.compileWithNim(
       compileToNim(
         source,
-        CompilationOptions(memoryStrategy: msManual)
+        CompilationOptions(memoryPolicy: NoMemoryPolicy)
       ),
       outputPath,
       memoryMode = "none"
@@ -268,7 +268,7 @@ suite "Compiler pipeline":
     nimCompiler.compileWithNim(
       compileToNim(
         source,
-        CompilationOptions(memoryStrategy: msManual)
+        CompilationOptions(memoryPolicy: NoMemoryPolicy)
       ),
       outputPath,
       memoryMode = "none"

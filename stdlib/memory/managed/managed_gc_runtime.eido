@@ -1,4 +1,4 @@
-// Compiler-private managed-memory runtime policy written in Eido over Storage.
+// SDK default managed-memory runtime policy written in Eido over Storage.
 class ManagedGcRuntime {
     Int ManagedGcRuntime.heapHead = 0;
     Int ManagedGcRuntime.collectionThreshold = 64;

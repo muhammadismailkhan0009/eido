@@ -12,6 +12,7 @@ import ../project/modules/model as moduleModel
 import ../semantic/analysis/program_analysis
 import ../semantic/modules/architecture_validation
 import ../source/source_unit
+import ../stdlib/builtin_sources
 
 type
   CompileTimePhaseSource* = object
@@ -94,6 +95,19 @@ proc lowerPhaseModuleToNim(
         "compiler-standard Eido phase manifest references missing source '" &
           sourceEntry & "'"
       )
+
+  # Compile-time APIs use ordinary Eido String values for names and diagnostics.
+  # Attach the same policy-independent String runtime used by target compilation.
+  let stringRuntimePath = "<eido-compile-time>/runtime/string_runtime.eido"
+  sourcePaths.add stringRuntimePath
+  sourceUnits.add initSourceUnit(
+    sourceUnits.len,
+    stringRuntimePath,
+    BuiltinStringRuntimeSource,
+    canonicalName,
+    soLanguageRuntime,
+    lrcString
+  )
 
   let phaseModule = moduleModel.ModuleSpec(
     name: manifest.name,

@@ -1,5 +1,5 @@
-## Selects and runs compiler-standard Eido memory strategies.
-## Strategy entrypoints are build-machine-only and never enter ordinary Eido source.
+## Derives policy-neutral memory metadata and validates memory-policy availability.
+## Concrete memory behavior is supplied by the selected Eido policy module.
 
 import ../diagnostics/errors
 import ../hir/declarations as hirDeclarations
@@ -156,14 +156,19 @@ proc hasObjectConstruction(program: hirProgram.HirProgram): bool =
 
   false
 
-## Rejects object-identity declarations while the explicit manual object model is unfinished.
-## Primitive/Storage-only and stateless static-API programs may already use manual memory safely.
-proc validateManualStrategy(program: hirProgram.HirProgram) =
+## Rejects identity-backed programs when no automatic memory policy is selected.
+## Primitive/Storage-only and stateless static-API programs need no object-storage policy.
+proc validateMemoryPolicyAvailability(
+  program: hirProgram.HirProgram,
+  policy: MemoryPolicySelection
+) =
+  if policy.isSelected:
+    return
   for classDecl in program.classes:
     if classDecl.requiresObjectIdentity:
       failAt(
         classDecl.span,
-        "manual memory strategy does not support identity-bearing class declarations yet"
+        "program requires object storage, but no memory policy is selected"
       )
 
   for fn in program.functions:
@@ -171,7 +176,7 @@ proc validateManualStrategy(program: hirProgram.HirProgram) =
     if not construction.isNil:
       failAt(
         construction.span,
-        "manual memory strategy does not support class construction yet"
+        "class construction requires object storage, but no memory policy is selected"
       )
 
   for classDecl in program.classes:
@@ -180,7 +185,7 @@ proc validateManualStrategy(program: hirProgram.HirProgram) =
       if not construction.isNil:
         failAt(
           construction.span,
-          "manual memory strategy does not support class construction yet"
+          "class construction requires object storage, but no memory policy is selected"
         )
 
     for methodDecl in classDecl.methods:
@@ -190,20 +195,16 @@ proc validateManualStrategy(program: hirProgram.HirProgram) =
       if not construction.isNil:
         failAt(
           construction.span,
-          "manual memory strategy does not support class construction yet"
+          "class construction requires object storage, but no memory policy is selected"
         )
 
-## Builds generic memory metadata required by automatic object runtimes.
-## Strategy selection decides runtime availability, not the shape of compiler metadata.
+## Builds policy-neutral memory metadata when the selected policy needs object identity.
+## The compiler reports structure; the selected Eido policy decides all memory behavior.
 proc runStandardCompileTimePhases*(
   program: hirProgram.HirProgram,
-  strategy: MemoryStrategy = msGc
+  policy: MemoryPolicySelection = DefaultMemoryPolicy
 ): CompileTimeMemoryMetadata =
-  case strategy
-  of msGc:
-    if program.hasIdentityClasses or program.hasObjectConstruction:
-      return runMemoryMetadataPhase(program)
-    CompileTimeMemoryMetadata()
-  of msManual:
-    validateManualStrategy(program)
-    CompileTimeMemoryMetadata()
+  validateMemoryPolicyAvailability(program, policy)
+  if policy.isSelected and (program.hasIdentityClasses or program.hasObjectConstruction):
+    return runMemoryMetadataPhase(program)
+  CompileTimeMemoryMetadata()

@@ -198,6 +198,35 @@ proc loadModuleProject*(
     let ownIndex = modules.len
     modules.add spec
 
+    for policyEntry in manifest.policySources:
+      let policyPath = absolutePath(directory / policyEntry)
+      if policyPath in ownedSourcePaths:
+        failAt(
+          normalizedManifest, 1, 1,
+          "source file belongs to more than one module role: " & policyPath
+        )
+      if policyEntry in manifest.sources:
+        failAt(
+          normalizedManifest, 1, 1,
+          "memory policy source must not also be a target source: " & policyEntry
+        )
+      if policyPath.splitFile.ext != ".eido":
+        failAt(
+          normalizedManifest, 1, 1,
+          "memory policy source must be an .eido file: " & policyEntry
+        )
+      if not fileExists(policyPath):
+        failAt(
+          normalizedManifest, 1, 1,
+          "memory policy source does not exist: " & policyEntry
+        )
+      ownedSourcePaths.incl policyPath
+      modules[ownIndex].policySources.add ModulePolicySource(
+        entry: policyEntry,
+        path: policyPath,
+        text: readFile(policyPath)
+      )
+
     for sourceEntry in manifest.sources:
       let sourcePath = absolutePath(directory / sourceEntry)
       if sourcePath in ownedSourcePaths:
@@ -222,7 +251,8 @@ proc loadModuleProject*(
         sources.len,
         sourcePath,
         readFile(sourcePath),
-        canonical
+        canonical,
+        if manifest.policySources.len > 0: soMemoryPolicyRuntime else: soOrdinary
       )
 
     for child in manifest.children:

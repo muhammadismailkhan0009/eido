@@ -29,25 +29,27 @@ suite "CLI project integration":
     check options.sourcePaths == @["Main.eido", "Helper.eido"]
     check options.outputPath == "app"
 
-  test "parses compiler memory strategy for build run and compile":
+  test "parses memory policy selection for build run and compile":
     let buildOptions = parseArgs(@["build", "--memory=manual"])
-    check buildOptions.memoryStrategy == msManual
+    check buildOptions.memoryPolicy == NoMemoryPolicy
 
     let runOptions = parseArgs(@[
       "run", "shop/module.yaml", "--memory=manual", "--", "arg"
     ])
-    check runOptions.memoryStrategy == msManual
+    check runOptions.memoryPolicy == NoMemoryPolicy
     check runOptions.applicationArgs == @["arg"]
 
     let compileOptions = parseArgs(@[
       "compile", "Main.eido", "--memory=manual", "-o", "app"
     ])
-    check compileOptions.memoryStrategy == msManual
+    check compileOptions.memoryPolicy == NoMemoryPolicy
 
-    check parseArgs(@["build"]).memoryStrategy == msGc
+    check parseArgs(@["build"]).memoryPolicy == DefaultMemoryPolicy
 
-    expect ValueError:
-      discard parseArgs(@["build", "--memory=arc"])
+    let customPolicy = parseArgs(@[
+      "build", "--memory=shop.memory.experimental"
+    ])
+    check customPolicy.memoryPolicy.moduleName == "shop.memory.experimental"
 
   test "uses a conventional project build layout":
     let root = freshProject("layout")
@@ -122,7 +124,7 @@ suite "CLI project integration":
 
     check exitCode == 0
     check fileExists(layout.executablePath)
-  test "manual strategy builds a primitive module with implicit stdlib":
+  test "no automatic policy builds a primitive module with implicit stdlib":
     let root = freshProject("manual_strategy")
     defer:
       if dirExists(root):
@@ -147,7 +149,7 @@ suite "CLI project integration":
     buildModuleFile(
       root / "module.yaml",
       outputPath,
-      memoryStrategy = msManual
+      memoryPolicy = NoMemoryPolicy
     )
 
     check execProcess(outputPath).strip() == "7"

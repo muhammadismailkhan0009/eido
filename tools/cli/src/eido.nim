@@ -30,7 +30,7 @@ when isMainModule:
         buildModuleFile(
           manifestPath,
           options.outputPath,
-          memoryStrategy = options.memoryStrategy
+          memoryPolicy = options.memoryPolicy
         )
         echo "Built " & options.outputPath
       else:
@@ -39,7 +39,7 @@ when isMainModule:
           manifestPath,
           layout.executablePath,
           layout.generatedSourcePath,
-          options.memoryStrategy
+          options.memoryPolicy
         )
         echo "Built " & layout.executablePath
 
@@ -80,7 +80,7 @@ when isMainModule:
         manifestPath,
         options.applicationArgs,
         layout,
-        options.memoryStrategy
+        options.memoryPolicy
       )
       if exitCode != 0:
         quit(exitCode)
@@ -94,7 +94,7 @@ when isMainModule:
       buildFiles(
         options.sourcePaths,
         options.outputPath,
-        options.memoryStrategy
+        options.memoryPolicy
       )
       echo "Built " & options.outputPath
 

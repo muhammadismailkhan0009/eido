@@ -8,3 +8,6 @@ sources:
   - memory_runtime.eido
 
 exports: []
+
+policySources:
+  - policy.eido

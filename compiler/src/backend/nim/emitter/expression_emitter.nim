@@ -158,10 +158,10 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
   of hirExpressions.hekFieldAccess:
     result = renderFieldAccess(expr)
   of hirExpressions.hekClassFieldAccess:
-    result = "eidoStorageRead(" & classOwnedFieldName(
+    result = classOwnedFieldName(
       expr.classFieldOwner.className,
       expr.classFieldName
-    ) & ", int64(0))"
+    )
   of hirExpressions.hekMethodCall:
     result = renderMethodCall(expr.methodCall)
   of hirExpressions.hekUnary:

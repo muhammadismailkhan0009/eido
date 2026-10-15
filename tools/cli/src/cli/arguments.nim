@@ -22,7 +22,7 @@ type
     outputPath*: string
     sourcePaths*: seq[string]
     applicationArgs*: seq[string]
-    memoryStrategy*: MemoryStrategy
+    memoryPolicy*: MemoryPolicySelection
     documentStdlib*: bool
 
 const
@@ -32,13 +32,13 @@ const
 proc usage*(): string =
   "Eido compiler and project tool\n\n" &
   "Usage:\n" &
-  "  eido build [module.yaml] [--memory=gc|manual] [-o <output>]\n" &
+  "  eido build [module.yaml] [--memory=gc|manual|none|<policy-module>] [-o <output>]\n" &
   "  eido check [module.yaml]\n" &
   "  eido doc [module.yaml] [-o <directory>]\n" &
   "  eido doc --stdlib [-o <directory>]\n" &
-  "  eido run [module.yaml] [--memory=gc|manual] [-- <application args...>]\n" &
+  "  eido run [module.yaml] [--memory=gc|manual|none|<policy-module>] [-- <application args...>]\n" &
   "  eido clean [module.yaml]\n" &
-  "  eido compile <source.eido>... [--memory=gc|manual] -o <output>\n" &
+  "  eido compile <source.eido>... [--memory=gc|manual|none|<policy-module>] -o <output>\n" &
   "  eido --help\n" &
   "  eido --version"
 
@@ -50,7 +50,7 @@ proc requireModuleManifest(path: string) =
       "Eido projects use module.yaml as their architecture root\n" & usage()
     )
 
-## Parses one --memory=<strategy> option when present.
+## Parses one --memory=<policy> option when present.
 proc parseMemoryOption(arg: string, options: var CliOptions): bool =
   if not arg.startsWith(MemoryOptionPrefix):
     return false
@@ -58,7 +58,11 @@ proc parseMemoryOption(arg: string, options: var CliOptions): bool =
   let name = arg[MemoryOptionPrefix.len .. ^1]
   if name.len == 0:
     raise newException(ValueError, usage())
-  options.memoryStrategy = parseMemoryStrategy(name)
+  options.memoryPolicy =
+    case name
+    of "gc": DefaultMemoryPolicy
+    of "manual", "none": NoMemoryPolicy
+    else: selectMemoryPolicy(name)
   true
 
 ## Parses an optional explicit manifest at the current argument index.
@@ -72,10 +76,10 @@ proc parseOptionalManifest(
     requireModuleManifest(options.modulePath)
     inc index
 
-## Parses the project build command with optional output and memory strategy.
+## Parses the project build command with optional output and memory policy.
 proc parseBuild(args: seq[string]): CliOptions =
   result.command = ccBuild
-  result.memoryStrategy = msGc
+  result.memoryPolicy = DefaultMemoryPolicy
   var index = 1
   parseOptionalManifest(args, index, result)
 
@@ -94,7 +98,7 @@ proc parseBuild(args: seq[string]): CliOptions =
 ## Parses one project command that accepts only an optional explicit manifest.
 proc parseManifestOnly(args: seq[string], command: CliCommand): CliOptions =
   result.command = command
-  result.memoryStrategy = msGc
+  result.memoryPolicy = DefaultMemoryPolicy
   var index = 1
   parseOptionalManifest(args, index, result)
   if index != args.len:
@@ -103,7 +107,7 @@ proc parseManifestOnly(args: seq[string], command: CliCommand): CliOptions =
 ## Parses project documentation generation with an optional output directory.
 proc parseDoc(args: seq[string]): CliOptions =
   result.command = ccDoc
-  result.memoryStrategy = msGc
+  result.memoryPolicy = DefaultMemoryPolicy
   var index = 1
   parseOptionalManifest(args, index, result)
 
@@ -122,10 +126,10 @@ proc parseDoc(args: seq[string]): CliOptions =
       continue
     raise newException(ValueError, usage())
 
-## Parses project execution with memory strategy and application arguments.
+## Parses project execution with memory policy and application arguments.
 proc parseRun(args: seq[string]): CliOptions =
   result.command = ccRun
-  result.memoryStrategy = msGc
+  result.memoryPolicy = DefaultMemoryPolicy
   var index = 1
   parseOptionalManifest(args, index, result)
 
@@ -143,7 +147,7 @@ proc parseRun(args: seq[string]): CliOptions =
 ## Parses standalone source compilation without the project/module loader.
 proc parseCompile(args: seq[string]): CliOptions =
   result.command = ccCompile
-  result.memoryStrategy = msGc
+  result.memoryPolicy = DefaultMemoryPolicy
   var index = 1
 
   while index < args.len:
@@ -173,17 +177,17 @@ proc parseCompile(args: seq[string]): CliOptions =
 ## Parses all supported project-tool and standalone compiler commands.
 proc parseArgs*(args: seq[string]): CliOptions =
   if args.len == 0:
-    return CliOptions(command: ccHelp, memoryStrategy: msGc)
+    return CliOptions(command: ccHelp, memoryPolicy: DefaultMemoryPolicy)
 
   case args[0]
   of "help", "--help", "-h":
     if args.len != 1:
       raise newException(ValueError, usage())
-    CliOptions(command: ccHelp, memoryStrategy: msGc)
+    CliOptions(command: ccHelp, memoryPolicy: DefaultMemoryPolicy)
   of "version", "--version", "-V":
     if args.len != 1:
       raise newException(ValueError, usage())
-    CliOptions(command: ccVersion, memoryStrategy: msGc)
+    CliOptions(command: ccVersion, memoryPolicy: DefaultMemoryPolicy)
   of "build": parseBuild(args)
   of "check": parseManifestOnly(args, ccCheck)
   of "doc": parseDoc(args)

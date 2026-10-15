@@ -28,6 +28,8 @@ provides:
 
 adopts:
   - processor.ProcessorHealth
+
+policySources: []
 ```
 
 The v0 parser accepts the YAML subset needed by this schema: mappings,
@@ -53,6 +55,10 @@ Every `.eido` source may contain at most one outermost nominal declaration total
 - `provides` records that a child module fulfills a parent-owned interface
   contract. The compiler validates that the contract is owned by the parent and
   that the declared provider subtree contains an explicit implementation.
+- `policySources` optionally declares build-machine Eido source that makes this
+  module selectable as a memory policy. These files use the compiler-facing
+  memory-policy API and never enter the target binary; the module's ordinary
+  `sources` become its hidden target runtime only when the module is selected.
 
 Canonical child identity is derived:
 
@@ -65,6 +71,35 @@ payments
 ```
 
 A child manifest declares only its local name. It does not declare its parent.
+
+## Memory-policy modules
+
+A module may provide a replaceable target-memory policy without compiler changes:
+
+```yaml
+module: custom_memory
+
+sources:
+  - runtime.eido
+
+policySources:
+  - policy.eido
+
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []
+```
+
+`policy.eido` executes only during compilation and binds generic program lifecycle
+events through `MemoryPolicy`. `runtime.eido` is analyzed/emitted only when this
+module is selected through the compilation memory-policy option. The SDK default
+`eido.stdlib.memory.managed` uses exactly this schema; custom policies are not a
+separate compiler extension mechanism.
+
+Policy source is intentionally separate from target source so build-machine
+inspection code and compiler API declarations cannot leak into the executable.
 
 ## Propagation
 

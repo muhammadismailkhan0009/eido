@@ -1,0 +1,4 @@
+// Public parameter/local-handle inspection API available to memory-policy modules.
+class ValueInfo {
+    native function typeOf(Int value) returns Int;
+}

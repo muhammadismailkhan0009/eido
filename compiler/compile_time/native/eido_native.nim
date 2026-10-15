@@ -148,9 +148,45 @@ proc eido_native_method_MemoryMetadata_identityValue*(
 ) =
   emitRecord(4, callableHandle, valueHandle, 0)
 
-## Emits one generic program-event binding selected by an Eido compile-time policy.
-proc eido_native_method_RuntimeBindings_bind*(
-  eventKind: int64,
-  methodName: string
-) =
-  echo "EIDO_BIND|" & $eventKind & "|" & methodName
+## Emits one named generic program-event binding selected by an Eido memory policy.
+proc emitPolicyBinding(eventName, handler: string) =
+  echo "EIDO_BIND|" & eventName & "|" & handler
+
+proc eido_native_method_MemoryPolicy_bindingEnter*(handler: string) =
+  emitPolicyBinding("bindingEnter", handler)
+
+proc eido_native_method_MemoryPolicy_bindingWrite*(handler: string) =
+  emitPolicyBinding("bindingWrite", handler)
+
+proc eido_native_method_MemoryPolicy_bindingLeave*(handler: string) =
+  emitPolicyBinding("bindingLeave", handler)
+
+proc eido_native_method_MemoryPolicy_typeMetadata*(handler: string) =
+  emitPolicyBinding("typeMetadata", handler)
+
+proc eido_native_method_MemoryPolicy_fieldMetadata*(handler: string) =
+  emitPolicyBinding("fieldMetadata", handler)
+
+proc eido_native_method_MemoryPolicy_objectAcquire*(handler: string) =
+  emitPolicyBinding("objectAcquire", handler)
+
+proc eido_native_method_MemoryPolicy_temporaryEnter*(handler: string) =
+  emitPolicyBinding("temporaryEnter", handler)
+
+proc eido_native_method_MemoryPolicy_temporaryLeave*(handler: string) =
+  emitPolicyBinding("temporaryLeave", handler)
+
+proc eido_native_method_MemoryPolicy_executionBoundary*(handler: string) =
+  emitPolicyBinding("executionBoundary", handler)
+
+proc eido_native_method_MemoryPolicy_invariantEnter*(handler: string) =
+  emitPolicyBinding("invariantEnter", handler)
+
+proc eido_native_method_MemoryPolicy_invariantLeave*(handler: string) =
+  emitPolicyBinding("invariantLeave", handler)
+
+proc eido_native_method_MemoryPolicy_invariantClear*(handler: string) =
+  emitPolicyBinding("invariantClear", handler)
+
+proc eido_native_method_MemoryPolicy_programExit*(handler: string) =
+  emitPolicyBinding("programExit", handler)

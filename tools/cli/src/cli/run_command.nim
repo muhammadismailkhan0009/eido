@@ -12,14 +12,14 @@ proc runModuleProject*(
   manifestPath: string,
   applicationArgs: seq[string],
   layout: ProjectLayout,
-  memoryStrategy: MemoryStrategy = msGc
+  memoryPolicy: MemoryPolicySelection = DefaultMemoryPolicy
 ): int =
   layout.prepareProjectLayout()
   buildModuleFile(
     manifestPath,
     layout.executablePath,
     layout.generatedSourcePath,
-    memoryStrategy
+    memoryPolicy
   )
 
   let process = startProcess(

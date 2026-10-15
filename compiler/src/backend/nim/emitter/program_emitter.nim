@@ -52,8 +52,7 @@ proc emitNim*(
 
   var hasStorage = false
   for classDecl in program.classes:
-    if isConcreteStorageTypeName(classDecl.sourceName) or
-        classDecl.classFields.len > 0:
+    if isConcreteStorageTypeName(classDecl.sourceName):
       hasStorage = true
       break
   if hasStorage:

@@ -1,4 +1,4 @@
-// Private compiler semantic entry points for compiler-standard compile-time phases.
+// Public compiler semantic inspection API available to memory-policy modules.
 class Compiler {
     native function typeCount() returns Int;
     native function typeAt(Int index) returns Int;

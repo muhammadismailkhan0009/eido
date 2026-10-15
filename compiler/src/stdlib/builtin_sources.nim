@@ -64,6 +64,8 @@ const
     "eido://stdlib/memory/managed/managed_gc_runtime.eido"
   BuiltinMemoryRuntimeSourcePath* =
     "eido://stdlib/memory/managed/memory_runtime.eido"
+  BuiltinManagedPolicySourcePath* =
+    "eido://stdlib/memory/managed/policy.eido"
 
   BuiltinProcessSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/process/process.eido"
@@ -102,6 +104,10 @@ const
   BuiltinMemoryRuntimeSource* = staticRead(
     currentSourcePath().parentDir /
       "../../../stdlib/memory/managed/memory_runtime.eido"
+  )
+  BuiltinManagedPolicySource* = staticRead(
+    currentSourcePath().parentDir /
+      "../../../stdlib/memory/managed/policy.eido"
   )
 
   BuiltinNativeSupportSource* = staticRead(
@@ -164,6 +170,8 @@ proc embeddedStdlibSource(
     (BuiltinManagedGcRuntimeSourcePath, BuiltinManagedGcRuntimeSource)
   of BuiltinManagedGcManifestPath & "|memory_runtime.eido":
     (BuiltinMemoryRuntimeSourcePath, BuiltinMemoryRuntimeSource)
+  of BuiltinManagedGcManifestPath & "|policy.eido":
+    (BuiltinManagedPolicySourcePath, BuiltinManagedPolicySource)
   else:
     raise newException(
       ValueError,
@@ -213,6 +221,25 @@ proc loadEmbeddedStdlibModule(
   let ownIndex = modules.len
   modules.add spec
 
+  for policyEntry in manifest.policySources:
+    if policyEntry in manifest.sources:
+      raise newException(
+        ValueError,
+        "embedded memory policy source must not also be a target source: " & policyEntry
+      )
+    let embedded = embeddedStdlibSource(manifestPath, policyEntry)
+    if embedded.path in embeddedSourcePaths:
+      raise newException(
+        ValueError,
+        "embedded stdlib source is declared more than once: " & embedded.path
+      )
+    embeddedSourcePaths.add embedded.path
+    modules[ownIndex].policySources.add ModulePolicySource(
+      entry: policyEntry,
+      path: embedded.path,
+      text: embedded.text
+    )
+
   for sourceEntry in manifest.sources:
     let embedded = embeddedStdlibSource(manifestPath, sourceEntry)
     if embedded.path in embeddedSourcePaths:
@@ -223,8 +250,8 @@ proc loadEmbeddedStdlibModule(
     embeddedSourcePaths.add embedded.path
     modules[ownIndex].sourcePaths.add embedded.path
     let origin =
-      if manifestPath == BuiltinManagedGcManifestPath:
-        soCompilerRuntime
+      if manifest.policySources.len > 0:
+        soMemoryPolicyRuntime
       elif manifestPath == BuiltinTextManifestPath or
           manifestPath == BuiltinRuntimeManifestPath:
         soLanguageRuntime

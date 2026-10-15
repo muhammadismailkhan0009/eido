@@ -31,6 +31,9 @@ suite "Module manifest parsing":
 
       adopts:
         - processor.ProcessorHealth
+
+      policySources:
+        - policy.eido
     """, "payments/module.yaml")
 
     check manifest.name == "payments"
@@ -46,6 +49,7 @@ suite "Module manifest parsing":
     check manifest.provides[0].contract == "PaymentProcessor"
     check manifest.provides[0].by == "processor"
     check manifest.adopts == @["processor.ProcessorHealth"]
+    check manifest.policySources == @["policy.eido"]
 
   test "accepts empty YAML sequences":
     let manifest = parseModuleManifest("""
@@ -57,6 +61,7 @@ suite "Module manifest parsing":
       exports: []
       provides: {}
       adopts: []
+      policySources: []
     """, "module.yaml")
 
     check manifest.name == "app"
@@ -65,6 +70,7 @@ suite "Module manifest parsing":
     check manifest.exports.len == 0
     check manifest.provides.len == 0
     check manifest.adopts.len == 0
+    check manifest.policySources.len == 0
 
   test "rejects unknown top-level keys":
     expect ValueError:
@@ -83,10 +89,12 @@ suite "Module manifest parsing":
 
     check manifest.name == "stdlib"
     check manifest.sources.len == 0
-    check manifest.children.len == 3
+    check manifest.children.len == 5
     check manifest.children[0].name == "process"
     check manifest.children[1].name == "io"
     check manifest.children[2].name == "memory"
+    check manifest.children[3].name == "text"
+    check manifest.children[4].name == "runtime"
     check manifest.dependencies.len == 0
     check manifest.exports == @[
       "process.Process",
@@ -105,3 +113,9 @@ suite "Module manifest parsing":
     check memoryManifest.children.len == 1
     check memoryManifest.children[0].name == "managed"
     check memoryManifest.exports == @["Memory"]
+
+    let managedManifest = parseModuleManifest(
+      BuiltinManagedGcManifestSource,
+      BuiltinManagedGcManifestPath
+    )
+    check managedManifest.policySources == @["policy.eido"]

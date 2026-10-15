@@ -7,12 +7,12 @@ eido.stdlib
 ├── process                  Process
 ├── io                       Console
 └── memory                   Memory, Arena
-    └── managed              compiler-private GC runtime
+    └── managed              selectable default GC policy/runtime
 ```
 
 The umbrella re-exports the ordinary public roots, so applications continue to use `Process`, `Console`, `Memory`, and transitively `Arena` without declaring additional dependencies. The `memory.managed` child is intentionally not exported.
 
-`Storage<T>` remains a compiler-provided foundational type rather than an Eido source declaration. It belongs conceptually to the memory subsystem and is the physical substrate used by Arena and the managed runtime.
+`Storage<T>` remains a compiler-provided foundational type rather than an Eido source declaration. It belongs conceptually to the memory subsystem and is the physical substrate used by Arena and memory-policy runtimes. `memory.managed` is the SDK default policy module, but custom project modules declaring `policySources` can replace it through the same compiler path.
 
 Backend-specific implementation support lives under `stdlib/native/`. The Nim backend supplies host/native implementations there; Eido source modules never name Nim modules or symbols.
 

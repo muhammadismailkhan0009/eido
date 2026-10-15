@@ -1,0 +1,4 @@
+// Public field-handle inspection API available to memory-policy modules.
+class FieldInfo {
+    native function typeOf(Int field) returns Int;
+}

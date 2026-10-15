@@ -1,0 +1,17 @@
+// Public policy-neutral compiler event binding API for memory-policy modules.
+// Handlers are ordinary static Eido methods named as "Class.method".
+class MemoryPolicy {
+    native function bindingEnter(String handler);
+    native function bindingWrite(String handler);
+    native function bindingLeave(String handler);
+    native function typeMetadata(String handler);
+    native function fieldMetadata(String handler);
+    native function objectAcquire(String handler);
+    native function temporaryEnter(String handler);
+    native function temporaryLeave(String handler);
+    native function executionBoundary(String handler);
+    native function invariantEnter(String handler);
+    native function invariantLeave(String handler);
+    native function invariantClear(String handler);
+    native function programExit(String handler);
+}

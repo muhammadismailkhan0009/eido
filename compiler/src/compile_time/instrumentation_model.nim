@@ -22,5 +22,13 @@ proc isEmpty*(plan: CompileTimeInstrumentationPlan): bool =
   plan.bindingEnter.len == 0 and
     plan.bindingWrite.len == 0 and
     plan.bindingLeave.len == 0 and
+    plan.metadataType.len == 0 and
+    plan.metadataField.len == 0 and
     plan.objectAcquire.len == 0 and
+    plan.temporaryEnter.len == 0 and
+    plan.temporaryLeave.len == 0 and
+    plan.statementBoundary.len == 0 and
+    plan.invariantEnter.len == 0 and
+    plan.invariantLeave.len == 0 and
+    plan.invariantClear.len == 0 and
     plan.programExit.len == 0

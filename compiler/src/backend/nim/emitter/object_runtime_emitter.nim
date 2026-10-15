@@ -92,6 +92,15 @@ proc renderInvariantDepthSupport(
   let sourceType = className(classDecl.sourceName)
   let runtimeBacked = metadata.hasObjectLayout(classDecl.sourceName)
   let depthField = invariantEvaluationDepthFieldName()
+  if runtimeBacked and (
+      runtimeBindings.invariantEnter.len == 0 or
+      runtimeBindings.invariantLeave.len == 0 or
+      runtimeBindings.invariantClear.len == 0
+  ):
+    raise newException(
+      ValueError,
+      "runtime policy must bind invariant lifecycle events for classes with invariants"
+    )
 
   result.add "proc " & classInvariantEnterName(classDecl.sourceName) &
     "(source: " & sourceType & ") =\n"
