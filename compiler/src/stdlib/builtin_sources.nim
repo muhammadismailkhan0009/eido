@@ -50,8 +50,6 @@ const
 
   BuiltinProcessSourcePath* = "eido://stdlib/process/process.eido"
   BuiltinConsoleSourcePath* = "eido://stdlib/io/console.eido"
-  BuiltinMemorySourcePath* = "eido://stdlib/memory/memory.eido"
-  BuiltinArenaSourcePath* = "eido://stdlib/memory/arena.eido"
   BuiltinStringRuntimeSourcePath* = "eido://stdlib/text/string_runtime.eido"
   BuiltinCopyRuntimeSourcePath* = "eido://stdlib/runtime/copy_runtime.eido"
   BuiltinMemoryValueRegistrySourcePath* =
@@ -72,12 +70,6 @@ const
   )
   BuiltinConsoleSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/io/console.eido"
-  )
-  BuiltinMemorySource* = staticRead(
-    currentSourcePath().parentDir / "../../../stdlib/memory/memory.eido"
-  )
-  BuiltinArenaSource* = staticRead(
-    currentSourcePath().parentDir / "../../../stdlib/memory/arena.eido"
   )
   BuiltinStringRuntimeSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/text/string_runtime.eido"
@@ -152,10 +144,6 @@ proc embeddedStdlibSource(
     (BuiltinProcessSourcePath, BuiltinProcessSource)
   of BuiltinIoManifestPath & "|console.eido":
     (BuiltinConsoleSourcePath, BuiltinConsoleSource)
-  of BuiltinMemoryManifestPath & "|memory.eido":
-    (BuiltinMemorySourcePath, BuiltinMemorySource)
-  of BuiltinMemoryManifestPath & "|arena.eido":
-    (BuiltinArenaSourcePath, BuiltinArenaSource)
   of BuiltinTextManifestPath & "|string_runtime.eido":
     (BuiltinStringRuntimeSourcePath, BuiltinStringRuntimeSource)
   of BuiltinRuntimeManifestPath & "|copy_runtime.eido":

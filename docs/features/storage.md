@@ -108,28 +108,6 @@ var count = Storage<Int>.capacity(middle);
 
 Storage parameters are borrowed. Borrowed Storage may cross a callable result boundary when the callable's result provenance is statically inferable; callers retain the borrowed/non-releasable status. Straight-line semantic analysis rejects obvious owner use after release, borrowed-view use after a tracked owner release, releasing a borrowed callable result, and replacement of a live owning Storage local without release. Complete control-flow/escape-aware lifetime analysis remains follow-on work.
 
-## Arena memory policy
-
-The first memory-management policy implemented above Storage is ordinary Eido source in `stdlib/memory/arena.eido`:
-
-```eido
-var arena = Arena<Int>.create(100);
-var first = arena.allocate(10);
-var second = arena.allocate(20);
-
-Storage<Int>.write(first, 0, 5);
-var free = arena.remaining();
-
-arena.reset();
-arena.release();
-```
-
-`Arena<T>` owns one `Storage<T>` root and a sequential cursor. `allocate(count)` returns a borrowed `Storage<T>.slice`, `remaining()` reports unused slots, `reset()` rewinds the cursor without reallocating, and `release()` releases the single backing root. Sizing, alignment, addresses, and physical allocation remain Storage responsibilities.
-
-The Arena capacity precondition may query `Storage.capacity` because that compiler-owned operation is observational and explicitly recognized as contract-safe. `Storage.size()` and `Storage.alignment()` are likewise verified observational queries. Allocation, mutation, and release remain effectful or conservatively unverified.
-
-Allocations returned by an Arena become logically invalid after `reset()` or `release()`; full compiler lifetime invalidation for that relationship is intentionally deferred to the future borrow/lifetime analysis.
-
 ## Current implementation boundary
 
 Primitive and `String` typed storage are currently supported, including raw `Storage<String>` views used by runtime code. A String slot now contains only the opaque Eido String handle; immutable UTF-8 backing is owned separately by the hidden Eido String runtime through `Storage<Byte>`, so the slot itself no longer embeds a Nim-managed string descriptor. Nominal/class Storage elements remain outside the current public specialization surface.

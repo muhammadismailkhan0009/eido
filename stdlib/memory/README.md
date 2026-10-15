@@ -1,15 +1,9 @@
 # eido.stdlib.memory
 
-Public explicit-memory APIs above Eido's compiler-provided `Storage<T>` substrate.
+Namespace for standard memory-management policy implementations.
 
-Public API:
-- `Memory<T>.arena(capacity)`
-- `Arena<T>.create(capacity)`
-- `Arena<T>.allocate(count)`
-- `Arena<T>.remaining()`
-- `Arena<T>.reset()`
-- `Arena<T>.release()`
+This module intentionally exports no ordinary application API. Eido's low-level memory capability is compiler-provided `Storage<T>`, and memory-policy authors receive the compiler-facing build-time API under `compiler/compile_time/api/memory_policy/`.
 
-`Memory<T>` is the explicit export root. Its `Arena<T>` result makes Arena transitively public without weakening the rule that stateful classes are not direct module export roots.
+The `managed/` child is the SDK's default automatic GC policy/runtime. It declares `policySources` for compile-time policy bindings and ordinary Eido runtime sources for allocation, metadata registries, tracing, collection, and shutdown.
 
-The `managed/` child owns the SDK default automatic GC policy/runtime. It is hidden from ordinary application imports but is not compiler-private: its `policySources` use the supported memory-policy API, and a custom policy module may replace it.
+Applications normally do not import `eido.stdlib.memory.managed`; the compiler selects it through the default `--memory=gc` policy alias. A project may instead select another module that declares its own `policySources` and implements its runtime over `Storage<T>`.

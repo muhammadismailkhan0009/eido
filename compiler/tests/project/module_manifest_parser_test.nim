@@ -98,8 +98,7 @@ suite "Module manifest parsing":
     check manifest.dependencies.len == 0
     check manifest.exports == @[
       "process.Process",
-      "io.Console",
-      "memory.Memory"
+      "io.Console"
     ]
     check manifest.provides.len == 0
     check manifest.adopts.len == 0
@@ -109,10 +108,10 @@ suite "Module manifest parsing":
       BuiltinMemoryManifestPath
     )
     check memoryManifest.name == "memory"
-    check memoryManifest.sources == @["memory.eido", "arena.eido"]
+    check memoryManifest.sources.len == 0
     check memoryManifest.children.len == 1
     check memoryManifest.children[0].name == "managed"
-    check memoryManifest.exports == @["Memory"]
+    check memoryManifest.exports.len == 0
 
     let managedManifest = parseModuleManifest(
       BuiltinManagedGcManifestSource,

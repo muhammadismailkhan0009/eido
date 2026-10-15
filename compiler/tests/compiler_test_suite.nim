@@ -132,7 +132,6 @@ import features/classes/self_receiver_variants_test
 import features/classes/class_copy_ref_variants_test
 import features/classes/gc_management_variants_test
 import features/storage/storage_variants_test
-import features/storage/arena_variants_test
 import features/interfaces/interface_variants_test
 import features/control_flow/conditional_variants_test
 import features/control_flow/else_if_variants_test

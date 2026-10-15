@@ -1,16 +1,11 @@
 module: memory
 
-sources:
-  - memory.eido
-  - arena.eido
+sources: []
 
 children:
   managed: { path: managed }
 
 dependencies: []
-
-exports:
-  - Memory
-
+exports: []
 provides: {}
 adopts: []

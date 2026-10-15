@@ -70,8 +70,7 @@ suite "Module project loading":
     ]
     check project.modules[2].exports == @[
       "process.Process",
-      "io.Console",
-      "memory.Memory"
+      "io.Console"
     ]
 
     check project.modules[3].canonicalName == BuiltinProcessModuleName
@@ -79,10 +78,7 @@ suite "Module project loading":
     check project.modules[4].canonicalName == BuiltinIoModuleName
     check project.modules[4].sourcePaths == @[BuiltinConsoleSourcePath]
     check project.modules[5].canonicalName == BuiltinMemoryModuleName
-    check project.modules[5].sourcePaths == @[
-      BuiltinMemorySourcePath,
-      BuiltinArenaSourcePath
-    ]
+    check project.modules[5].sourcePaths.len == 0
     check project.modules[5].children == @[BuiltinManagedGcModuleName]
     check project.modules[6].canonicalName == BuiltinManagedGcModuleName
     check project.modules[6].sourcePaths == @[
@@ -105,30 +101,28 @@ suite "Module project loading":
     check project.modules[8].exports.len == 0
 
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 13
+    check project.sources.len == 11
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
     check project.sources[3].moduleName == BuiltinIoModuleName
-    check project.sources[4].moduleName == BuiltinMemoryModuleName
-    check project.sources[5].moduleName == BuiltinMemoryModuleName
+    check project.sources[4].moduleName == BuiltinManagedGcModuleName
+    check project.sources[5].moduleName == BuiltinManagedGcModuleName
     check project.sources[6].moduleName == BuiltinManagedGcModuleName
     check project.sources[7].moduleName == BuiltinManagedGcModuleName
     check project.sources[8].moduleName == BuiltinManagedGcModuleName
-    check project.sources[9].moduleName == BuiltinManagedGcModuleName
-    check project.sources[10].moduleName == BuiltinManagedGcModuleName
-    check project.sources[11].moduleName == BuiltinTextModuleName
-    check project.sources[12].moduleName == BuiltinRuntimeModuleName
-    for index in 0 .. 5:
+    check project.sources[9].moduleName == BuiltinTextModuleName
+    check project.sources[10].moduleName == BuiltinRuntimeModuleName
+    for index in 0 .. 3:
       check project.sources[index].origin == soOrdinary
       check project.sources[index].runtimeCapability == lrcNone
-    for index in 6 .. 10:
+    for index in 4 .. 8:
       check project.sources[index].origin == soMemoryPolicyRuntime
       check project.sources[index].runtimeCapability == lrcNone
-    check project.sources[11].origin == soLanguageRuntime
-    check project.sources[11].runtimeCapability == lrcString
-    check project.sources[12].origin == soLanguageRuntime
-    check project.sources[12].runtimeCapability == lrcClassCopy
+    check project.sources[9].origin == soLanguageRuntime
+    check project.sources[9].runtimeCapability == lrcString
+    check project.sources[10].origin == soLanguageRuntime
+    check project.sources[10].runtimeCapability == lrcClassCopy
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

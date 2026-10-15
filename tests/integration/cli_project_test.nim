@@ -250,7 +250,6 @@ suite "CLI project integration":
     let json = readFile(outputDirectory / "api.json")
     check "eido.stdlib.process" in html
     check "Process-wide operations supplied by the active Eido backend/runtime." in html
-    check "Arena&lt;T&gt;" in html
     check "ManagedGcRuntime" in html
     check "Module-internal" in html
     check "\"project\": \"eido.stdlib\"" in json

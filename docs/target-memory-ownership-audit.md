@@ -15,7 +15,7 @@ The audit is intentionally deeper than a normal code review. It covers generated
 
 ## Executive conclusion
 
-The core memory architecture is substantially correct. Managed object payloads, GC headers, heap bookkeeping, root/type registries, interface boxes, arenas, String backing, and copy scratch are routed through Eido code and `Storage`. Fixed process-lifetime class-owned slots are inline backend representation and own no dynamic backing themselves.
+The core memory architecture is substantially correct. Managed object payloads, GC headers, heap bookkeeping, root/type registries, interface boxes, String backing, and copy scratch are routed through Eido code and `Storage`. Fixed process-lifetime class-owned slots are inline backend representation and own no dynamic backing themselves.
 
 There is **no general local/parameter/result ownership problem**. Primitive values, object identities, Storage descriptors, and most optional values are inline/register/ABI representations. A backend may spill them to a machine stack slot, but that does not create an independent logical memory owner.
 
@@ -62,7 +62,6 @@ No full Eido build/test suite was run as part of this audit; conclusions are bas
 | Runtime type/field registry | Storage arrays | Eido runtime -> Storage | compliant | none |
 | Class-owned source field slot | inline process-lifetime backend value/handle/descriptor | no dynamic backing owned by slot | compliant |
 | Storage descriptor | inline pointer/counters/flags | no backing allocation by descriptor itself | compliant | none |
-| Arena backing | `Storage<T>` root + borrowed slices | Eido Arena -> Storage | compliant | none |
 | Graph-copy memo | paired source/target `Int` identities in one raw Storage block | hidden Eido `CopyRuntime` -> `Storage<Byte>` | **compliant (remediated)** | none for ownership; failure cleanup follows trap work |
 | Contracts/Storage failures | Nim exception object | Nim runtime | **gap, exceptional path** | non-Nim/Eido trap model |
 | `Process.argument()` result | foreign Nim `string` copied immediately to Eido String handle | Eido `StringRuntime` -> Storage after ABI bridge | **compliant (remediated)** | none |
@@ -292,7 +291,7 @@ Delete the unused `class_emitter.nim` and ensure `ref object` / closure fallback
 
 ## Final verdict
 
-The memory redesign is not missing a large automatic/local-memory layer. The major dynamic-memory work already completed—object payloads, GC state, registries, interface boxes, heap allocation, Strings, copy scratch, and arenas—is genuinely Storage-centered, while fixed local/static representation slots do not create parallel dynamic owners.
+The memory redesign is not missing a large automatic/local-memory layer. The major dynamic-memory work already completed—object payloads, GC state, registries, interface boxes, heap allocation, Strings, and copy scratch—is genuinely Storage-centered, while fixed local/static representation slots do not create parallel dynamic owners.
 
 String P0 and graph-copy P1 are now closed. The remaining architecture debt is narrow and identifiable:
 
