@@ -6,7 +6,8 @@ import ../source/source_unit
 import ../stdlib/builtin_sources
 import ../frontend/parser/project_parser
 import ../hir/program as hirProgram
-import ../compile_time/[phase_runner, runtime_policy_phase]
+import ../hir/string_usage
+import ../compile_time/[instrumentation_model, phase_runner, runtime_policy_phase]
 import options
 import ../compilation/plan
 import ../semantic/analysis/program_analysis
@@ -14,48 +15,79 @@ import ../semantic/modules/architecture_validation
 import ../backend/nim/emitter/program_emitter
 
 
-## Removes compiler-private runtime sources while retaining their manifest ownership.
-## Planning sees only ordinary program declarations; target compilation may reuse the
-## original project when the selected strategy requires its hidden runtime sources.
-proc withoutCompilerRuntime(project: EidoProject): EidoProject =
+## Reports whether one hidden runtime origin is selected for target compilation.
+proc runtimeOriginSelected(
+  origin: SourceOrigin,
+  includeLanguageRuntime, includePolicyRuntime: bool
+): bool =
+  case origin
+  of soOrdinary:
+    true
+  of soLanguageRuntime:
+    includeLanguageRuntime
+  of soCompilerRuntime:
+    includePolicyRuntime
+
+## Filters hidden runtime sources without exposing their implementation class names.
+proc selectRuntimeSources(
+  project: EidoProject,
+  includeLanguageRuntime, includePolicyRuntime: bool
+): EidoProject =
   result = project
-  var runtimePaths: seq[string]
+  var excludedPaths: seq[string]
   result.sources = @[]
   for source in project.sources:
-    if source.origin == soCompilerRuntime:
-      runtimePaths.add source.path
-    else:
+    if runtimeOriginSelected(
+      source.origin, includeLanguageRuntime, includePolicyRuntime
+    ):
       result.sources.add source
+    else:
+      excludedPaths.add source.path
 
   for moduleIndex in 0 ..< result.modules.len:
     var filtered: seq[string]
     for sourcePath in result.modules[moduleIndex].sourcePaths:
-      if sourcePath notin runtimePaths:
+      if sourcePath notin excludedPaths:
         filtered.add sourcePath
     result.modules[moduleIndex].sourcePaths = filtered
 
-## Adds every SDK source tagged as compiler-runtime when a raw source project lacks them.
-## This is source-origin based: the compiler does not know runtime filenames or classes.
-proc withCompilerRuntime(project: EidoProject): EidoProject =
-  for source in project.sources:
-    if source.origin == soCompilerRuntime:
-      return project
+## Adds selected hidden SDK runtime sources when raw source projects do not carry them.
+proc withSelectedRuntime(
+  project: EidoProject,
+  includeLanguageRuntime, includePolicyRuntime: bool
+): EidoProject =
+  result = selectRuntimeSources(
+    project, includeLanguageRuntime, includePolicyRuntime
+  )
 
-  # Module-aware projects normally receive the SDK during module loading. Raw
-  # source projects used by standalone compilation/tests need the hidden runtime
-  # sources attached explicitly, without importing public stdlib declarations.
-  result = project
+  var nextSourceId = 0
+  var existingPaths: seq[string]
+  for source in result.sources:
+    nextSourceId = max(nextSourceId, source.id.value + 1)
+    existingPaths.add source.path
+
   let sdk = builtinStdlibProject(ptLibrary)
   for sdkSource in sdk.sources:
-    if sdkSource.origin != soCompilerRuntime:
+    if sdkSource.origin == soOrdinary or
+        not runtimeOriginSelected(
+          sdkSource.origin, includeLanguageRuntime, includePolicyRuntime
+        ) or sdkSource.path in existingPaths:
       continue
+
     result.sources.add initSourceUnit(
-      result.sources.len,
+      nextSourceId,
       sdkSource.path,
       sdkSource.text,
       sdkSource.moduleName,
       sdkSource.origin
     )
+    inc nextSourceId
+    existingPaths.add sdkSource.path
+
+    for moduleIndex in 0 ..< result.modules.len:
+      if result.modules[moduleIndex].canonicalName == sdkSource.moduleName:
+        result.modules[moduleIndex].sourcePaths.add sdkSource.path
+        break
 
 ## Analyzes every source in one Eido project into resolved typed HIR.
 ## Example: a function in service.eido can resolve a class declared in account.eido.
@@ -70,18 +102,26 @@ proc compileProjectToNim*(
   project: EidoProject,
   options: CompilationOptions = DefaultCompilationOptions
 ): string =
-  let baseProject = withoutCompilerRuntime(project)
+  let baseProject = project.selectRuntimeSources(false, false)
   let baseProgram = analyzeProject(baseProject)
   let memoryMetadata = runStandardCompileTimePhases(
     baseProgram,
     options.memoryStrategy
   )
+  let needsLanguageRuntime = baseProgram.usesString
+  let needsPolicyRuntime =
+    options.memoryStrategy == msGc and memoryMetadata.types.len > 0
 
-  # Strategy selection controls which Eido memory runtime is present. Generic
-  # compiler metadata itself is computed once from the ordinary program only.
-  if options.memoryStrategy == msGc and memoryMetadata.types.len > 0:
-    let runtimeProgram = analyzeProject(project.withCompilerRuntime)
-    let instrumentation = runRuntimePolicyPhase(options.memoryStrategy)
+  if needsLanguageRuntime or needsPolicyRuntime:
+    let runtimeProject = project.withSelectedRuntime(
+      needsLanguageRuntime, needsPolicyRuntime
+    )
+    let runtimeProgram = analyzeProject(runtimeProject)
+    let instrumentation =
+      if needsPolicyRuntime:
+        runRuntimePolicyPhase(options.memoryStrategy)
+      else:
+        CompileTimeInstrumentationPlan()
     return emitNim(
       runtimeProgram,
       CompilationPlan(
@@ -90,7 +130,4 @@ proc compileProjectToNim*(
       )
     )
 
-  emitNim(
-    baseProgram,
-    CompilationPlan(memory: memoryMetadata)
-  )
+  emitNim(baseProgram, CompilationPlan(memory: memoryMetadata))

@@ -83,7 +83,7 @@ proc addClass(
   classDecl: HirClass
 ) =
   if isConcreteStorageTypeName(classDecl.sourceName) or
-      classDecl.span.isCompilerRuntime:
+      classDecl.span.isHiddenRuntime:
     return
 
   let typeHandle = snapshot.ensureType(classDecl.typ)
@@ -273,7 +273,7 @@ proc buildCompileTimeSnapshot*(program: HirProgram): CompileTimeSnapshot =
 
   for classDecl in program.classes:
     if isConcreteStorageTypeName(classDecl.sourceName) or
-        classDecl.span.isCompilerRuntime:
+        classDecl.span.isHiddenRuntime:
       continue
     for methodDecl in classDecl.methods:
       result.addMethod(methodDecl)

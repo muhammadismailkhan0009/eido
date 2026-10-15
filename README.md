@@ -137,7 +137,7 @@ eido --version
 
 ### Core language
 
-- Primitive types: `Bool`, `Byte`, `Short`, `Int`, `Float`, `Char`, and `String`.
+- Primitive types: `Bool`, `Byte`, `Short`, `Int`, `Float`, and `Char`; immutable `String` is a separate built-in value type.
 - Typed functions with zero or one result.
 - Local variables and explicit `set` mutation.
 - Arithmetic, comparison, Boolean operators, grouping, and unary negation.
@@ -155,6 +155,7 @@ eido --version
 - Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; every class-owned value is lowered to a one-slot Storage-backed capability rather than a standalone backend value. Identity-bearing class/interface slots report their process-lifetime value identity through the same generic memory metadata boundary used by ordinary locals and parameters; the selected Eido policy decides what that means.
 - Generic classes with compiler specialization.
 - Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>.allocateRaw` is the single physical owned-allocation path; typed allocation adopts that raw backing, typed `view`/`viewAt`/`slice` capabilities are allocation-free, and `size`/`alignment` expose target layout through Storage itself. Target memory-management policy and mutable bookkeeping live above this substrate in Eido. The compiler may describe **what exists** (layout and identity-bearing fields/values) and expose generic semantic event points, but the selected Eido policy decides which events matter and **how values live** (GC roots/tracing, retain/release, arenas, collection triggers, or allocator policy).
+- Built-in immutable `String` now follows the same ownership boundary: target values are opaque machine-word handles, while UTF-8 bytes are allocated and reclaimed by hidden Eido language-runtime code over `Storage<Byte>`. Literals, concatenation, and equality do not use Nim-managed String backing; native/platform text is copied across the ABI boundary. Pure String computation is covered under Nim `--mm:none`.
 - Explicit class graph `copy` / `ref` semantics and detached class-valued returns.
 - No class inheritance.
 

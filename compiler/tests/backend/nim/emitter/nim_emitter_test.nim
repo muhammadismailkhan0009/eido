@@ -27,7 +27,7 @@ suite "Nim emitter":
     check "): int32" notin generated
     check "): float32" notin generated
 
-  test "emits String as Nim string with escaped literals and concatenation":
+  test "emits String as opaque Storage-backed handles and runtime operations":
     # Given
     let source = """
       function join(String name) returns String {
@@ -40,9 +40,12 @@ suite "Nim emitter":
     let generated = emitSource(source)
 
     # Then
-    check "): string" in generated
-    check "\"Hello\\x0A\"" in generated
-    check " & eido_local_0_name" in generated
+    check "proc eido_fn_0_join(eido_local_0_name: int64): int64" in generated
+    check "eido_string_literal([" in generated
+    check "int8(72)" in generated
+    check "int8(10)" in generated
+    check "eido_string_concat(" in generated
+    check " & eido_local_0_name" notin generated
 
   test "uses semantic IDs in generated local names":
     # Given

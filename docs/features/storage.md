@@ -132,7 +132,7 @@ Allocations returned by an Arena become logically invalid after `reset()` or `re
 
 ## Current implementation boundary
 
-Primitive and `String` typed storage are currently supported. `Storage<String>.view(raw, ...)` remains rejected because raw managed-value initialization tracking is not yet defined. Nominal/class elements remain deferred until object layout and identity move onto the Storage substrate.
+Primitive and `String` typed storage are currently supported, including raw `Storage<String>` views used by runtime code. A String slot now contains only the opaque Eido String handle; immutable UTF-8 backing is owned separately by the hidden Eido String runtime through `Storage<Byte>`, so the slot itself no longer embeds a Nim-managed string descriptor. Nominal/class Storage elements remain outside the current public specialization surface.
 
 The hosted Nim backend zeroes newly acquired backing memory, while Eido's source model separates slot allocation from assignment through `write`. Full initialized-slot tracking for arbitrary dynamic indexes is follow-on safety work; the current phase is proving the unified memory substrate before adding stronger compiler guarantees.
 
@@ -142,4 +142,4 @@ The hosted implementation lives in `stdlib/native/nim/eido_storage.nim`. `EidoSt
 
 `allocateRaw` is the single hosted physical allocation path and uses the explicit `bytesPerAllocation`. Typed `allocate` calls that raw path with `sizeof(T)` and then reinterprets the same owning descriptor as `Storage<T>` without acquiring a second region. `fromAddress` uses the caller-provided base without allocating backing memory. `view` and `slice` derive borrowed descriptors without allocating backing memory. `size()` and `alignment()` expose the backend's `sizeof(T)`/`alignof(T)` facts through the unified Storage API.
 
-A primitive raw-to-typed Storage program compiles and executes under Nim `--mm:none`. The current hosted trap/error path still constructs Nim exception objects, so complete runtime memory-manager independence is not yet claimed for every failure path.
+Primitive raw-to-typed Storage and pure Eido String allocation/concatenation/equality compile and execute under Nim `--mm:none`. The current hosted trap/error path still constructs Nim exception objects, so complete runtime memory-manager independence is not yet claimed for every failure path.

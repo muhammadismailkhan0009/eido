@@ -1,0 +1,134 @@
+// Compiler-private built-in String storage runtime written in Eido over Storage.
+class StringRuntime {
+    Int StringRuntime.head = 0;
+
+    function nextOffset() returns Int { return 0; }
+    function lengthOffset() returns Int { return Storage<Int>.size(); }
+    function payloadOffset() returns Int { return Storage<Int>.size() * 2; }
+    function totalSize(Int length) returns Int {
+        return StringRuntime.payloadOffset() + length;
+    }
+
+    function header(Int value) returns Storage<Byte> {
+        return Storage<Byte>.fromAddress(
+            value,
+            1,
+            StringRuntime.payloadOffset()
+        );
+    }
+
+    function stringLength(Int value) returns Int {
+        var header = StringRuntime.header(value);
+        var lengthSlot = Storage<Int>.viewAt(
+            header,
+            StringRuntime.lengthOffset()
+        );
+        return Storage<Int>.read(lengthSlot, 0);
+    }
+
+    function bytes(Int value) returns Storage<Byte> {
+        var length = StringRuntime.stringLength(value);
+        return Storage<Byte>.fromAddress(
+            value + StringRuntime.payloadOffset(),
+            length,
+            1
+        );
+    }
+
+    function stringAllocate(Int length) returns Int {
+        require { length >= 0; }
+        var backing = Storage<Byte>.allocateRaw(
+            1,
+            StringRuntime.totalSize(length)
+        );
+        var address = Storage<Byte>.address(backing);
+        var nextSlot = Storage<Int>.viewAt(
+            backing,
+            StringRuntime.nextOffset()
+        );
+        Storage<Int>.write(nextSlot, 0, StringRuntime.head);
+        var lengthSlot = Storage<Int>.viewAt(
+            backing,
+            StringRuntime.lengthOffset()
+        );
+        Storage<Int>.write(lengthSlot, 0, length);
+        set StringRuntime.head = address;
+        return address;
+    }
+
+    function stringWriteByte(Int value, Int index, Byte byteValue) {
+        var bytes = StringRuntime.bytes(value);
+        Storage<Byte>.write(bytes, index, byteValue);
+    }
+
+    function stringByteAt(Int value, Int index) returns Byte {
+        var bytes = StringRuntime.bytes(value);
+        return Storage<Byte>.read(bytes, index);
+    }
+
+    function stringConcat(Int left, Int right) returns Int {
+        var leftLength = StringRuntime.stringLength(left);
+        var rightLength = StringRuntime.stringLength(right);
+        var result = StringRuntime.stringAllocate(leftLength + rightLength);
+        var index = 0;
+        while (index < leftLength) {
+            StringRuntime.stringWriteByte(
+                result,
+                index,
+                StringRuntime.stringByteAt(left, index)
+            );
+            set index = index + 1;
+        }
+        set index = 0;
+        while (index < rightLength) {
+            StringRuntime.stringWriteByte(
+                result,
+                leftLength + index,
+                StringRuntime.stringByteAt(right, index)
+            );
+            set index = index + 1;
+        }
+        return result;
+    }
+
+    function stringEqual(Int left, Int right) returns Bool {
+        if (left == right) { return true; }
+        var leftLength = StringRuntime.stringLength(left);
+        var rightLength = StringRuntime.stringLength(right);
+        if (leftLength != rightLength) { return false; }
+        var index = 0;
+        while (index < leftLength) {
+            if (
+                StringRuntime.stringByteAt(left, index) !=
+                StringRuntime.stringByteAt(right, index)
+            ) { return false; }
+            set index = index + 1;
+        }
+        return true;
+    }
+
+    function next(Int value) returns Int {
+        var header = StringRuntime.header(value);
+        var nextSlot = Storage<Int>.viewAt(
+            header,
+            StringRuntime.nextOffset()
+        );
+        return Storage<Int>.read(nextSlot, 0);
+    }
+
+    function stringShutdown() {
+        var current = StringRuntime.head;
+        while (current != 0) {
+            var nextValue = StringRuntime.next(current);
+            var length = StringRuntime.stringLength(current);
+            var backing = Storage<Byte>.adoptAddress(
+                current,
+                1,
+                StringRuntime.totalSize(length)
+            );
+            Storage<Byte>.release(backing);
+            set current = nextValue;
+        }
+        set StringRuntime.head = 0;
+    }
+}

@@ -6,6 +6,7 @@ type
 
   SourceOrigin* = enum
     soOrdinary,
+    soLanguageRuntime,
     soCompilerRuntime
 
   SourceUnit* = object

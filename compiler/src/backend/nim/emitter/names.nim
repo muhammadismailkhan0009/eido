@@ -193,3 +193,34 @@ proc classInvariantLeaveName*(classSourceName: string): string =
 ## Builds the generated invariant-depth observation helper.
 proc classInvariantClearName*(classSourceName: string): string =
   "eido_invariant_clear_" & nominalName(classSourceName)
+
+
+## Builds the generated built-in String allocation wrapper name.
+proc stringAllocateName*(): string = "eido_string_allocate"
+
+## Builds the generated built-in String byte-write wrapper name.
+proc stringWriteByteName*(): string = "eido_string_write_byte"
+
+## Builds the generated built-in String length wrapper name.
+proc stringLengthName*(): string = "eido_string_length"
+
+## Builds the generated built-in String byte-read wrapper name.
+proc stringByteAtName*(): string = "eido_string_byte_at"
+
+## Builds the generated built-in String concatenation wrapper name.
+proc stringConcatName*(): string = "eido_string_concat"
+
+## Builds the generated built-in String equality wrapper name.
+proc stringEqualName*(): string = "eido_string_equal"
+
+## Builds the generated built-in String shutdown wrapper name.
+proc stringShutdownName*(): string = "eido_string_shutdown"
+
+## Builds the generated foreign-native-to-Eido String bridge name.
+proc stringFromNativeName*(): string = "eido_string_from_native"
+
+## Builds the generated Eido-to-foreign-native String bridge name.
+proc stringToNativeName*(): string = "eido_string_to_native"
+
+## Builds the generated source-literal-to-Eido String helper name.
+proc stringLiteralName*(): string = "eido_string_literal"

@@ -6,6 +6,7 @@ children:
   process: { path: process }
   io: { path: io }
   memory: { path: memory }
+  text: { path: text }
 
 dependencies: []
 

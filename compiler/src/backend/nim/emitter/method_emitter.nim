@@ -53,7 +53,7 @@ proc renderMethod*(
 
   # Compiler-runtime implementation methods consume metadata; they must not
   # recursively report their own lexical lifetime/boundary events.
-  let isCompilerRuntimeMethod = methodDecl.span.isCompilerRuntime
+  let isCompilerRuntimeMethod = methodDecl.span.isHiddenRuntime
   let identityValues =
     if isCompilerRuntimeMethod:
       @[]

@@ -173,31 +173,6 @@ class ManagedGcRuntime {
         }
     }
 
-    function cleanupPayload(Int allocation) {
-        var typeId = ManagedGcRuntime.typeId(allocation);
-        var count = MemoryTypeRegistry.fieldCount(typeId);
-        if (count == 0) { return; }
-        var payload = Storage<Byte>.fromAddress(
-            allocation,
-            1,
-            ManagedGcRuntime.payloadSize(allocation)
-        );
-        var index = 0;
-        while (index < count) {
-            var kind = MemoryTypeRegistry.fieldCleanupKind(typeId, index);
-            if (kind == 1) {
-                var offset = MemoryTypeRegistry.fieldOffset(typeId, index);
-                var stringSlot = Storage<String>.viewAt(payload, offset);
-                Storage<String>.write(stringSlot, 0, "");
-            } else if (kind == 2) {
-                var offset = MemoryTypeRegistry.fieldOffset(typeId, index);
-                var optionalStringSlot = Storage<String?>.viewAt(payload, offset);
-                Storage<String?>.write(optionalStringSlot, 0, none);
-            }
-            set index = index + 1;
-        }
-    }
-
     function sweep() {
         var previous = 0;
         var current = ManagedGcRuntime.heapHead;
@@ -209,7 +184,6 @@ class ManagedGcRuntime {
             } else {
                 if (previous == 0) { set ManagedGcRuntime.heapHead = nextAllocation; }
                 else { ManagedGcRuntime.setNext(previous, nextAllocation); }
-                ManagedGcRuntime.cleanupPayload(current);
                 var totalSize = ManagedGcRuntime.readInt(current, ManagedGcRuntime.totalSizeOffset());
                 ManagedHeapAllocator.release(
                     ManagedGcRuntime.headerAddress(current),

@@ -238,7 +238,7 @@ proc resolveMetadata(
 proc expectedClassLayouts(program: hirProgram.HirProgram): int =
   for classDecl in program.classes:
     if not isConcreteStorageTypeName(classDecl.sourceName) and
-        not classDecl.span.isCompilerRuntime:
+        not classDecl.span.isHiddenRuntime:
       inc result
 
 ## Verifies one complete stable layout for every ordinary class declaration.

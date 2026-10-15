@@ -18,7 +18,7 @@ proc requiresObjectIdentity(
   classDecl: hirDeclarations.HirClass
 ): bool =
   if isConcreteStorageTypeName(classDecl.sourceName) or
-      classDecl.span.isCompilerRuntime:
+      classDecl.span.isHiddenRuntime:
     return false
   if classDecl.fields.len > 0:
     return true

@@ -31,9 +31,17 @@ proc initSourceSpan*(
     column: column
   )
 
-## Reports whether this source span belongs to compiler-injected runtime code.
+## Reports whether this source span belongs to any compiler-injected hidden runtime code.
+proc isHiddenRuntime*(span: SourceSpan): bool =
+  span.sourceOrigin in {soLanguageRuntime, soCompilerRuntime}
+
+## Reports whether this source span belongs to the selected memory-policy runtime.
 proc isCompilerRuntime*(span: SourceSpan): bool =
   span.sourceOrigin == soCompilerRuntime
+
+## Reports whether this source span belongs to the built-in language runtime.
+proc isLanguageRuntime*(span: SourceSpan): bool =
+  span.sourceOrigin == soLanguageRuntime
 
 ## Covers two spans that originate from the same source unit.
 ## Example: combining the spans of `a` and `5` produces the span for `a + 5`.

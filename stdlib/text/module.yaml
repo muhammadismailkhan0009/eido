@@ -1,0 +1,9 @@
+module: text
+
+sources:
+  - string_runtime.eido
+
+dependencies: []
+exports: []
+provides: {}
+adopts: []

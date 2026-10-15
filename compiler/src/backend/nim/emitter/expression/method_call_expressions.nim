@@ -51,10 +51,17 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
   for argument in call.arguments:
     if wroteArgument:
       rendered.add ", "
-    rendered.add renderExpr(argument)
+    if call.isNative and not isConcreteStorageTypeName(call.ownerType.className):
+      rendered.add renderNativeArgument(argument)
+    else:
+      rendered.add renderExpr(argument)
     wroteArgument = true
     if argument.isIdentityTemporary:
       protect = true
 
   rendered.add ")"
-  protectIdentityTemporaries(rendered, protect)
+  rendered = protectIdentityTemporaries(rendered, protect)
+  if call.isNative and not isConcreteStorageTypeName(call.ownerType.className):
+    wrapNativeResult(rendered, call.result)
+  else:
+    rendered

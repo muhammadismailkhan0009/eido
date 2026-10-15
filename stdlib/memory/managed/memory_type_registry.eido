@@ -5,7 +5,6 @@ class MemoryTypeRegistry {
     Storage<Int> MemoryTypeRegistry.fieldCounts = Storage<Int>.allocate(16);
     Storage<Int> MemoryTypeRegistry.fieldOffsets = Storage<Int>.allocate(32);
     Storage<Bool> MemoryTypeRegistry.fieldIdentity = Storage<Bool>.allocate(32);
-    Storage<Int> MemoryTypeRegistry.fieldCleanupKinds = Storage<Int>.allocate(32);
     Int MemoryTypeRegistry.typeCapacity = 16;
     Int MemoryTypeRegistry.fieldCapacity = 32;
     Int MemoryTypeRegistry.fieldUsed = 0;
@@ -35,20 +34,16 @@ class MemoryTypeRegistry {
         while (newCapacity < required) { set newCapacity = newCapacity * 2; }
         var newOffsets = Storage<Int>.allocate(newCapacity);
         var newIdentity = Storage<Bool>.allocate(newCapacity);
-        var newCleanupKinds = Storage<Int>.allocate(newCapacity);
         var index = 0;
         while (index < MemoryTypeRegistry.fieldUsed) {
             Storage<Int>.write(newOffsets, index, Storage<Int>.read(MemoryTypeRegistry.fieldOffsets, index));
             Storage<Bool>.write(newIdentity, index, Storage<Bool>.read(MemoryTypeRegistry.fieldIdentity, index));
-            Storage<Int>.write(newCleanupKinds, index, Storage<Int>.read(MemoryTypeRegistry.fieldCleanupKinds, index));
             set index = index + 1;
         }
         Storage<Int>.release(MemoryTypeRegistry.fieldOffsets);
         Storage<Bool>.release(MemoryTypeRegistry.fieldIdentity);
-        Storage<Int>.release(MemoryTypeRegistry.fieldCleanupKinds);
         set MemoryTypeRegistry.fieldOffsets = newOffsets;
         set MemoryTypeRegistry.fieldIdentity = newIdentity;
-        set MemoryTypeRegistry.fieldCleanupKinds = newCleanupKinds;
         set MemoryTypeRegistry.fieldCapacity = newCapacity;
     }
 
@@ -61,12 +56,11 @@ class MemoryTypeRegistry {
         set MemoryTypeRegistry.fieldUsed = MemoryTypeRegistry.fieldUsed + fieldCount;
     }
 
-    function setField(Int typeId, Int index, Int offset, Bool containsIdentity, Int cleanupKind) {
-        require { typeId >= 0; index >= 0; offset >= 0; cleanupKind >= 0; }
+    function setField(Int typeId, Int index, Int offset, Bool containsIdentity) {
+        require { typeId >= 0; index >= 0; offset >= 0; }
         var start = Storage<Int>.read(MemoryTypeRegistry.fieldStarts, typeId);
         Storage<Int>.write(MemoryTypeRegistry.fieldOffsets, start + index, offset);
         Storage<Bool>.write(MemoryTypeRegistry.fieldIdentity, start + index, containsIdentity);
-        Storage<Int>.write(MemoryTypeRegistry.fieldCleanupKinds, start + index, cleanupKind);
     }
 
     function fieldCount(Int typeId) returns Int {
@@ -80,16 +74,10 @@ class MemoryTypeRegistry {
         var start = Storage<Int>.read(MemoryTypeRegistry.fieldStarts, typeId);
         return Storage<Bool>.read(MemoryTypeRegistry.fieldIdentity, start + index);
     }
-    function fieldCleanupKind(Int typeId, Int index) returns Int {
-        var start = Storage<Int>.read(MemoryTypeRegistry.fieldStarts, typeId);
-        return Storage<Int>.read(MemoryTypeRegistry.fieldCleanupKinds, start + index);
-    }
-
     function shutdown() {
         Storage<Int>.release(MemoryTypeRegistry.fieldStarts);
         Storage<Int>.release(MemoryTypeRegistry.fieldCounts);
         Storage<Int>.release(MemoryTypeRegistry.fieldOffsets);
         Storage<Bool>.release(MemoryTypeRegistry.fieldIdentity);
-        Storage<Int>.release(MemoryTypeRegistry.fieldCleanupKinds);
     }
 }

@@ -42,7 +42,7 @@ proc storageLayoutOf*(typ: EidoType): StorageLayout =
       if optional: optionalLayout(uint16) else: requiredLayout(uint16)
 
   of etkString:
-    if optional: optionalLayout(string) else: requiredLayout(string)
+    if optional: optionalLayout(int64) else: requiredLayout(int64)
 
   of etkClass:
     if isConcreteStorageTypeName(typ.className):

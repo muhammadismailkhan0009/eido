@@ -2,9 +2,7 @@
 ## Example: Eido Int literal `2147483648` becomes `int64(2147483648)`.
 
 import ../../../hir/expressions as hirExpressions
-import ../../../types/model
-import ../../../types/method_kind
-import ../../../types/storage
+import ../../../types/[function_result, model, method_kind, storage]
 import names
 import type_emitter
 
@@ -26,6 +24,21 @@ proc protectIdentityTemporaries(expression: string, required: bool): string =
 ## Example: local Int `x + 5` renders as `(eido_local_0_x + int64(5))`.
 proc renderExpr*(expr: hirExpressions.HirExpr): string
 
+## Converts one Eido String argument only at a foreign native ABI boundary.
+proc renderNativeArgument(expr: hirExpressions.HirExpr): string =
+  let rendered = renderExpr(expr)
+  if expr.typ.kind == etkString:
+    stringToNativeName() & "(" & rendered & ")"
+  else:
+    rendered
+
+## Copies one foreign native String result immediately into Eido-owned storage.
+proc wrapNativeResult(rendered: string, callableResult: FunctionResult): string =
+  if callableResult.kind == frSingle and callableResult.typ.kind == etkString:
+    stringFromNativeName() & "(" & rendered & ")"
+  else:
+    rendered
+
 include expression/string_values
 include expression/boolean_operators
 include expression/construction_expressions
@@ -46,11 +59,15 @@ proc renderCall*(call: hirExpressions.HirCall): string =
   for index, argument in call.arguments:
     if index > 0:
       rendered.add ", "
-    rendered.add renderExpr(argument)
+    if call.isNative:
+      rendered.add renderNativeArgument(argument)
+    else:
+      rendered.add renderExpr(argument)
     if argument.isIdentityTemporary:
       protect = true
   rendered.add ")"
-  result = protectIdentityTemporaries(rendered, protect)
+  rendered = protectIdentityTemporaries(rendered, protect)
+  result = if call.isNative: wrapNativeResult(rendered, call.result) else: rendered
 
 ## Renders a typed integral literal with its Nim representation.
 ## Example: Eido Byte literal value 7 becomes `int8(7)`, while ordinary Int becomes `int64(...)`.
@@ -158,6 +175,9 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
       return renderBooleanBinary(expr)
     if expr.op == hirExpressions.hboAdd and expr.typ == etString:
       return renderStringConcatenation(expr)
+    if expr.op in {hirExpressions.hboEqual, hirExpressions.hboNotEqual} and
+        expr.left.typ == etString and expr.right.typ == etString:
+      return renderStringEquality(expr)
 
     let operator =
       case expr.op

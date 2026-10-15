@@ -14,7 +14,7 @@ proc renderRequiredType(typ: EidoType): string =
   of etkInterface:
     interfaceName(typ.interfaceName)
   of etkString:
-    "string"
+    "int64"
   of etkPrimitive:
     case typ.primitive
     of ptBool: "bool"

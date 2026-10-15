@@ -22,6 +22,23 @@ suite "Optional execution":
 
     check runFeatureSource(source, "optional_present_int") == "42"
 
+  test "preserves Storage-backed String handles through optional presence":
+    let source = """
+      function maybe() returns String? {
+        return "hello";
+      }
+
+      function main() returns String {
+        var value = maybe();
+        if value exists {
+          return value;
+        }
+        return "";
+      }
+    """
+
+    check runFeatureSource(source, "optional_present_string") == "hello"
+
   test "skips an exists block for none":
     let source = """
       function maybe() returns Int? {

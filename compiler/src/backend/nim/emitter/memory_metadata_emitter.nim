@@ -3,7 +3,6 @@
 
 import ../../../compile_time/model
 import ../../../hir/declarations as hirDeclarations
-import ../../../types/model
 import names
 import runtime_bindings
 
@@ -26,12 +25,6 @@ proc findFieldMetadata(
     if fieldMetadata.fieldName == fieldName:
       return fieldMetadata
   raise newException(ValueError, "backend invariant: missing field metadata '" & fieldName & "'")
-
-## Returns generic cleanup semantics for one field representation.
-proc cleanupKind(fieldType: EidoType): int =
-  if fieldType.kind != etkString:
-    return 0
-  if fieldType.isOptional: 2 else: 1
 
 ## Renders stable type IDs, payload sizes, and alignments from generic memory metadata.
 proc renderMemoryMetadata*(
@@ -74,8 +67,7 @@ proc renderMemoryMetadataInitializers*(
       let fieldMetadata = typeMetadata.findFieldMetadata(field.sourceName)
       result.add runtimeBindings.metadataField & "(" & typeId &
         ", int64(" & $fieldIndex & "), int64(" & $fieldMetadata.offset & "), " &
-        (if fieldMetadata.containsIdentity: "true" else: "false") &
-        ", int64(" & $cleanupKind(field.typ) & "))\n"
+        (if fieldMetadata.containsIdentity: "true" else: "false") & ")\n"
 
   # Interface boxes are backend-created objects whose first payload field stores
   # the receiver identity. This remains representation metadata, not collector policy.
@@ -83,6 +75,6 @@ proc renderMemoryMetadataInitializers*(
     let typeId = interfaceMemoryTypeIdName(interfaceDecl.sourceName)
     result.add runtimeBindings.metadataType & "(" & typeId & ", int64(1))\n"
     result.add runtimeBindings.metadataField & "(" & typeId &
-      ", int64(0), int64(0), true, int64(0))\n"
+      ", int64(0), int64(0), true)\n"
 
   result.add "\n"

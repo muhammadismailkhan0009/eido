@@ -247,3 +247,59 @@ suite "Compiler pipeline":
       memoryMode = "none"
     )
     check execProcess(outputPath).strip() == "73"
+
+
+  test "String runtime executes through Storage with Nim memory management disabled":
+    let source = """
+      function main() returns Int {
+        var value = "Ei" + "do";
+        if (value == "Eido") { return 1; }
+        return 0;
+      }
+    """
+    let outputPath =
+      getTempDir() / ("eido_string_mmnone_" & $getCurrentProcessId())
+    let generatedPath = outputPath & "_generated.nim"
+
+    defer:
+      if fileExists(outputPath): removeFile(outputPath)
+      if fileExists(generatedPath): removeFile(generatedPath)
+
+    nimCompiler.compileWithNim(
+      compileToNim(
+        source,
+        CompilationOptions(memoryStrategy: msManual)
+      ),
+      outputPath,
+      memoryMode = "none"
+    )
+    check execProcess(outputPath).strip() == "1"
+
+  test "native String results are copied into Eido-owned storage at the ABI boundary":
+    let source = """
+      native function platformArgument(Int index) returns String;
+      function main() returns String {
+        return platformArgument(0);
+      }
+    """
+    let outputPath =
+      getTempDir() / ("eido_native_string_bridge_" & $getCurrentProcessId())
+    let generatedPath = outputPath & "_generated.nim"
+
+    defer:
+      if fileExists(outputPath): removeFile(outputPath)
+      if fileExists(generatedPath): removeFile(generatedPath)
+
+    let generated = compileToNim(source)
+    check "eido_string_from_native(eido_native_platformArgument" in generated
+    nimCompiler.compileWithNim(generated, outputPath)
+    let execution = execCmdEx(outputPath & " bridge-ok")
+    check execution.exitCode == 0
+    check execution.output.strip() == "bridge-ok"
+
+  test "integer-only programs do not include the hidden String runtime":
+    let generated = compileToNim("function main() returns Int { return 7; }")
+
+    check "eido_string_allocate" notin generated
+    check "eido_string_shutdown" notin generated
+    check "StringRuntime" notin generated

@@ -98,11 +98,12 @@ class equality semantics do not apply to String.
 
 ## Backend and memory boundary
 
-The current Nim backend lowers Eido String to Nim `string` and lowers String
-`+` to Nim `&`. Nim currently owns the physical storage, allocation, lifetime,
-and reclamation of those values.
+Eido String remains an immutable value with no source-visible object identity, but its target backing is now Eido-owned. The Nim backend represents one String value as an opaque `int64` handle. Hidden ordinary Eido language-runtime code in `stdlib/text/string_runtime.eido` owns the immutable UTF-8 byte allocation through `Storage<Byte>`.
 
-That representation is not an Eido language commitment. Eido specifies an
-immutable text value with no observable storage identity; a future backend may
-share buffers, copy them, intern literals, reference-count them, or use another
-representation without changing source semantics.
+Each current String allocation contains a small runtime header (`next`, byte length) followed by UTF-8 bytes. Literals lower to fixed byte arrays that are copied directly into this Storage-backed representation; `+` and content equality call ordinary hidden Eido runtime methods rather than Nim `&` or Nim string equality.
+
+The current String lifetime policy is deliberately simple: allocations are linked by `StringRuntime` and remain valid for program lifetime, then `stringShutdown()` reconstructs and releases every owning `Storage<Byte>` allocation. Replacing a local or field therefore never invalidates another String handle, and class copy may safely copy the handle because the text itself is immutable.
+
+Native/platform text is an ABI boundary only. A foreign Nim `string` result such as `Process.argument()` is copied immediately into Eido String storage before Eido code observes it. Conversely, `Console.writeLine` and similar native calls materialize a temporary native string from Eido bytes only for the duration of the foreign call. The foreign representation is never the owner of an Eido String value.
+
+A targeted backend regression compiles String allocation, concatenation, equality, and shutdown with Nim `--mm:none`, demonstrating that normal pure String computation no longer depends on Nim's memory manager. Future String policies may add interning, reference counting, or more selective reclamation without changing source semantics.
