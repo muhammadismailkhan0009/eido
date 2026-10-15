@@ -6,6 +6,7 @@ import ../../../semantic/symbols/ids
 import std/strutils
 import names
 import contract_emitter
+import runtime_bindings
 
 type
   NormalExitContext* = object
@@ -15,13 +16,14 @@ type
     invariantOwner*: string
     invariantReceiver*: string
     ownerClassName*: string
-    gcEnabled*: bool
-    gcRootIds*: seq[int]
-    resultRootId*: int
+    instrumentationEnabled*: bool
+    identityValueIds*: seq[int]
+    resultIdentityValueId*: int
+    runtimeBindings*: RuntimeBindings
 
-## Reports whether one LocalId was selected as a precise GC root.
-proc isGcRoot*(context: NormalExitContext, localId: LocalId): bool =
-  localId.value in context.gcRootIds
+## Reports whether one LocalId carries compiler-described object/interface identity.
+proc isIdentityValue*(context: NormalExitContext, localId: LocalId): bool =
+  localId.value in context.identityValueIds
 
 ## Reports whether any normal-exit work is configured.
 proc hasNormalExitChecks*(context: NormalExitContext): bool =

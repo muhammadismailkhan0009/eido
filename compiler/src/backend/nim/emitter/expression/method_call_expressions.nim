@@ -10,15 +10,26 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
       call.ownerType.interfaceName,
       call.methodName
     ) & "(" & renderExpr(call.receiver)
-    if call.receiver.isManagedTemporary:
+    if call.receiver.isIdentityTemporary:
       protect = true
 
     for argument in call.arguments:
       rendered.add ", " & renderExpr(argument)
-      if argument.isManagedTemporary:
+      if argument.isIdentityTemporary:
         protect = true
     rendered.add ")"
-    return protectManagedTemporary(rendered, protect)
+    return protectIdentityTemporaries(rendered, protect)
+
+  if call.isNative and
+      isConcreteStorageTypeName(call.ownerType.className) and
+      call.methodName == "release" and
+      call.arguments.len == 1 and
+      call.arguments[0].kind == hirExpressions.hekClassFieldAccess:
+    let argument = call.arguments[0]
+    return classOwnedFieldReleaseName(
+      argument.classFieldOwner.className,
+      argument.classFieldName
+    ) & "()"
 
   let renderedName =
     if call.isNative and
@@ -26,8 +37,6 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
       storageMethodName(call.ownerType.className, call.methodName)
     elif call.isNative:
       nativeMethodName(call.ownerType.className, call.methodName)
-    elif isManagedGcRuntimeClassName(call.ownerType.className):
-      managedGcRuntimeMethodName(call.methodName)
     else:
       methodName(call.methodId, call.ownerType.className, call.methodName)
 
@@ -36,7 +45,7 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
   if call.kind == mkInstance:
     rendered.add renderExpr(call.receiver)
     wroteArgument = true
-    if call.receiver.isManagedTemporary:
+    if call.receiver.isIdentityTemporary:
       protect = true
 
   for argument in call.arguments:
@@ -44,8 +53,8 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
       rendered.add ", "
     rendered.add renderExpr(argument)
     wroteArgument = true
-    if argument.isManagedTemporary:
+    if argument.isIdentityTemporary:
       protect = true
 
   rendered.add ")"
-  protectManagedTemporary(rendered, protect)
+  protectIdentityTemporaries(rendered, protect)

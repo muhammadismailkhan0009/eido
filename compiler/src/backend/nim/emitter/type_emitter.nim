@@ -26,8 +26,8 @@ proc renderRequiredType(typ: EidoType): string =
 
 
 
-## Reports whether one type uses the GC-managed one-pointer nominal representation.
-proc isManagedNominalType*(typ: EidoType): bool =
+## Reports whether one nominal type carries Eido object/interface identity.
+proc isIdentityNominalType*(typ: EidoType): bool =
   case typ.kind
   of etkClass:
     not isConcreteStorageTypeName(typ.className)
@@ -40,7 +40,7 @@ proc isManagedNominalType*(typ: EidoType): bool =
 ## Example: Int? becomes Option[int64] without exposing Option in Eido source.
 proc renderType*(typ: EidoType): string =
   if typ.isOptional:
-    if typ.isManagedNominalType:
+    if typ.isIdentityNominalType:
       return renderRequiredType(requiredType(typ))
     return "Option[" & renderRequiredType(requiredType(typ)) & "]"
 

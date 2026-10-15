@@ -65,6 +65,42 @@ suite "Compiler architecture":
     # Given / When / Then
     assertNoDependency(compilerRoot, ["/tools/"])
 
+  test "does not identify memory runtime implementation classes":
+    # Embedded SDK packaging may name source files; compiler semantics may not
+    # recognize or special-case the classes implemented inside those files.
+    let packaging = compilerRoot / "stdlib" / "builtin_sources.nim"
+    for path in nimSources(compilerRoot):
+      if path == packaging:
+        continue
+      let source = readFile(path)
+      for className in [
+        "MemoryRuntime",
+        "MemoryValueRegistry",
+        "MemoryTypeRegistry",
+        "ManagedGcRuntime",
+        "ManagedHeapAllocator"
+      ]:
+        check className notin source
+    check not fileExists(compilerRoot / "types" / "managed_gc_runtime.nim")
+    check not fileExists(compilerRoot / "compile_time" / "gc_memory_strategy.nim")
+
+  test "keeps compiler memory metadata policy-neutral":
+    # Memory-specific compiler code may describe identity/layout/lifetime facts,
+    # but collector policy words belong only to Eido runtime implementations.
+    for relativePath in [
+      "compile_time/model.nim",
+      "compile_time/instrumentation_model.nim",
+      "compile_time/memory_metadata_phase.nim",
+      "compile_time/runtime_policy_phase.nim",
+      "backend/nim/emitter/memory_metadata_emitter.nim",
+      "backend/nim/emitter/instrumentation_emitter.nim",
+      "backend/nim/emitter/runtime_bindings.nim",
+      "backend/nim/emitter/object_runtime_emitter.nim"
+    ]:
+      let source = readFile(compilerRoot / relativePath).toLowerAscii()
+      for forbidden in ["safepoint", "trace", "root registry", "mark-and-sweep"]:
+        check forbidden notin source
+
   test "documents every production procedure":
     # Given
     var productionSources = nimSources(compilerRoot)

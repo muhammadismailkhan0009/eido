@@ -7,26 +7,22 @@ import ../../../semantic/symbols/ids
 import ../../../hir/expressions as hirExpressions
 import ../../../types/function_result
 import ../../../types/method_kind
-import ../../../types/managed_gc_runtime
+import ../../../source/span
+import runtime_bindings
 import names
 import type_emitter
 import statement_emitter
 import contract_emitter
 import normal_exit
-import gc_root_emitter
+import instrumentation_emitter
 
 ## Renders one generated method signature with a receiver only for instance methods.
-## Example: Calculator.add(Int, Int) emits two Int parameters, while Account.value() emits its hidden Account receiver.
 proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
-  let renderedMethodName =
-    if isManagedGcRuntimeClassName(methodDecl.ownerType.className):
-      managedGcRuntimeMethodName(methodDecl.sourceName)
-    else:
-      methodName(
-        methodDecl.methodId,
-        methodDecl.ownerType.className,
-        methodDecl.sourceName
-      )
+  let renderedMethodName = methodName(
+    methodDecl.methodId,
+    methodDecl.ownerType.className,
+    methodDecl.sourceName
+  )
   result = "proc " & renderedMethodName & "("
 
   var hasPreviousParameter = false
@@ -38,10 +34,8 @@ proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
   for parameter in methodDecl.parameters:
     if hasPreviousParameter:
       result.add ", "
-    result.add localName(
-      parameter.localId,
-      parameter.sourceName
-    ) & ": " & renderType(parameter.typ)
+    result.add localName(parameter.localId, parameter.sourceName) &
+      ": " & renderType(parameter.typ)
     hasPreviousParameter = true
 
   result.add ")"
@@ -49,26 +43,24 @@ proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
     result.add ": " & renderType(methodDecl.result.typ)
 
 ## Renders one complete generated method body.
-## Example: an empty inferred static method still emits discard.
 proc renderMethod*(
   methodDecl: hirDeclarations.HirMethod,
   enforceInvariant: bool = false,
-  memoryPlan: CompileTimeMemoryPlan = CompileTimeMemoryPlan()
+  memoryMetadata: CompileTimeMemoryMetadata = CompileTimeMemoryMetadata(),
+  runtimeBindings: RuntimeBindings = RuntimeBindings()
 ): string =
   result.add renderMethodSignature(methodDecl) & " =\n"
 
-  # Hidden managed-runtime methods must never receive ordinary GC roots or
-  # statement safepoints. In particular, the allocator cannot recursively
-  # trigger collection while it is acquiring or releasing object backing.
-  let isManagedRuntimeMethod =
-    isManagedGcInternalClassName(methodDecl.ownerType.className)
-  let roots =
-    if isManagedRuntimeMethod:
+  # Compiler-runtime implementation methods consume metadata; they must not
+  # recursively report their own lexical lifetime/boundary events.
+  let isCompilerRuntimeMethod = methodDecl.span.isCompilerRuntime
+  let identityValues =
+    if isCompilerRuntimeMethod:
       @[]
     else:
-      memoryPlan.rootsForMethod(methodDecl.methodId)
-  if memoryPlan.types.len > 0 and not isManagedRuntimeMethod:
-    result.add renderMethodRootPreamble(methodDecl, roots)
+      memoryMetadata.identityValuesForMethod(methodDecl.methodId)
+  if memoryMetadata.types.len > 0 and not isCompilerRuntimeMethod:
+    result.add renderMethodValuePreamble(methodDecl, identityValues, runtimeBindings)
 
   let hasInvariant = enforceInvariant and methodDecl.kind == mkInstance
   let receiverName =
@@ -83,11 +75,11 @@ proc renderMethod*(
   for clause in methodDecl.ensures:
     effectiveEnsures.add clause
 
-  var resultRootId = -1
-  for root in roots:
+  var resultIdentityValueId = -1
+  for value in identityValues:
     if effectiveEnsures.len > 0 and methodDecl.result.kind == frSingle and
-        root.localId == methodDecl.ensureResultLocalId.value:
-      resultRootId = root.localId
+        value.localId == methodDecl.ensureResultLocalId.value:
+      resultIdentityValueId = value.localId
 
   let exitContext = NormalExitContext(
     contractClauses: effectiveEnsures,
@@ -102,9 +94,10 @@ proc renderMethod*(
       if hasInvariant: methodDecl.ownerType.className else: "",
     invariantReceiver: receiverName,
     ownerClassName: methodDecl.ownerType.className,
-    gcEnabled: memoryPlan.types.len > 0 and not isManagedRuntimeMethod,
-    gcRootIds: roots.rootIds,
-    resultRootId: resultRootId
+    instrumentationEnabled: memoryMetadata.types.len > 0 and not isCompilerRuntimeMethod,
+    identityValueIds: identityValues.identityValueIds,
+    resultIdentityValueId: resultIdentityValueId,
+    runtimeBindings: runtimeBindings
   )
 
   if hasInvariant:

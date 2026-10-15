@@ -4,24 +4,31 @@
 type
   SourceId* = distinct int
 
+  SourceOrigin* = enum
+    soOrdinary,
+    soCompilerRuntime
+
   SourceUnit* = object
     id*: SourceId
     path*: string
     text*: string
     moduleName*: string
+    origin*: SourceOrigin
 
 ## Creates one source unit with stable project-local identity.
 ## Module-aware projects also attach the owning canonical module name.
 proc initSourceUnit*(
   id: int,
   path, text: string,
-  moduleName: string = ""
+  moduleName: string = "",
+  origin: SourceOrigin = soOrdinary
 ): SourceUnit =
   SourceUnit(
     id: SourceId(id),
     path: path,
     text: text,
-    moduleName: moduleName
+    moduleName: moduleName,
+    origin: origin
   )
 
 ## Extracts the integer value of a source identity.

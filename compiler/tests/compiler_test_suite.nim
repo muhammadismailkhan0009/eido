@@ -87,7 +87,7 @@ import backend/nim/emitter/class_static_method_emitter_test
 import backend/nim/emitter/class_copy_emitter_test
 import backend/nim/emitter/generic_class_emitter_test
 import backend/nim/emitter/storage_emitter_test
-import backend/nim/emitter/gc_metadata_emitter_test
+import backend/nim/emitter/memory_metadata_emitter_test
 import backend/nim/emitter/expression/boolean_operator_emitter_test
 import backend/nim/emitter/expression/construction_expression_emitter_test
 import backend/nim/emitter/expression/field_access_expression_emitter_test

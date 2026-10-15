@@ -71,10 +71,10 @@ proc validateStorageReleaseOwner(
 
   of astExpressions.ekFieldAccess:
     if argument.target.kind != astExpressions.ekIdentifier or
-        argument.target.name != "self":
+        (argument.target.name != "self" and locals.contains(argument.target.name)):
       failAt(
         argument.span,
-        "Storage.release requires an owning local or self field"
+        "Storage.release requires an owning local, self field, or class-owned field"
       )
 
   else:
@@ -102,12 +102,6 @@ proc analyzeStaticMethodCall(
   if isConcreteStorageTypeName(owner.name):
     if target.name == "release":
       validateStorageReleaseOwner(expr, locals)
-    if target.name in ["view", "viewAt"] and
-        storageElementName(owner.name) == "String":
-      failAt(
-        expr.span,
-        "raw Storage<String> views are unavailable until initialization tracking is defined"
-      )
 
   if target.kind != mkStatic:
     failAt(

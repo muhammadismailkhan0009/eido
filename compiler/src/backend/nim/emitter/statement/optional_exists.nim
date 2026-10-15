@@ -9,8 +9,8 @@ proc renderExists(
   exitContext: NormalExitContext
 ): string =
   let pad = indentation(indent)
-  if stmt.existsValue.typ.isManagedNominalType:
-    result.add pad & "if eidoGcIsSome(" &
+  if stmt.existsValue.typ.isIdentityNominalType:
+    result.add pad & "if eidoMemoryPresent(" &
       renderExpr(stmt.existsValue) & "):\n"
   else:
     result.add pad & "if isSome(" & renderExpr(stmt.existsValue) & "):\n"

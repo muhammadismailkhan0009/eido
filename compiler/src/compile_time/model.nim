@@ -1,44 +1,44 @@
-## Defines compiler-internal compile-time strategy results after private phase handles
+## Defines generic compiler memory metadata after private phase handles
 ## have been resolved back to stable semantic identities.
 
 type
-  CompileTimeFieldLayout* = object
+  CompileTimeFieldMetadata* = object
     fieldName*: string
     offset*: int64
-    traced*: bool
+    containsIdentity*: bool
 
-  CompileTimeTypeLayout* = object
+  CompileTimeTypeMetadata* = object
     className*: string
     size*: int64
     alignment*: int64
-    fields*: seq[CompileTimeFieldLayout]
+    fields*: seq[CompileTimeFieldMetadata]
 
   CompileTimeCallableKind* = enum
     ctkFunction,
     ctkMethod
 
-  CompileTimeRoot* = object
+  CompileTimeIdentityValue* = object
     localId*: int
     sourceName*: string
 
-  CompileTimeCallableRoots* = object
+  CompileTimeCallableMetadata* = object
     kind*: CompileTimeCallableKind
     semanticId*: int
     ownerName*: string
     sourceName*: string
-    roots*: seq[CompileTimeRoot]
+    identityValues*: seq[CompileTimeIdentityValue]
 
-  CompileTimeMemoryPlan* = object
-    types*: seq[CompileTimeTypeLayout]
-    callables*: seq[CompileTimeCallableRoots]
+  CompileTimeMemoryMetadata* = object
+    types*: seq[CompileTimeTypeMetadata]
+    callables*: seq[CompileTimeCallableMetadata]
 
 
-## Reports whether one canonical class has a selected managed payload layout.
-proc hasManagedLayout*(
-  plan: CompileTimeMemoryPlan,
+## Reports whether one canonical class has compiler-described object layout metadata.
+proc hasObjectLayout*(
+  metadata: CompileTimeMemoryMetadata,
   className: string
 ): bool =
-  for typePlan in plan.types:
-    if typePlan.className == className:
+  for typeMetadata in metadata.types:
+    if typeMetadata.className == className:
       return true
   false

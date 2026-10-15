@@ -1,53 +1,78 @@
 ## Emits class-owned mutable state separately from instance payloads.
-## Class fields are process-wide slots and never enter constructors or instance layout.
+## Every source-level class-owned value lives in a one-slot Storage capability.
 
 import ../../../hir/declarations as hirDeclarations
+import ../../../types/[model, storage]
 import names
 import type_emitter
 import expression_emitter
+import runtime_bindings
 
-## Declares every class-owned slot before generated helpers so static initializers may
-## freely refer to other class-owned state regardless of source declaration order.
+## Renders the backend Storage capability type holding one class-owned value.
+proc classOwnedStorageType(fieldType: EidoType): string =
+  "EidoStorage[" & renderType(fieldType) & "]"
+
+## Renders class-owned mutable state as Storage-backed one-slot capabilities.
 proc renderClassStateDeclarations*(
   classes: seq[hirDeclarations.HirClass],
-  managedRuntime: bool
+  runtimeBackedObjects: bool
 ): string =
   for classDecl in classes:
     for field in classDecl.classFields:
-      result.add "var " & classOwnedFieldName(
-        classDecl.sourceName,
-        field.sourceName
-      ) & ": " & renderType(field.typ) & "\n"
-      if managedRuntime and field.typ.isManagedNominalType:
-        result.add "var " & classOwnedFieldRootName(
+      let slot = classOwnedFieldName(classDecl.sourceName, field.sourceName)
+      result.add "var " & slot & ": " & classOwnedStorageType(field.typ) & "\n"
+      if runtimeBackedObjects and field.typ.isIdentityNominalType:
+        result.add "var " & classOwnedFieldMemoryValueName(
           classDecl.sourceName,
           field.sourceName
-        ) & ": EidoGcRoot\n"
+        ) & ": int64\n"
+
+      if field.typ.kind == etkClass and
+          isConcreteStorageTypeName(field.typ.className):
+        result.add "proc " & classOwnedFieldReleaseName(
+          classDecl.sourceName,
+          field.sourceName
+        ) & "() =\n"
+        result.add "  var value = eidoStorageRead(" & slot & ", int64(0))\n"
+        result.add "  " & storageMethodName(field.typ.className, "release") &
+          "(value)\n"
+        result.add "  eidoStorageWrite(" & slot & ", int64(0), value)\n"
   if result.len > 0:
     result.add "\n"
 
-## Registers managed class-owned slots as permanent precise roots before evaluating
-## any initializer, then evaluates all initializers after generated helpers exist.
+## Allocates and initializes every class-owned Storage slot in declaration order.
 proc renderClassStateInitializers*(
   classes: seq[hirDeclarations.HirClass],
-  managedRuntime: bool
+  runtimeBackedObjects: bool,
+  runtimeBindings: RuntimeBindings = RuntimeBindings()
 ): string =
-  if managedRuntime:
+  if runtimeBackedObjects and runtimeBindings.bindingEnter.len > 0:
     for classDecl in classes:
       for field in classDecl.classFields:
-        if not field.typ.isManagedNominalType:
+        if not field.typ.isIdentityNominalType:
           continue
-        let slot = classOwnedFieldName(classDecl.sourceName, field.sourceName)
-        let root = classOwnedFieldRootName(classDecl.sourceName, field.sourceName)
-        result.add "eidoGcPushRoot(addr " & root &
-          ", cast[ptr EidoManagedRef](addr " & slot & "))\n"
+        let valueSlot = classOwnedFieldMemoryValueName(
+          classDecl.sourceName,
+          field.sourceName
+        )
+        result.add valueSlot & " = " & runtimeBindings.bindingEnter & "(int64(0))\n"
 
   for classDecl in classes:
     for field in classDecl.classFields:
-      result.add classOwnedFieldName(
-        classDecl.sourceName,
-        field.sourceName
-      ) & " = " & renderExpr(field.initializer) & "\n"
+      let slot = classOwnedFieldName(classDecl.sourceName, field.sourceName)
+      result.add slot & " = eidoStorageAllocate[" & renderType(field.typ) &
+        "](int64(1))\n"
+      result.add "eidoStorageWrite(" & slot & ", int64(0), " &
+        renderExpr(field.initializer) & ")\n"
+      if runtimeBackedObjects and
+          field.typ.isIdentityNominalType and
+          runtimeBindings.bindingWrite.len > 0:
+        let valueSlot = classOwnedFieldMemoryValueName(
+          classDecl.sourceName,
+          field.sourceName
+        )
+        result.add runtimeBindings.bindingWrite & "(" & valueSlot &
+          ", eidoStorageRead(" & slot & ", int64(0)))\n"
 
   if result.len > 0:
     result.add "\n"

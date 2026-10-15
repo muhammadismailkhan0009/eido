@@ -129,7 +129,7 @@ eido --help
 eido --version
 ```
 
-`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default compilation strategy; managed objects use the Eido-written `ManagedGcRuntime` + `ManagedHeapAllocator` stack over `Storage<Byte>`. `--memory=manual` currently skips managed planning and rejects classes that require managed instance representation.
+`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default runtime policy; its hidden Eido implementation builds target-memory state over `Storage`. The compiler does **not** plan GC: it produces policy-neutral memory metadata (layout and identity-bearing fields/values) plus generic language event points. A private Eido compile-time policy chooses which event points need target instrumentation and which ordinary Eido runtime methods handle them. Class construction remains compiler semantics, while storage acquisition is one such policy-selected event. Runtime implementation classes and GC concepts remain opaque to the compiler. `--memory=manual` currently rejects identity-bearing class representation/construction until the explicit manual object model is implemented.
 
 `compile` is the lower-level standalone source path. Normal application development should currently prefer a `module.yaml` project because project compilation also provides the implicit SDK standard library and module architecture.
 
@@ -152,9 +152,9 @@ eido --version
 - Named-field construction.
 - Explicit `self` receiver semantics.
 - Static/type-associated methods inferred when `self` is not required; no `static` keyword.
-- Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; managed class/interface slots are process-lifetime precise GC roots rather than instance payload.
+- Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; every class-owned value is lowered to a one-slot Storage-backed capability rather than a standalone backend value. Identity-bearing class/interface slots report their process-lifetime value identity through the same generic memory metadata boundary used by ordinary locals and parameters; the selected Eido policy decides what that means.
 - Generic classes with compiler specialization.
-- Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>.allocateRaw` is the single physical owned-allocation path; typed allocation adopts that raw backing, typed `view`/`slice` capabilities are allocation-free, `size`/`alignment` expose target layout through Storage itself, and ownership/release is compiler/runtime enforced. Higher allocation strategies, objects, and collections are intended to build above this same substrate.
+- Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>.allocateRaw` is the single physical owned-allocation path; typed allocation adopts that raw backing, typed `view`/`viewAt`/`slice` capabilities are allocation-free, and `size`/`alignment` expose target layout through Storage itself. Target memory-management policy and mutable bookkeeping live above this substrate in Eido. The compiler may describe **what exists** (layout and identity-bearing fields/values) and expose generic semantic event points, but the selected Eido policy decides which events matter and **how values live** (GC roots/tracing, retain/release, arenas, collection triggers, or allocator policy).
 - Explicit class graph `copy` / `ref` semantics and detached class-valued returns.
 - No class inheritance.
 
@@ -266,7 +266,7 @@ The example README documents the deliberate failure scenarios as well.
 
 ## Memory-management demo
 
-[`examples/eido-memory-management`](examples/eido-memory-management) demonstrates the post-freeze memory architecture using only ordinary Eido plus the public `Storage<T>` substrate. It contains a uniquely named internal `heap_runtime` module (avoiding collisions with the implicit `eido.stdlib.memory` module) whose managed `HeapState` lives in class-owned state and therefore becomes a permanent precise root, while allocation, alignment, accounting, reset, and release policy stays in Eido.
+[`examples/eido-memory-management`](examples/eido-memory-management) demonstrates the post-freeze memory architecture using only ordinary Eido plus the public `Storage<T>` substrate. It contains a uniquely named internal `heap_runtime` module (avoiding collisions with the implicit `eido.stdlib.memory` module) whose `HeapState` lives in Storage-backed class-owned state, while allocation, alignment, accounting, reset, and release policy stays in Eido.
 
 ```bash
 cd examples/eido-memory-management
@@ -274,7 +274,7 @@ eido check
 eido run
 ```
 
-The example is intentionally a small bump heap rather than a second GC; its purpose is to make the Eido-owned runtime architecture visible and executable. The actual default `gc` runtime now follows the same layering: Eido `ManagedGcRuntime` collection policy delegates physical object allocation/release to the simple Eido `ManagedHeapAllocator`, which uses `Storage<Byte>` as its only backing substrate.
+The example is intentionally a small bump heap rather than a second GC; its purpose is to make the Eido-owned runtime architecture visible and executable. The default `gc` policy consumes the same generic compiler facts and, in its own private Eido compile-time phase, binds the generic lifetime/boundary/construction events it needs. `MemoryValueRegistry` stores the resulting live identity-value reports, `MemoryTypeRegistry` stores field/layout metadata, and only `ManagedGcRuntime` interprets those facts as roots/traversal for mark-and-sweep. Physical backing remains delegated to `ManagedHeapAllocator` over `Storage<Byte>`. Current runtime-backed identities point directly at payload storage; the GC recovers its private header through an Eido-managed Storage back-pointer, so generated field/interface access requires no GC payload-offset callback.
 
 ## Editor/tooling support
 

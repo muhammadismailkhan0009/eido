@@ -42,12 +42,16 @@ const
   BuiltinConsoleSourcePath* = "eido://stdlib/io/console.eido"
   BuiltinMemorySourcePath* = "eido://stdlib/memory/memory.eido"
   BuiltinArenaSourcePath* = "eido://stdlib/memory/arena.eido"
-  BuiltinManagedGcNativeSourcePath* =
-    "eido://stdlib/memory/managed/managed_gc_native.eido"
+  BuiltinMemoryValueRegistrySourcePath* =
+    "eido://stdlib/memory/managed/memory_value_registry.eido"
+  BuiltinMemoryTypeRegistrySourcePath* =
+    "eido://stdlib/memory/managed/memory_type_registry.eido"
   BuiltinManagedHeapAllocatorSourcePath* =
     "eido://stdlib/memory/managed/managed_heap_allocator.eido"
   BuiltinManagedGcRuntimeSourcePath* =
     "eido://stdlib/memory/managed/managed_gc_runtime.eido"
+  BuiltinMemoryRuntimeSourcePath* =
+    "eido://stdlib/memory/managed/memory_runtime.eido"
 
   BuiltinProcessSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/process/process.eido"
@@ -61,9 +65,13 @@ const
   BuiltinArenaSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/memory/arena.eido"
   )
-  BuiltinManagedGcNativeSource* = staticRead(
+  BuiltinMemoryValueRegistrySource* = staticRead(
     currentSourcePath().parentDir /
-      "../../../stdlib/memory/managed/managed_gc_native.eido"
+      "../../../stdlib/memory/managed/memory_value_registry.eido"
+  )
+  BuiltinMemoryTypeRegistrySource* = staticRead(
+    currentSourcePath().parentDir /
+      "../../../stdlib/memory/managed/memory_type_registry.eido"
   )
   BuiltinManagedHeapAllocatorSource* = staticRead(
     currentSourcePath().parentDir /
@@ -73,15 +81,16 @@ const
     currentSourcePath().parentDir /
       "../../../stdlib/memory/managed/managed_gc_runtime.eido"
   )
+  BuiltinMemoryRuntimeSource* = staticRead(
+    currentSourcePath().parentDir /
+      "../../../stdlib/memory/managed/memory_runtime.eido"
+  )
 
   BuiltinNativeSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native.nim"
   )
   BuiltinStorageSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_storage.nim"
-  )
-  BuiltinManagedGcSupportSource* = staticRead(
-    currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_managed_gc.nim"
   )
 
 ## Returns one embedded SDK manifest by its stable virtual installation path.
@@ -119,12 +128,16 @@ proc embeddedStdlibSource(
     (BuiltinMemorySourcePath, BuiltinMemorySource)
   of BuiltinMemoryManifestPath & "|arena.eido":
     (BuiltinArenaSourcePath, BuiltinArenaSource)
-  of BuiltinManagedGcManifestPath & "|managed_gc_native.eido":
-    (BuiltinManagedGcNativeSourcePath, BuiltinManagedGcNativeSource)
+  of BuiltinManagedGcManifestPath & "|memory_value_registry.eido":
+    (BuiltinMemoryValueRegistrySourcePath, BuiltinMemoryValueRegistrySource)
+  of BuiltinManagedGcManifestPath & "|memory_type_registry.eido":
+    (BuiltinMemoryTypeRegistrySourcePath, BuiltinMemoryTypeRegistrySource)
   of BuiltinManagedGcManifestPath & "|managed_heap_allocator.eido":
     (BuiltinManagedHeapAllocatorSourcePath, BuiltinManagedHeapAllocatorSource)
   of BuiltinManagedGcManifestPath & "|managed_gc_runtime.eido":
     (BuiltinManagedGcRuntimeSourcePath, BuiltinManagedGcRuntimeSource)
+  of BuiltinManagedGcManifestPath & "|memory_runtime.eido":
+    (BuiltinMemoryRuntimeSourcePath, BuiltinMemoryRuntimeSource)
   else:
     raise newException(
       ValueError,
@@ -187,7 +200,11 @@ proc loadEmbeddedStdlibModule(
       sources.len,
       embedded.path,
       embedded.text,
-      canonical
+      canonical,
+      if manifestPath == BuiltinManagedGcManifestPath:
+        soCompilerRuntime
+      else:
+        soOrdinary
     )
 
   for child in manifest.children:

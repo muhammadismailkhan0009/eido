@@ -35,15 +35,15 @@ proc renderCopyDeclarations(classes: seq[hirDeclarations.HirClass]): string =
 ## Renders one memoized recursive copier body.
 proc renderInternalCopier(
   classDecl: hirDeclarations.HirClass,
-  plan: CompileTimeMemoryPlan
+  plan: CompileTimeMemoryMetadata
 ): string =
   let sourceType = className(classDecl.sourceName)
   let tableName = classCopyTableName(classDecl.sourceName)
   result.add "proc " & classCopyInternalName(classDecl.sourceName) &
     "(source: " & sourceType & ", context: var " & copyContextName() &
     "): " & sourceType & " =\n"
-  if plan.hasManagedLayout(classDecl.sourceName):
-    result.add "  if not eidoGcIsSome(source):\n"
+  if plan.hasObjectLayout(classDecl.sourceName):
+    result.add "  if not eidoMemoryPresent(source):\n"
     result.add "    return default(" & sourceType & ")\n"
   else:
     result.add "  if source.isNil:\n"
@@ -64,8 +64,8 @@ proc renderInternalCopier(
         isConcreteStorageTypeName(field.typ.className):
       result.add "  " & setter & "(result, " & sourceValue & ")\n"
     elif field.typ.kind == etkClass:
-      if plan.hasManagedLayout(classDecl.sourceName):
-        result.add "  if eidoGcIsSome(" & sourceValue & "):\n"
+      if plan.hasObjectLayout(classDecl.sourceName):
+        result.add "  if eidoMemoryPresent(" & sourceValue & "):\n"
         result.add "    " & setter & "(result, " &
           classCopyInternalName(field.typ.className) &
           "(" & sourceValue & ", context))\n"
@@ -102,7 +102,7 @@ proc renderPublicCopier(
 ## Renders all copy support needed by the program's nominal classes.
 proc renderClassCopiers*(
   classes: seq[hirDeclarations.HirClass],
-  plan: CompileTimeMemoryPlan = CompileTimeMemoryPlan()
+  plan: CompileTimeMemoryMetadata = CompileTimeMemoryMetadata()
 ): string =
   var copyableClasses: seq[hirDeclarations.HirClass]
   for classDecl in classes:

@@ -27,7 +27,7 @@ proc runTests() =
   if detectedJobs <= 0:
     detectedJobs = 1
 
-  var jobs = max(1, detectedJobs - 2)
+  var jobs = max(1, detectedJobs - 4)
   let jobsOverride = getEnv("EIDO_TEST_JOBS")
   if jobsOverride.len > 0:
     try:
@@ -73,7 +73,7 @@ proc runTests() =
     selectors.add testSelector
   selectors.sort()
 
-  jobs = min(jobs, selectors.len)
+  jobs = 4#min(jobs, selectors.len)
 
   let executable =
     getTempDir() / ("eido_test_suite_" & $getCurrentProcessId())

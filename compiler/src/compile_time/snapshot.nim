@@ -4,7 +4,8 @@
 import std/json
 import ../hir/[declarations, program, statements]
 import ../semantic/symbols/ids
-import ../types/[function_result, managed_gc_runtime, method_kind, model, storage]
+import ../source/span
+import ../types/[function_result, method_kind, model, storage]
 import target_storage_layout
 
 type
@@ -12,7 +13,7 @@ type
     typ: EidoType
     declarationName: string
     fields: seq[int64]
-    managed: bool
+    identity: bool
 
   SnapshotField = object
     ownerType: int64
@@ -51,8 +52,8 @@ proc findType(types: seq[SnapshotType], typ: EidoType): int =
       return index
   -1
 
-## Reports whether one semantic value is traced by the selected managed collector.
-proc isManagedReference(typ: EidoType): bool =
+## Reports whether one semantic type carries Eido object/interface identity.
+proc isIdentityType(typ: EidoType): bool =
   case typ.kind
   of etkClass:
     not isConcreteStorageTypeName(typ.className)
@@ -72,7 +73,7 @@ proc ensureType(snapshot: var CompileTimeSnapshot, typ: EidoType): int64 =
     typ: typ,
     declarationName: "",
     fields: @[],
-    managed: isManagedReference(typ)
+    identity: isIdentityType(typ)
   )
   handle
 
@@ -82,7 +83,7 @@ proc addClass(
   classDecl: HirClass
 ) =
   if isConcreteStorageTypeName(classDecl.sourceName) or
-      isManagedGcInternalClassName(classDecl.sourceName):
+      classDecl.span.isCompilerRuntime:
     return
 
   let typeHandle = snapshot.ensureType(classDecl.typ)
@@ -200,7 +201,7 @@ proc addFunction(
   snapshot.addStatementLocals(callableHandle, fn.body)
 
   if fn.ensures.len > 0 and fn.result.kind == frSingle and
-      isManagedReference(fn.result.typ):
+      isIdentityType(fn.result.typ):
     snapshot.addLocalValue(
       callableHandle,
       fn.ensureResultLocalId,
@@ -247,7 +248,7 @@ proc addMethod(
   snapshot.addStatementLocals(callableHandle, methodDecl.body)
 
   if methodDecl.ensures.len > 0 and methodDecl.result.kind == frSingle and
-      isManagedReference(methodDecl.result.typ):
+      isIdentityType(methodDecl.result.typ):
     snapshot.addLocalValue(
       callableHandle,
       methodDecl.ensureResultLocalId,
@@ -272,7 +273,7 @@ proc buildCompileTimeSnapshot*(program: HirProgram): CompileTimeSnapshot =
 
   for classDecl in program.classes:
     if isConcreteStorageTypeName(classDecl.sourceName) or
-        isManagedGcInternalClassName(classDecl.sourceName):
+        classDecl.span.isCompilerRuntime:
       continue
     for methodDecl in classDecl.methods:
       result.addMethod(methodDecl)
@@ -352,7 +353,7 @@ proc toJson(snapshot: CompileTimeSnapshot): JsonNode =
       fields.add %fieldHandle
 
     types.add %*{
-      "managed": entry.managed,
+      "identity": entry.identity,
       "size": layout.size,
       "alignment": layout.alignment,
       "fields": fields

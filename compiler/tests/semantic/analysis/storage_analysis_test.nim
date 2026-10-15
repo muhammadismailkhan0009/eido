@@ -221,7 +221,7 @@ suite "Storage semantics":
     expect ValueError:
       discard analyzeSource(source)
 
-  test "rejects raw String views until initialization tracking exists":
+  test "permits raw String views for Storage-backed runtime cleanup":
     let source = """
       function main() {
         var raw = Storage<Byte>.allocateRaw(4, 8);
@@ -229,8 +229,7 @@ suite "Storage semantics":
       }
     """
 
-    expect ValueError:
-      discard analyzeSource(source)
+    discard analyzeSource(source)
 
 
   test "user callables may transfer newly owned Storage":

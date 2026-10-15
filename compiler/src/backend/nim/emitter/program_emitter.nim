@@ -1,4 +1,4 @@
-## Renders a complete HIR program to Nim, including class methods, functions, and the temporary main harness.
+## Renders a complete HIR program to Nim, including runtime-backed object representation and the temporary main harness.
 
 import ../../../hir/program as hirProgram
 import ../../../hir/declarations as hirDeclarations
@@ -6,7 +6,7 @@ import ../../../compilation/plan
 import ../../../semantic/symbols/ids
 import ../../../types/function_result
 import ../../../types/storage
-import ../../../types/managed_gc_runtime
+import ../../../source/span
 import names
 import interface_emitter
 import nominal_type_emitter
@@ -15,29 +15,37 @@ import method_emitter
 import function_emitter
 import invariant_emitter
 import storage_support
-import gc_metadata_emitter
-import managed_class_emitter
+import memory_metadata_emitter
+import object_runtime_emitter
 import class_state_emitter
+import runtime_bindings
 
-## Renders the full HIR program plus validated compilation strategy decisions
-## to compilable Nim source.
+## Renders the full HIR program plus generic compiler memory metadata to Nim source.
 proc emitNim*(
   program: hirProgram.HirProgram,
   plan: CompilationPlan
 ): string =
   result.add "import std/options\n"
-  let managedRuntime = plan.memory.types.len > 0
+  let runtimeBackedObjects = plan.memory.types.len > 0
+  let runtimeBindings =
+    if runtimeBackedObjects:
+      bindRuntimeInstrumentation(program, plan.instrumentation)
+    else:
+      RuntimeBindings()
+
   var ordinaryClasses: seq[hirDeclarations.HirClass]
+  var runtimeClasses: seq[hirDeclarations.HirClass]
   for classDecl in program.classes:
-    if not isManagedGcInternalClassName(classDecl.sourceName):
+    if classDecl.span.isCompilerRuntime and
+        not isConcreteStorageTypeName(classDecl.sourceName):
+      runtimeClasses.add classDecl
+    else:
       ordinaryClasses.add classDecl
-  if managedRuntime:
-    result.add "import eido_managed_gc\n"
-  else:
-    result.add "template eidoGcProtected(body: untyped): untyped = body\n"
+
   var hasStorage = false
   for classDecl in program.classes:
-    if isConcreteStorageTypeName(classDecl.sourceName):
+    if isConcreteStorageTypeName(classDecl.sourceName) or
+        classDecl.classFields.len > 0:
       hasStorage = true
       break
   if hasStorage:
@@ -51,7 +59,7 @@ proc emitNim*(
 
   if not hasNativeDeclarations:
     for classDecl in program.classes:
-      if isManagedGcInternalClassName(classDecl.sourceName):
+      if classDecl.span.isCompilerRuntime:
         continue
       for methodDecl in classDecl.methods:
         if methodDecl.isNative and
@@ -65,18 +73,14 @@ proc emitNim*(
     result.add "import eido_native\n"
 
   result.add "\n"
-  result.add renderNominalTypes(
-    program.interfaces,
-    ordinaryClasses,
-    plan.memory
-  )
-  result.add renderGcMetadata(plan.memory)
+  result.add renderNominalTypes(program.interfaces, ordinaryClasses, plan.memory)
+  result.add renderMemoryMetadata(plan.memory, program.interfaces)
   result.add renderStorageSupport(ordinaryClasses)
 
-  # Forward declare Eido-bodied callables before generated class/interface helpers
-  # because managed allocation/trace helpers call the hidden Eido GC runtime.
+  # Runtime-backed generated helpers may call ordinary Eido runtime methods, so
+  # all Eido-bodied methods are forward-declared before helper emission.
   for classDecl in program.classes:
-    if isManagedGcInternalClassName(classDecl.sourceName) and not managedRuntime:
+    if classDecl.span.isCompilerRuntime and not runtimeBackedObjects:
       continue
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
@@ -87,43 +91,84 @@ proc emitNim*(
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
-  result.add renderClassStateDeclarations(program.classes, managedRuntime)
-  result.add renderClassRuntimeSupport(ordinaryClasses, plan.memory)
-  if managedRuntime:
-    result.add renderManagedInterfaceSupport(program.interfaces)
+  if runtimeBackedObjects:
+    result.add "template eidoMemoryPayloadAt(T: typedesc, identity: untyped): untyped =\n"
+    result.add "  cast[ptr T](cast[uint](identity))\n"
+    result.add "template eidoMemoryPresent(identity: int64): bool = identity != int64(0)\n"
+    result.add "template eidoMemoryGet(identity: int64): int64 =\n"
+    result.add "  block:\n"
+    result.add "    if identity == int64(0):\n"
+    result.add "      raise newException(AssertionDefect, \"optional identity value is absent\")\n"
+    result.add "    identity\n"
+    if runtimeBindings.temporaryEnter.len > 0 and
+        runtimeBindings.temporaryLeave.len > 0:
+      result.add "template eidoMemoryTemporaryScope(body: untyped): untyped =\n"
+      result.add "  block:\n"
+      result.add "    " & runtimeBindings.temporaryEnter & "()\n"
+      result.add "    defer:\n"
+      result.add "      " & runtimeBindings.temporaryLeave & "()\n"
+      result.add "    body\n\n"
+    else:
+      result.add "template eidoMemoryTemporaryScope(body: untyped): untyped = body\n\n"
+  else:
+    result.add "template eidoMemoryTemporaryScope(body: untyped): untyped = body\n\n"
+
+  result.add renderClassStateDeclarations(program.classes, runtimeBackedObjects)
+  result.add renderClassRuntimeSupport(ordinaryClasses, plan.memory, runtimeBindings)
+  if runtimeBackedObjects:
+    result.add renderRuntimeInterfaceSupport(program.interfaces, runtimeBindings)
   result.add renderInterfaceDispatchers(
     program.interfaces,
-    managedRuntime
+    runtimeBackedObjects,
+    runtimeBindings
   )
   result.add renderClassCopiers(ordinaryClasses, plan.memory)
 
   result.add renderClassInvariantCheckers(ordinaryClasses)
   result.add renderInterfaceUpcasts(
     program.interfaces,
-    managedRuntime
+    runtimeBackedObjects,
+    runtimeBindings
   )
   result.add renderClassInterfaceAdapters(
     program.interfaces,
     ordinaryClasses,
-    managedRuntime
+    runtimeBackedObjects,
+    runtimeBindings
   )
-  result.add renderClassStateInitializers(program.classes, managedRuntime)
+
+  # Compiler-runtime class state bootstraps before generic program metadata/value
+  # reporting, preventing runtime implementation state from reporting itself.
+  result.add renderClassStateInitializers(runtimeClasses, false)
+  if runtimeBackedObjects:
+    result.add renderMemoryMetadataInitializers(
+      plan.memory,
+      ordinaryClasses,
+      program.interfaces,
+      runtimeBindings
+    )
+  result.add renderClassStateInitializers(
+    ordinaryClasses,
+    runtimeBackedObjects,
+    runtimeBindings
+  )
 
   for classDecl in program.classes:
-    if isManagedGcInternalClassName(classDecl.sourceName) and not managedRuntime:
+    if classDecl.span.isCompilerRuntime and not runtimeBackedObjects:
       continue
     for methodDecl in classDecl.methods:
       if not methodDecl.isNative:
         result.add renderMethod(
           methodDecl,
           classDecl.invariants.len > 0,
-          plan.memory
+          plan.memory,
+          runtimeBindings
         )
         result.add "\n"
 
   for fn in program.functions:
     if not fn.isNative:
-      result.add renderFunction(fn, plan.memory)
+      result.add renderFunction(fn, plan.memory, runtimeBindings)
       result.add "\n"
 
   if program.hasMain:
@@ -139,19 +184,18 @@ proc emitNim*(
     result.add "when isMainModule:\n"
     if mainFn.result.kind == frNone:
       result.add "  " & mainName & "()\n"
-      if managedRuntime:
-        result.add "  " & managedGcRuntimeMethodName("shutdown") & "()\n"
+      if runtimeBackedObjects and runtimeBindings.programExit.len > 0:
+        result.add "  " & runtimeBindings.programExit & "()\n"
     else:
       # Temporary v0 harness: result printing remains until process-exit/stdlib semantics replace it.
-      if managedRuntime:
+      if runtimeBackedObjects:
         result.add "  let eido_runtime_main_result = " & mainName & "()\n"
         result.add "  echo eido_runtime_main_result\n"
-        result.add "  " & managedGcRuntimeMethodName("shutdown") & "()\n"
+        if runtimeBindings.programExit.len > 0:
+          result.add "  " & runtimeBindings.programExit & "()\n"
       else:
         result.add "  echo " & mainName & "()\n"
 
-
-## Preserves low-level emitter tests/callers that intentionally bypass compiler
-## strategy execution. Normal compilation goes through the plan-aware overload.
+## Preserves low-level emitter tests/callers that intentionally bypass compiler metadata execution.
 proc emitNim*(program: hirProgram.HirProgram): string =
   emitNim(program, CompilationPlan())

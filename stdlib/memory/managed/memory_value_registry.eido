@@ -1,0 +1,75 @@
+// Generic live identity-value registry backed entirely by Storage.
+// The compiler reports lexical value lifetime; a selected memory policy may
+// interpret these slots as roots, retain/release sites, diagnostics, or ignore them.
+class MemoryValueRegistry {
+    Storage<Int> MemoryValueRegistry.values = Storage<Int>.allocate(64);
+    Storage<Bool> MemoryValueRegistry.active = Storage<Bool>.allocate(64);
+    Int MemoryValueRegistry.slotCapacity = 64;
+    Int MemoryValueRegistry.highWater = 0;
+
+    function grow() {
+        var newCapacity = MemoryValueRegistry.slotCapacity * 2;
+        var newValues = Storage<Int>.allocate(newCapacity);
+        var newActive = Storage<Bool>.allocate(newCapacity);
+        var index = 0;
+        while (index < MemoryValueRegistry.highWater) {
+            Storage<Int>.write(newValues, index, Storage<Int>.read(MemoryValueRegistry.values, index));
+            Storage<Bool>.write(newActive, index, Storage<Bool>.read(MemoryValueRegistry.active, index));
+            set index = index + 1;
+        }
+        Storage<Int>.release(MemoryValueRegistry.values);
+        Storage<Bool>.release(MemoryValueRegistry.active);
+        set MemoryValueRegistry.values = newValues;
+        set MemoryValueRegistry.active = newActive;
+        set MemoryValueRegistry.slotCapacity = newCapacity;
+    }
+
+    function enter(Int identity) returns Int {
+        var index = 0;
+        while (index < MemoryValueRegistry.highWater) {
+            if (not Storage<Bool>.read(MemoryValueRegistry.active, index)) {
+                Storage<Int>.write(MemoryValueRegistry.values, index, identity);
+                Storage<Bool>.write(MemoryValueRegistry.active, index, true);
+                return index;
+            }
+            set index = index + 1;
+        }
+        if (MemoryValueRegistry.highWater >= MemoryValueRegistry.slotCapacity) {
+            MemoryValueRegistry.grow();
+        }
+        var valueId = MemoryValueRegistry.highWater;
+        Storage<Int>.write(MemoryValueRegistry.values, valueId, identity);
+        Storage<Bool>.write(MemoryValueRegistry.active, valueId, true);
+        set MemoryValueRegistry.highWater = MemoryValueRegistry.highWater + 1;
+        return valueId;
+    }
+
+    function update(Int valueId, Int identity) {
+        require { valueId >= 0; valueId < MemoryValueRegistry.highWater; }
+        Storage<Int>.write(MemoryValueRegistry.values, valueId, identity);
+    }
+
+    function leave(Int valueId) {
+        require { valueId >= 0; valueId < MemoryValueRegistry.highWater; }
+        Storage<Int>.write(MemoryValueRegistry.values, valueId, 0);
+        Storage<Bool>.write(MemoryValueRegistry.active, valueId, false);
+    }
+
+    function highWaterMark() returns Int { return MemoryValueRegistry.highWater; }
+    function isActive(Int valueId) returns Bool { return Storage<Bool>.read(MemoryValueRegistry.active, valueId); }
+    function valueAt(Int valueId) returns Int { return Storage<Int>.read(MemoryValueRegistry.values, valueId); }
+
+    function clear() {
+        var index = 0;
+        while (index < MemoryValueRegistry.highWater) {
+            Storage<Int>.write(MemoryValueRegistry.values, index, 0);
+            Storage<Bool>.write(MemoryValueRegistry.active, index, false);
+            set index = index + 1;
+        }
+    }
+
+    function shutdown() {
+        Storage<Int>.release(MemoryValueRegistry.values);
+        Storage<Bool>.release(MemoryValueRegistry.active);
+    }
+}

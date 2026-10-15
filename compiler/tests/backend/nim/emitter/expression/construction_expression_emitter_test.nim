@@ -46,4 +46,4 @@ suite "Construction expression emission":
     let generated = emitSource(source)
 
     # Then
-    check "arg_eido_field_marker = eidoGcProtected(eido_construct_Marker())" in generated
+    check "arg_eido_field_marker = eidoMemoryTemporaryScope(eido_construct_Marker())" in generated

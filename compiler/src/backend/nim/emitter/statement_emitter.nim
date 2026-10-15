@@ -4,19 +4,18 @@
 import std/strutils
 import ../../../hir/statements as hirStatements
 import ../../../types/function_result
+import ../../../semantic/symbols/ids
 import names
 import type_emitter
 import expression_emitter
 import normal_exit
-import gc_root_emitter
+import instrumentation_emitter
 
 ## Returns spaces for one emitted statement indentation level.
-## Example: indentation(4) prefixes a statement nested inside a function-level conditional.
 proc indentation(level: int): string =
   repeat(' ', level)
 
 ## Renders one HIR statement at an explicit indentation level.
-## Example: conditional emission recursively calls this for branch statements.
 proc renderStmtAt*(
   stmt: hirStatements.HirStmt,
   indent: int,
@@ -29,8 +28,12 @@ include statement/while_statements
 include statement/for_statements
 include statement/loop_control_statements
 
+## Renders one stable expression-free execution boundary for the selected Eido memory runtime.
+proc renderMemoryBoundary(context: NormalExitContext, pad: string): string =
+  if context.instrumentationEnabled and context.runtimeBindings.statementBoundary.len > 0:
+    result.add pad & context.runtimeBindings.statementBoundary & "()\n"
+
 ## Renders one HIR statement at an explicit indentation level.
-## Example: an HIR variable declaration nested at four spaces keeps that indentation.
 proc renderStmtAt*(
   stmt: hirStatements.HirStmt,
   indent: int,
@@ -41,22 +44,25 @@ proc renderStmtAt*(
   case stmt.kind
   of hirStatements.hskVar:
     result.add pad & "var " & localName(stmt.localId, stmt.sourceName) &
-      ": " & renderType(stmt.typ) & " = " &
-      renderExpr(stmt.initializer) & "\n"
-    if exitContext.isGcRoot(stmt.localId):
-      result.add renderLocalRootRegistration(
+      ": " & renderType(stmt.typ) & " = " & renderExpr(stmt.initializer) & "\n"
+    if exitContext.isIdentityValue(stmt.localId):
+      result.add renderLocalValueRegistration(
         stmt.localId,
         stmt.sourceName,
-        indent
+        indent,
+        exitContext.runtimeBindings
       )
-    if exitContext.gcEnabled:
-      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+    result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskAssign:
     result.add pad & localName(stmt.targetId, stmt.targetName) &
       " = " & renderExpr(stmt.assignedValue) & "\n"
-    if exitContext.gcEnabled:
-      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+    if exitContext.isIdentityValue(stmt.targetId) and
+        exitContext.runtimeBindings.bindingWrite.len > 0:
+      result.add pad & exitContext.runtimeBindings.bindingWrite & "(" &
+        memoryValueSlotName(stmt.targetId) & ", " &
+        localName(stmt.targetId, stmt.targetName) & ")\n"
+    result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskFieldSet:
     result.add pad & classFieldSetName(
@@ -65,32 +71,38 @@ proc renderStmtAt*(
     ) & "(" & localName(stmt.receiverId, "receiver") & ", " &
       renderExpr(stmt.fieldValue) & ")\n"
     result.add renderInvariantValidation(exitContext, indent)
-    if exitContext.gcEnabled:
-      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+    result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskClassFieldSet:
-    result.add pad & classOwnedFieldName(
+    let classSlot = classOwnedFieldName(
       stmt.classFieldOwner.className,
       stmt.classFieldName
-    ) & " = " & renderExpr(stmt.classFieldValue) & "\n"
-    if exitContext.gcEnabled:
-      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+    )
+    result.add pad & "eidoStorageWrite(" & classSlot & ", int64(0), " &
+      renderExpr(stmt.classFieldValue) & ")\n"
+    if exitContext.instrumentationEnabled and
+        stmt.classFieldValue.typ.isIdentityNominalType and
+        exitContext.runtimeBindings.bindingWrite.len > 0:
+      result.add pad & exitContext.runtimeBindings.bindingWrite & "(" &
+        classOwnedFieldMemoryValueName(
+          stmt.classFieldOwner.className,
+          stmt.classFieldName
+        ) & ", eidoStorageRead(" & classSlot & ", int64(0)))\n"
+    result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskCall:
     if stmt.call.result.kind == frNone:
       result.add pad & renderCall(stmt.call) & "\n"
     else:
       result.add pad & "discard " & renderCall(stmt.call) & "\n"
-    if exitContext.gcEnabled:
-      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+    result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskMethodCall:
     if stmt.methodCall.result.kind == frNone:
       result.add pad & renderMethodCall(stmt.methodCall) & "\n"
     else:
       result.add pad & "discard " & renderMethodCall(stmt.methodCall) & "\n"
-    if exitContext.gcEnabled:
-      result.add pad & managedGcRuntimeMethodName("safepoint") & "()\n"
+    result.add renderMemoryBoundary(exitContext, pad)
 
   of hirStatements.hskReturn:
     if stmt.value.isNil:
@@ -102,8 +114,12 @@ proc renderStmtAt*(
           exitContext.resultBindingName
         else:
           "eido_runtime_return_" & $stmt.span.startOffset
-      if exitContext.resultRootId >= 0:
+      if exitContext.resultIdentityValueId >= 0:
         result.add pad & returnLocal & " = " & renderExpr(stmt.value) & "\n"
+        if exitContext.runtimeBindings.bindingWrite.len > 0:
+          result.add pad & exitContext.runtimeBindings.bindingWrite & "(" &
+            memoryValueSlotName(LocalId(exitContext.resultIdentityValueId)) & ", " &
+            returnLocal & ")\n"
       else:
         result.add pad & "let " & returnLocal & " = " & renderExpr(stmt.value) & "\n"
       result.add renderNormalExitChecks(exitContext, indent)
@@ -113,21 +129,16 @@ proc renderStmtAt*(
 
   of hirStatements.hskIf:
     result.add renderConditional(stmt, indent, exitContext)
-
   of hirStatements.hskExists:
     result.add renderExists(stmt, indent, exitContext)
-
   of hirStatements.hskWhile:
     result.add renderWhile(stmt, indent, exitContext)
-
   of hirStatements.hskFor:
     result.add renderFor(stmt, indent, exitContext)
-
   of hirStatements.hskBreak, hirStatements.hskContinue:
     result.add renderLoopControl(stmt, indent)
 
 ## Renders one function-level HIR statement.
-## Example: top-level function statements begin with two spaces in generated Nim.
 proc renderStmtAt*(stmt: hirStatements.HirStmt, indent: int): string =
   renderStmtAt(stmt, indent, NormalExitContext())
 

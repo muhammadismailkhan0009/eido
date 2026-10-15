@@ -1,0 +1,11 @@
+module: memory_policy_gc
+
+sources:
+  - RuntimeBindings.eido
+  - runner.eido
+
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

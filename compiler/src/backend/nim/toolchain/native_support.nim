@@ -21,10 +21,6 @@ proc materializeEmbeddedNativeSupport(): string =
       readFile(storageFile) != BuiltinStorageSupportSource:
     writeFile(storageFile, BuiltinStorageSupportSource)
 
-  let managedGcFile = directory / "eido_managed_gc.nim"
-  if not fileExists(managedGcFile) or
-      readFile(managedGcFile) != BuiltinManagedGcSupportSource:
-    writeFile(managedGcFile, BuiltinManagedGcSupportSource)
   directory
 
 ## Returns the directory containing the Nim backend native-support module.

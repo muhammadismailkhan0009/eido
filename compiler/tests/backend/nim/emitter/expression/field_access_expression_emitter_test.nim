@@ -51,4 +51,4 @@ suite "Field access expression emission":
     let generated = emitSource(source)
 
     # Then
-    check "return eido_get_Point_x(eidoGcProtected(eido_construct_Point(arg_eido_field_x = int64(10))))" in generated
+    check "return eido_get_Point_x(eidoMemoryTemporaryScope(eido_construct_Point(arg_eido_field_x = int64(10))))" in generated

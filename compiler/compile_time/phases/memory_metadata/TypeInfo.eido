@@ -1,6 +1,6 @@
-// Private type-handle queries for compiler-standard compile-time phases.
+// Private type-handle queries for compiler-standard memory metadata.
 class TypeInfo {
-    native function isManaged(Int type) returns Bool;
+    native function isIdentity(Int type) returns Bool;
     native function fieldCount(Int type) returns Int;
     native function fieldAt(Int type, Int index) returns Int;
 }

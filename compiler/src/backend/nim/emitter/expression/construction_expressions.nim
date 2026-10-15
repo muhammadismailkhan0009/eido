@@ -18,4 +18,4 @@ proc renderConstruction(expr: hirExpressions.HirExpr): string =
   if expr.checkInvariant:
     rendered.add ")"
 
-  protectManagedTemporary(rendered, true)
+  protectIdentityTemporaries(rendered, true)

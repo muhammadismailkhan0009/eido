@@ -65,8 +65,8 @@ proc eido_native_method_Compiler_callableAt*(index: int64): int64 =
   requireIndex(index, int64(callables.len), "callable")
   index
 
-proc eido_native_method_TypeInfo_isManaged*(typeHandle: int64): bool =
-  typeNode(typeHandle)["managed"].getBool()
+proc eido_native_method_TypeInfo_isIdentity*(typeHandle: int64): bool =
+  typeNode(typeHandle)["identity"].getBool()
 
 proc eido_native_method_TypeInfo_fieldCount*(typeHandle: int64): int64 =
   int64(typeNode(typeHandle)["fields"].len)
@@ -121,20 +121,20 @@ proc eido_native_method_StorageInfo_alignmentOf*(typeHandle: int64): int64 =
 proc emitRecord(kind, first, second, third: int64) =
   echo &"EIDO_CT|{kind}|{first}|{second}|{third}"
 
-proc eido_native_method_MemoryPlan_field*(
+proc eido_native_method_MemoryMetadata_field*(
   ownerType,
   fieldHandle,
   offset: int64
 ) =
   emitRecord(1, ownerType, fieldHandle, offset)
 
-proc eido_native_method_MemoryPlan_trace*(
+proc eido_native_method_MemoryMetadata_identityField*(
   ownerType,
   fieldHandle: int64
 ) =
   emitRecord(2, ownerType, fieldHandle, 0)
 
-proc eido_native_method_MemoryPlan_layout*(
+proc eido_native_method_MemoryMetadata_layout*(
   typeHandle,
   size,
   alignment: int64
@@ -142,8 +142,15 @@ proc eido_native_method_MemoryPlan_layout*(
   emitRecord(3, typeHandle, size, alignment)
 
 
-proc eido_native_method_MemoryPlan_root*(
+proc eido_native_method_MemoryMetadata_identityValue*(
   callableHandle,
   valueHandle: int64
 ) =
   emitRecord(4, callableHandle, valueHandle, 0)
+
+## Emits one generic program-event binding selected by an Eido compile-time policy.
+proc eido_native_method_RuntimeBindings_bind*(
+  eventKind: int64,
+  methodName: string
+) =
+  echo "EIDO_BIND|" & $eventKind & "|" & methodName

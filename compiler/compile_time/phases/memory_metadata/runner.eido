@@ -1,0 +1,5 @@
+// Generic compiler-owned memory-metadata entrypoint.
+// The phase describes program structure and contains no memory-management policy.
+function main() {
+    MemoryMetadataBuilder.build();
+}

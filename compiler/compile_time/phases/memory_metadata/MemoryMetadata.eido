@@ -1,0 +1,7 @@
+// Private generic memory-metadata sink consumed by the compiler after the phase exits.
+class MemoryMetadata {
+    native function field(Int ownerType, Int field, Int offset);
+    native function identityField(Int ownerType, Int field);
+    native function layout(Int type, Int size, Int alignment);
+    native function identityValue(Int callable, Int value);
+}

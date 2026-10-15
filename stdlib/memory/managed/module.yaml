@@ -1,12 +1,10 @@
 module: managed
 
 sources:
-  - managed_gc_native.eido
+  - memory_value_registry.eido
+  - memory_type_registry.eido
   - managed_heap_allocator.eido
   - managed_gc_runtime.eido
+  - memory_runtime.eido
 
-children: []
-dependencies: []
 exports: []
-provides: {}
-adopts: []

@@ -1,8 +1,9 @@
-## Carries validated compiler-strategy decisions into backend generation.
-## Future strategy outputs should join this object rather than bypassing the pipeline.
+## Carries validated compiler metadata into backend generation.
+## Memory-management policy remains outside this model in the selected Eido runtime.
 
-import ../compile_time/model
+import ../compile_time/[instrumentation_model, model]
 
 type
   CompilationPlan* = object
-    memory*: CompileTimeMemoryPlan
+    memory*: CompileTimeMemoryMetadata
+    instrumentation*: CompileTimeInstrumentationPlan

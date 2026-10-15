@@ -1,0 +1,43 @@
+// Generic compiler/runtime memory boundary.
+// Compiler-generated code reports semantic memory facts here; the selected
+// Eido implementation decides how those facts drive allocation and lifetime.
+class MemoryRuntime {
+    function memoryValueEnter(Int identity) returns Int {
+        return MemoryValueRegistry.enter(identity);
+    }
+    function memoryValueUpdate(Int valueId, Int identity) {
+        MemoryValueRegistry.update(valueId, identity);
+    }
+    function memoryValueLeave(Int valueId) {
+        MemoryValueRegistry.leave(valueId);
+    }
+
+    function memoryTypeRegister(Int typeId, Int fieldCount) {
+        MemoryTypeRegistry.registerType(typeId, fieldCount);
+    }
+    function memoryTypeSetField(
+        Int typeId,
+        Int index,
+        Int offset,
+        Bool containsIdentity,
+        Int cleanupKind
+    ) {
+        MemoryTypeRegistry.setField(typeId, index, offset, containsIdentity, cleanupKind);
+    }
+
+    function memoryObjectAllocate(Int payloadSize, Int payloadAlignment, Int typeId) returns Int {
+        return ManagedGcRuntime.allocate(payloadSize, payloadAlignment, typeId);
+    }
+
+    function memoryTemporaryEnter() { ManagedGcRuntime.temporaryEnter(); }
+    function memoryTemporaryLeave() { ManagedGcRuntime.temporaryLeave(); }
+    function memoryExecutionBoundary() { ManagedGcRuntime.executionBoundary(); }
+
+    function memoryObjectInvariantEnter(Int identity) { ManagedGcRuntime.invariantEnter(identity); }
+    function memoryObjectInvariantLeave(Int identity) { ManagedGcRuntime.invariantLeave(identity); }
+    function memoryObjectInvariantClear(Int identity) returns Bool {
+        return ManagedGcRuntime.invariantClear(identity);
+    }
+
+    function memoryShutdown() { ManagedGcRuntime.shutdown(); }
+}

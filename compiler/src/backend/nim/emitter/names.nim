@@ -51,10 +51,6 @@ proc nativeMethodName*(ownerName, sourceName: string): string =
 proc storageMethodName*(ownerName, sourceName: string): string =
   "eido_storage_" & nominalName(ownerName) & "_" & sourceName
 
-## Builds stable backend names for hidden Eido managed-GC runtime methods.
-## These names intentionally do not depend on semantic method IDs.
-proc managedGcRuntimeMethodName*(sourceName: string): string =
-  "eido_gc_runtime_" & sourceName
 
 ## Builds a collision-safe Nim method name from semantic identity and owner.
 proc methodName*(
@@ -114,9 +110,13 @@ proc fieldName*(sourceName: string): string =
 proc classOwnedFieldName*(ownerName, sourceName: string): string =
   "eido_class_state_" & nominalName(ownerName) & "_" & sourceName
 
-## Builds the permanent precise-root descriptor for one managed class-owned field.
-proc classOwnedFieldRootName*(ownerName, sourceName: string): string =
-  "eido_class_root_" & nominalName(ownerName) & "_" & sourceName
+## Builds the generated runtime-metadata slot for one identity-valued class field.
+proc classOwnedFieldMemoryValueName*(ownerName, sourceName: string): string =
+  "eido_class_memory_value_" & nominalName(ownerName) & "_" & sourceName
+
+## Builds the generated helper that releases a class-owned Storage value in place.
+proc classOwnedFieldReleaseName*(ownerName, sourceName: string): string =
+  "eido_class_state_release_" & nominalName(ownerName) & "_" & sourceName
 
 ## Builds the generated runtime invariant-checker name for one class.
 proc classInvariantName*(sourceName: string): string =
@@ -127,41 +127,33 @@ proc invariantEvaluationDepthFieldName*(): string =
   "eido_runtime_invariant_evaluation_depth"
 
 
-## Builds the generated Nim payload type name for one managed Eido class.
+## Builds the generated Nim payload type name for one runtime-backed Eido class.
 proc classPayloadName*(sourceName: string): string =
   "eido_payload_" & nominalName(sourceName)
 
-## Builds the generated blank-allocation helper for one managed Eido class.
+## Builds the generated blank-allocation helper for one runtime-backed Eido class.
 proc classAllocateName*(sourceName: string): string =
   "eido_allocate_" & nominalName(sourceName)
 
-## Builds the generated full constructor helper for one managed Eido class.
+## Builds the generated full constructor helper for one runtime-backed Eido class.
 proc classConstructorName*(sourceName: string): string =
   "eido_construct_" & nominalName(sourceName)
 
-## Builds the generated trace callback for one managed Eido class.
-proc classTraceName*(sourceName: string): string =
-  "eido_trace_" & nominalName(sourceName)
+## Builds the generated generic memory-metadata type id constant for one class.
+proc classMemoryTypeIdName*(sourceName: string): string =
+  className(sourceName) & "_memory_type_id"
 
-## Builds the generated destroy callback for one managed Eido class.
-proc classDestroyName*(sourceName: string): string =
-  "eido_destroy_" & nominalName(sourceName)
-
-## Builds the generated managed interface payload type name.
+## Builds the generated runtime-backed interface payload type name.
 proc interfacePayloadName*(sourceName: string): string =
   "eido_interface_payload_" & nominalName(sourceName)
 
-## Builds the generated managed interface allocation helper.
+## Builds the generated runtime-backed interface allocation helper.
 proc interfaceAllocateName*(sourceName: string): string =
   "eido_interface_allocate_" & nominalName(sourceName)
 
-## Builds the generated managed interface trace callback.
-proc interfaceTraceName*(sourceName: string): string =
-  "eido_interface_trace_" & nominalName(sourceName)
-
-## Builds the generated managed interface destroy callback.
-proc interfaceDestroyName*(sourceName: string): string =
-  "eido_interface_destroy_" & nominalName(sourceName)
+## Builds the generic memory-metadata type id constant for one interface box.
+proc interfaceMemoryTypeIdName*(sourceName: string): string =
+  interfaceName(sourceName) & "_memory_type_id"
 
 ## Builds the generated interface method dispatcher wrapper.
 proc interfaceDispatchName*(interfaceNameValue, methodNameValue: string): string =
@@ -177,9 +169,9 @@ proc interfaceThunkName*(
   "eido_interface_thunk_" & nominalName(classSourceName) & "_" &
     nominalName(interfaceSourceName) & "_" & methodSourceName
 
-## Builds the stack-owned precise-root descriptor name for one LocalId.
-proc gcRootName*(id: LocalId): string =
-  "eido_gc_root_" & $id.value
+## Builds the generated runtime-metadata slot variable for one identity-valued LocalId.
+proc memoryValueSlotName*(id: LocalId): string =
+  "eido_memory_value_" & $id.value
 
 
 ## Builds the representation-neutral generated getter for one class field.

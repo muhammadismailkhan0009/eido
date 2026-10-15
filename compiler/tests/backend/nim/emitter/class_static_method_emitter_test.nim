@@ -24,3 +24,25 @@ suite "Inferred static method emission":
     check "eido_class_Calculator" notin
       generated.split("proc eido_method_0_Calculator_add(")[1].split(")")[0]
     check "return eido_method_0_Calculator_add(int64(20), int64(22))" in generated
+
+  test "routes class-owned state through Storage-backed slots":
+    let source = """
+      class Counter {
+        Int Counter.count = 1;
+        function increment() {
+          set Counter.count = Counter.count + 1;
+        }
+      }
+      function main() returns Int {
+        Counter.increment();
+        return Counter.count;
+      }
+    """
+
+    let generated = emitSource(source)
+
+    check "import eido_storage" in generated
+    check "var eido_class_state_Counter_count: EidoStorage[int64]" in generated
+    check "eido_class_state_Counter_count = eidoStorageAllocate[int64](int64(1))" in generated
+    check "eidoStorageWrite(eido_class_state_Counter_count, int64(0), int64(1))" in generated
+    check "eidoStorageRead(eido_class_state_Counter_count, int64(0))" in generated

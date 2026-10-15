@@ -96,6 +96,26 @@ suite "Storage execution":
 
     check runNativeFeatureSource(source, "storage_field_release") == "9"
 
+  test "a class-owned Storage field releases its descriptor in place":
+    let source = """
+      class Buffer {
+        Storage<Int> Buffer.storage = Storage<Int>.allocate(1);
+
+        function useAndClose() returns Int {
+          Storage<Int>.write(Buffer.storage, 0, 42);
+          var value = Storage<Int>.read(Buffer.storage, 0);
+          Storage<Int>.release(Buffer.storage);
+          return value;
+        }
+      }
+
+      function main() returns Int {
+        return Buffer.useAndClose();
+      }
+    """
+
+    check runNativeFeatureSource(source, "storage_class_owned_release") == "42"
+
   test "creates allocation-free typed views over byte storage":
     let source = """
       function main() returns Int {

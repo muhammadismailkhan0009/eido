@@ -1,0 +1,74 @@
+// Generic compiler memory-metadata builder.
+//
+// This phase describes program structure only. It does not select roots,
+// collectors, allocation policy, reference-count behavior, or safepoints.
+class MemoryMetadataBuilder {
+    function align(Int offset, Int alignment) returns Int {
+        return ((offset + alignment - 1) / alignment) * alignment;
+    }
+
+    function describeType(Int type) {
+        var offset = 0;
+        var requiredAlignment = 1;
+        var fieldIndex = 0;
+
+        while (fieldIndex < TypeInfo.fieldCount(type)) {
+            var field = TypeInfo.fieldAt(type, fieldIndex);
+            var fieldType = FieldInfo.typeOf(field);
+            var fieldAlignment = StorageInfo.alignmentOf(fieldType);
+
+            set offset = MemoryMetadataBuilder.align(offset, fieldAlignment);
+            MemoryMetadata.field(type, field, offset);
+
+            if (TypeInfo.isIdentity(fieldType)) {
+                MemoryMetadata.identityField(type, field);
+            }
+
+            set offset = offset + StorageInfo.sizeOf(fieldType);
+            if (fieldAlignment > requiredAlignment) {
+                set requiredAlignment = fieldAlignment;
+            }
+            set fieldIndex = fieldIndex + 1;
+        }
+
+        MemoryMetadata.layout(
+            type,
+            MemoryMetadataBuilder.align(offset, requiredAlignment),
+            requiredAlignment
+        );
+    }
+
+    function describeCallable(Int callable) {
+        var parameterIndex = 0;
+        while (parameterIndex < CallableInfo.parameterCount(callable)) {
+            var parameter = CallableInfo.parameterAt(callable, parameterIndex);
+            if (TypeInfo.isIdentity(ValueInfo.typeOf(parameter))) {
+                MemoryMetadata.identityValue(callable, parameter);
+            }
+            set parameterIndex = parameterIndex + 1;
+        }
+
+        var localIndex = 0;
+        while (localIndex < CallableInfo.localCount(callable)) {
+            var local = CallableInfo.localAt(callable, localIndex);
+            if (TypeInfo.isIdentity(ValueInfo.typeOf(local))) {
+                MemoryMetadata.identityValue(callable, local);
+            }
+            set localIndex = localIndex + 1;
+        }
+    }
+
+    function build() {
+        var typeIndex = 0;
+        while (typeIndex < Compiler.typeCount()) {
+            MemoryMetadataBuilder.describeType(Compiler.typeAt(typeIndex));
+            set typeIndex = typeIndex + 1;
+        }
+
+        var callableIndex = 0;
+        while (callableIndex < Compiler.callableCount()) {
+            MemoryMetadataBuilder.describeCallable(Compiler.callableAt(callableIndex));
+            set callableIndex = callableIndex + 1;
+        }
+    }
+}

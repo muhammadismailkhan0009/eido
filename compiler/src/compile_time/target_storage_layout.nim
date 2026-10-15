@@ -51,9 +51,9 @@ proc storageLayoutOf*(typ: EidoType): StorageLayout =
       else:
         requiredLayout(EidoStorage[int8])
     else:
-      # Managed class values, including optional absence, are one-pointer handles.
+      # Class identity values, including optional absence, use one-pointer backend handles.
       requiredLayout(pointer)
 
   of etkInterface:
-    # Managed interface values, including optional absence, are one-pointer boxes.
+    # Interface identity values, including optional absence, use one-pointer backend handles.
     requiredLayout(pointer)

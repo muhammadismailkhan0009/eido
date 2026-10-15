@@ -5,22 +5,20 @@ import ../../../hir/expressions as hirExpressions
 import ../../../types/model
 import ../../../types/method_kind
 import ../../../types/storage
-import ../../../types/managed_gc_runtime
 import names
 import type_emitter
 
-## Reports whether one managed expression is not already held in a source local.
-## Such values require a short collection barrier while sibling call arguments
-## are still being evaluated.
-proc isManagedTemporary(expr: hirExpressions.HirExpr): bool =
+## Reports whether one identity-bearing expression is not already held in a source local.
+## Such values participate in a generic temporary-expression lifetime region.
+proc isIdentityTemporary(expr: hirExpressions.HirExpr): bool =
   not expr.isNil and
-    expr.typ.isManagedNominalType and
+    expr.typ.isIdentityNominalType and
     expr.kind != hirExpressions.hekLocal
 
-## Wraps one rendered compound expression in the GC temporary barrier when needed.
-proc protectManagedTemporary(expression: string, required: bool): string =
+## Wraps one compound expression in generic temporary-lifetime metadata when needed.
+proc protectIdentityTemporaries(expression: string, required: bool): string =
   if required:
-    "eidoGcProtected(" & expression & ")"
+    "eidoMemoryTemporaryScope(" & expression & ")"
   else:
     expression
 
@@ -49,10 +47,10 @@ proc renderCall*(call: hirExpressions.HirCall): string =
     if index > 0:
       rendered.add ", "
     rendered.add renderExpr(argument)
-    if argument.isManagedTemporary:
+    if argument.isIdentityTemporary:
       protect = true
   rendered.add ")"
-  result = protectManagedTemporary(rendered, protect)
+  result = protectIdentityTemporaries(rendered, protect)
 
 ## Renders a typed integral literal with its Nim representation.
 ## Example: Eido Byte literal value 7 becomes `int8(7)`, while ordinary Int becomes `int64(...)`.
@@ -95,18 +93,18 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
   of hirExpressions.hekString:
     result = renderStringLiteral(expr)
   of hirExpressions.hekNone:
-    if expr.typ.isManagedNominalType:
+    if expr.typ.isIdentityNominalType:
       result = "default(" & renderType(requiredType(expr.typ)) & ")"
     else:
       result = "none(" & renderType(requiredType(expr.typ)) & ")"
   of hirExpressions.hekOptionalSome:
-    if expr.typ.isManagedNominalType:
+    if expr.typ.isIdentityNominalType:
       result = renderExpr(expr.optionalValue)
     else:
       result = "some(" & renderExpr(expr.optionalValue) & ")"
   of hirExpressions.hekOptionalGet:
-    if expr.typ.isManagedNominalType:
-      result = "eidoGcGet(" & renderExpr(expr.optionalValue) & ")"
+    if expr.typ.isIdentityNominalType:
+      result = "eidoMemoryGet(" & renderExpr(expr.optionalValue) & ")"
     else:
       result = "get(" & renderExpr(expr.optionalValue) & ")"
   of hirExpressions.hekLocal:
@@ -143,10 +141,10 @@ proc renderExpr*(expr: hirExpressions.HirExpr): string =
   of hirExpressions.hekFieldAccess:
     result = renderFieldAccess(expr)
   of hirExpressions.hekClassFieldAccess:
-    result = classOwnedFieldName(
+    result = "eidoStorageRead(" & classOwnedFieldName(
       expr.classFieldOwner.className,
       expr.classFieldName
-    )
+    ) & ", int64(0))"
   of hirExpressions.hekMethodCall:
     result = renderMethodCall(expr.methodCall)
   of hirExpressions.hekUnary:

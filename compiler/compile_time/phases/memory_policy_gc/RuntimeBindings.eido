@@ -1,0 +1,5 @@
+// Private compiler-standard sink for generic runtime event bindings.
+// Event meanings are compiler-generic; this GC policy chooses ordinary Eido handlers.
+class RuntimeBindings {
+    native function bind(Int eventKind, String methodName);
+}

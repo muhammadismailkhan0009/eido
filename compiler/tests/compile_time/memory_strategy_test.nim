@@ -3,7 +3,7 @@ import support/[compiler_test_support, project_fixture_support]
 import compile_time/[model, phase_runner]
 import pipeline/[options, project_compiler]
 
-suite "Compiler-standard Eido memory strategies":
+suite "Compiler-standard Eido memory metadata":
   test "keeps compile-time contracts unavailable to ordinary Eido source":
     expect ValueError:
       discard analyzeSource("""
@@ -19,67 +19,61 @@ suite "Compiler-standard Eido memory strategies":
         }
       """)
 
-  test "GC strategy runs Eido mark-and-sweep layout policy":
+  test "builds policy-neutral object layout and identity-field metadata":
     let source = """
-      class Child {
-        Int value;
-      }
-
+      class Child { Int value; }
       class Parent {
         Byte tag;
         Int number;
         Child child;
       }
-
       function main() {}
     """
 
     let program = analyzeSource(source)
-    let plan = runStandardCompileTimePhases(program, msGc)
+    let metadata = runStandardCompileTimePhases(program, msGc)
 
-    check plan.types.len == 2
-
+    check metadata.types.len == 2
     var totalFields = 0
-    var tracedFields = 0
+    var identityFields = 0
     var sawAlignedParent = false
 
-    for typePlan in plan.types:
-      totalFields += typePlan.fields.len
-      check typePlan.alignment > 0
-      check typePlan.size >= 0
+    for typeMetadata in metadata.types:
+      totalFields += typeMetadata.fields.len
+      check typeMetadata.alignment > 0
+      check typeMetadata.size >= 0
 
-      if typePlan.fields.len == 3:
+      if typeMetadata.fields.len == 3:
         sawAlignedParent = true
-        check typePlan.fields[0].offset == 0
-        check typePlan.fields[1].offset == 8
-        check typePlan.fields[2].offset == 16
-        check typePlan.size == 24
-        check typePlan.alignment == 8
+        check typeMetadata.fields[0].offset == 0
+        check typeMetadata.fields[1].offset == 8
+        check typeMetadata.fields[2].offset == 16
+        check typeMetadata.size == 24
+        check typeMetadata.alignment == 8
 
-      for field in typePlan.fields:
-        if field.traced:
-          inc tracedFields
+      for field in typeMetadata.fields:
+        if field.containsIdentity:
+          inc identityFields
 
     check sawAlignedParent
     check totalFields == 4
-    check tracedFields == 1
+    check identityFields == 1
 
     var sawStableParentIdentity = false
-    for typePlan in plan.types:
-      if typePlan.className != "Parent":
+    for typeMetadata in metadata.types:
+      if typeMetadata.className != "Parent":
         continue
       sawStableParentIdentity = true
-      check typePlan.fields.len == 3
-      check typePlan.fields[2].fieldName == "child"
-      check typePlan.fields[2].traced
+      check typeMetadata.fields.len == 3
+      check typeMetadata.fields[2].fieldName == "child"
+      check typeMetadata.fields[2].containsIdentity
 
     check sawStableParentIdentity
 
-  test "GC strategy selects managed parameters locals and receivers as roots":
+  test "describes identity-valued parameters locals and receivers without selecting roots":
     let source = """
       class Box {
         Int value;
-
         function keep(Box other) returns Int {
           var local = Box { value = other.value; };
           return local.value + self.value;
@@ -98,38 +92,34 @@ suite "Compiler-standard Eido memory strategies":
     """
 
     let program = analyzeSource(source)
-    let plan = runStandardCompileTimePhases(program, msGc)
+    let metadata = runStandardCompileTimePhases(program, msGc)
 
-    var sawFunctionRoots = false
-    var sawMethodRoots = false
-    for callable in plan.callables:
+    var sawFunctionValues = false
+    var sawMethodValues = false
+    for callable in metadata.callables:
       if callable.kind == ctkFunction and callable.sourceName == "consume":
-        sawFunctionRoots = true
-        check callable.roots.len == 2
-        check callable.roots[0].sourceName == "input"
-        check callable.roots[1].sourceName == "localBox"
+        sawFunctionValues = true
+        check callable.identityValues.len == 2
+        check callable.identityValues[0].sourceName == "input"
+        check callable.identityValues[1].sourceName == "localBox"
       if callable.kind == ctkMethod and callable.sourceName == "keep":
-        sawMethodRoots = true
-        check callable.roots.len == 3
-        check callable.roots[0].sourceName == "receiver"
-        check callable.roots[1].sourceName == "other"
-        check callable.roots[2].sourceName == "local"
+        sawMethodValues = true
+        check callable.identityValues.len == 3
+        check callable.identityValues[0].sourceName == "receiver"
+        check callable.identityValues[1].sourceName == "other"
+        check callable.identityValues[2].sourceName == "local"
 
-    check sawFunctionRoots
-    check sawMethodRoots
+    check sawFunctionValues
+    check sawMethodValues
 
-  test "GC strategy plan becomes generated backend metadata":
+  test "generic metadata becomes policy-neutral generated runtime facts":
     let source = """
-      class Child {
-        Int value;
-      }
-
+      class Child { Int value; }
       class Parent {
         Byte tag;
         Int number;
         Child child;
       }
-
       function main() returns Int {
         var child = Child { value = 7; };
         var parent = Parent {
@@ -146,28 +136,57 @@ suite "Compiler-standard Eido memory strategies":
       CompilationOptions(memoryStrategy: msGc)
     )
 
-    check "eido_class_Parent_gc_payload_size = int64(24)" in generated
-    check "eido_class_Parent_gc_alignment = int64(8)" in generated
-    check "eido_class_Parent_gc_trace_count = 1" in generated
-    check "eido_class_Parent_gc_trace_0_offset = int64(16)" in generated
-    check "eido_class_Child_gc_trace_count = 0" in generated
-    check "var eido_gc_root_" in generated
-    check "eidoGcPushRoot(" in generated
-    check "eidoGcPopRoot(" in generated
-    check "eido_gc_runtime_safepoint()" in generated
+    check "eido_class_Parent_memory_payload_size = int64(24)" in generated
+    check "eido_class_Parent_memory_alignment = int64(8)" in generated
+    check "eido_class_Parent_memory_type_id" in generated
+    check "_memoryTypeRegister(" in generated
+    check "_memoryTypeSetField(" in generated
+    check "int64(16)" in generated
+    check "var eido_memory_value_" in generated
+    check "_memoryValueEnter(" in generated
+    check "_memoryValueLeave(" in generated
+    check "_memoryExecutionBoundary()" in generated
 
-  test "generic runner contains no GC layout policy":
-    let projectRoot =
-      currentSourcePath().parentDir.parentDir.parentDir.parentDir
+    check "runtimeRoot" notin generated
+    check "runtimeManaged" notin generated
+    check "runtimeTypeSetReferenceOffset" notin generated
+    check "eido_gc_" notin generated
+    check "safepoint" notin generated.toLowerAscii()
+
+  test "generic metadata runner contains no memory-management policy":
+    let projectRoot = currentSourcePath().parentDir.parentDir.parentDir.parentDir
     let runner = readFile(
       projectRoot / "compiler" / "compile_time" / "phases" /
-        "memory_gc" / "runner.eido"
+        "memory_metadata" / "runner.eido"
+    )
+    let builder = readFile(
+      projectRoot / "compiler" / "compile_time" / "phases" /
+        "memory_metadata" / "MemoryMetadataBuilder.eido"
+    )
+    let gcPolicy = readFile(
+      projectRoot / "compiler" / "compile_time" / "phases" /
+        "memory_policy_gc" / "runner.eido"
+    )
+    let bindingResolver = readFile(
+      projectRoot / "compiler" / "src" / "backend" / "nim" / "emitter" /
+        "runtime_bindings.nim"
     )
 
-    check "SelectedMemoryStrategy.plan();" in runner
+    check "MemoryMetadataBuilder.build();" in runner
     check "fieldCount" notin runner
     check "StorageInfo" notin runner
-    check "MemoryPlan" notin runner
+    check "MemoryMetadata.root(" notin builder
+    check "MemoryMetadata.trace(" notin builder
+    check "safepoint(" notin builder.toLowerAscii()
+    check "collect(" notin builder.toLowerAscii()
+
+    # Concrete handler selection belongs to Eido policy, not compiler emission.
+    check "memoryValueEnter" in gcPolicy
+    check "memoryObjectAllocate" in gcPolicy
+    check "memoryExecutionBoundary" in gcPolicy
+    check "memoryValueEnter" notin bindingResolver
+    check "memoryObjectAllocate" notin bindingResolver
+    check "memoryExecutionBoundary" notin bindingResolver
 
   test "manual strategy accepts primitive and Storage-only programs":
     let source = """
@@ -186,16 +205,13 @@ suite "Compiler-standard Eido memory strategies":
     )
 
     check "when isMainModule" in generated
-    check "_gc_payload_size" notin generated
-    check "_gc_trace_count" notin generated
+    check "_memory_payload_size" notin generated
+    check "memoryTypeRegister" notin generated
 
   test "manual strategy rejects even zero-field class construction":
     let source = """
       class Token {}
-
-      function main() {
-        var token = Token {};
-      }
+      function main() { var token = Token {}; }
     """
 
     expect ValueError:
@@ -204,15 +220,10 @@ suite "Compiler-standard Eido memory strategies":
         CompilationOptions(memoryStrategy: msManual)
       )
 
-  test "manual strategy rejects managed class declarations":
+  test "manual strategy rejects identity-bearing class declarations":
     let source = """
-      class Account {
-        Int balance;
-      }
-
-      function main() {
-        var account = Account { balance = 1; };
-      }
+      class Account { Int balance; }
+      function main() { var account = Account { balance = 1; }; }
     """
 
     expect ValueError:
@@ -221,15 +232,10 @@ suite "Compiler-standard Eido memory strategies":
         CompilationOptions(memoryStrategy: msManual)
       )
 
-  test "compile-time strategy contracts do not leak into target code":
+  test "compile-time metadata contracts do not leak into target code":
     let source = """
-      class Account {
-        Int balance;
-      }
-
-      function main() {
-        var account = Account { balance = 1; };
-      }
+      class Account { Int balance; }
+      function main() { var account = Account { balance = 1; }; }
     """
 
     let generated = compileProjectToNim(
@@ -239,6 +245,5 @@ suite "Compiler-standard Eido memory strategies":
 
     check "StorageInfo" notin generated
     check "Compiler_typeCount" notin generated
-    check "MemoryPlan" notin generated
-    check "SelectedMemoryStrategy" notin generated
+    check "MemoryMetadataBuilder" notin generated
     check "EIDO_CT" notin generated

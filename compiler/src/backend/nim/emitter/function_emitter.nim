@@ -9,7 +9,8 @@ import type_emitter
 import statement_emitter
 import contract_emitter
 import normal_exit
-import gc_root_emitter
+import instrumentation_emitter
+import runtime_bindings
 
 ## Renders a Nim procedure signature from an HIR function. Example: `add(Int a, Int b) returns Int` becomes a proc with two `int64` parameters and an `int64` result.
 proc renderSignature*(fn: hirDeclarations.HirFunction): string =
@@ -24,27 +25,28 @@ proc renderSignature*(fn: hirDeclarations.HirFunction): string =
   if fn.result.kind == frSingle:
     result.add ": " & renderType(fn.result.typ)
 
-## Renders a complete Nim procedure body from an HIR function. Example: an empty no-result Eido function emits `discard` so the Nim body remains valid.
+## Renders a complete Nim procedure body from an HIR function.
 proc renderFunction*(
   fn: hirDeclarations.HirFunction,
-  memoryPlan: CompileTimeMemoryPlan = CompileTimeMemoryPlan()
+  memoryMetadata: CompileTimeMemoryMetadata = CompileTimeMemoryMetadata(),
+  runtimeBindings: RuntimeBindings = RuntimeBindings()
 ): string =
   result.add renderSignature(fn) & " =\n"
 
-  let roots = memoryPlan.rootsForFunction(fn.functionId)
-  if memoryPlan.types.len > 0:
-    result.add renderFunctionRootPreamble(fn, roots)
+  let identityValues = memoryMetadata.identityValuesForFunction(fn.functionId)
+  if memoryMetadata.types.len > 0:
+    result.add renderFunctionValuePreamble(fn, identityValues, runtimeBindings)
 
   for clause in fn.requires:
     result.add renderContractCheck(
       clause, "require contract failed in function '" & fn.sourceName & "'", 2
     )
 
-  var resultRootId = -1
-  for root in roots:
+  var resultIdentityValueId = -1
+  for value in identityValues:
     if fn.ensures.len > 0 and fn.result.kind == frSingle and
-        root.localId == fn.ensureResultLocalId.value:
-      resultRootId = root.localId
+        value.localId == fn.ensureResultLocalId.value:
+      resultIdentityValueId = value.localId
 
   let exitContext = NormalExitContext(
     contractClauses: fn.ensures,
@@ -55,9 +57,10 @@ proc renderFunction*(
       else:
         "",
     ownerClassName: "",
-    gcEnabled: memoryPlan.types.len > 0,
-    gcRootIds: roots.rootIds,
-    resultRootId: resultRootId
+    instrumentationEnabled: memoryMetadata.types.len > 0,
+    identityValueIds: identityValues.identityValueIds,
+    resultIdentityValueId: resultIdentityValueId,
+    runtimeBindings: runtimeBindings
   )
 
   if fn.body.len == 0:

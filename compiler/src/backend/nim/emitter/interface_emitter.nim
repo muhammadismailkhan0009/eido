@@ -1,10 +1,11 @@
-## Lowers interface contracts to either managed interface boxes or the bootstrap
-## closure representation when no managed memory strategy is active.
+## Lowers interface contracts to either runtime-backed identity boxes or the
+## bootstrap closure representation when no object memory runtime is active.
 
 import ../../../hir/declarations as hirDeclarations
 import ../../../types/function_result
 import names
 import type_emitter
+import runtime_bindings
 
 ## Finds one interface HIR declaration by source name.
 proc findInterface(
@@ -46,7 +47,8 @@ proc hirInterfaceExtends(
 ## Renders representation-neutral interface dispatch helpers used by expressions.
 proc renderInterfaceDispatchers*(
   interfaces: seq[hirDeclarations.HirInterface],
-  managedRuntime: bool
+  runtimeBackedObjects: bool,
+  runtimeBindings: RuntimeBindings = RuntimeBindings()
 ): string =
   for interfaceDecl in interfaces:
     for methodDecl in interfaceDecl.methods:
@@ -62,11 +64,10 @@ proc renderInterfaceDispatchers*(
         result.add ": " & renderType(methodDecl.result.typ)
       result.add " =\n"
 
-      if managedRuntime:
-        result.add "  let payload = eidoGcPayloadAt[" &
+      if runtimeBackedObjects:
+        result.add "  let payload = eidoMemoryPayloadAt(" &
           interfacePayloadName(interfaceDecl.sourceName) &
-          "](source, " & managedGcRuntimeMethodName("payloadOffset") &
-          "(eidoGcHandle(source)))\n"
+          ", source)\n"
         result.add "  "
         if methodDecl.result.kind == frSingle:
           result.add "return "
@@ -91,50 +92,37 @@ proc renderInterfaceDispatchers*(
           result.add "arg" & $index
         result.add ")\n\n"
 
-## Renders managed interface trace/destroy/allocation helpers.
-proc renderManagedInterfaceSupport*(
-  interfaces: seq[hirDeclarations.HirInterface]
+## Renders runtime-backed interface storage helpers.
+proc renderRuntimeInterfaceSupport*(
+  interfaces: seq[hirDeclarations.HirInterface],
+  runtimeBindings: RuntimeBindings
 ): string =
   for interfaceDecl in interfaces:
     let sourceName = interfaceDecl.sourceName
     let payloadType = interfacePayloadName(sourceName)
-
-    result.add "proc " & interfaceTraceName(sourceName) &
-      "(payloadAddress: pointer) {.nimcall.} =\n"
-    result.add "  let payload = cast[ptr " & payloadType &
-      "](payloadAddress)\n"
-    result.add "  " & managedGcRuntimeMethodName("mark") &
-      "(eidoGcHandle(payload[].eido_receiver))\n\n"
-
-    result.add "proc " & interfaceDestroyName(sourceName) &
-      "(payloadAddress: pointer) {.nimcall.} =\n"
-    result.add "  cast[ptr " & payloadType &
-      "](payloadAddress)[] = default(" & payloadType & ")\n\n"
-
     result.add "proc " & interfaceAllocateName(sourceName) & "(): " &
       interfaceName(sourceName) & " =\n"
-    result.add "  result = eidoGcRefFromHandle(" &
-      managedGcRuntimeMethodName("allocate") & "(\n"
+    result.add "  result = " & runtimeBindings.objectAcquire & "(\n"
     result.add "    int64(sizeof(" & payloadType & ")),\n"
     result.add "    int64(alignof(" & payloadType & ")),\n"
-    result.add "    eidoGcTraceAddress(" & interfaceTraceName(sourceName) & "),\n"
-    result.add "    eidoGcDestroyAddress(" & interfaceDestroyName(sourceName) & ")\n"
-    result.add "  ))\n\n"
+    result.add "    " & interfaceMemoryTypeIdName(sourceName) & "\n"
+    result.add "  )\n\n"
 
 ## Renders one class-to-interface adapter after class methods are forward-declared.
 proc renderClassInterfaceAdapter(
   classDecl: hirDeclarations.HirClass,
   interfaceDecl: hirDeclarations.HirInterface,
-  managedRuntime: bool
+  runtimeBackedObjects: bool,
+  runtimeBindings: RuntimeBindings
 ): string =
-  if managedRuntime:
+  if runtimeBackedObjects:
     for contract in interfaceDecl.methods:
       let implementation = findClassMethod(classDecl, contract.sourceName)
       result.add "proc " & interfaceThunkName(
         classDecl.sourceName,
         interfaceDecl.sourceName,
         contract.sourceName
-      ) & "(receiver: EidoManagedRef"
+      ) & "(receiver: int64"
 
       for index, parameterType in contract.parameterTypes:
         result.add ", arg" & $index & ": " & renderType(parameterType)
@@ -160,14 +148,13 @@ proc renderClassInterfaceAdapter(
   ) & "(source: " & className(classDecl.sourceName) & "): " &
     interfaceName(interfaceDecl.sourceName) & " =\n"
 
-  if managedRuntime:
+  if runtimeBackedObjects:
     result.add "  result = " & interfaceAllocateName(
       interfaceDecl.sourceName
     ) & "()\n"
-    result.add "  let payload = eidoGcPayloadAt[" &
+    result.add "  let payload = eidoMemoryPayloadAt(" &
       interfacePayloadName(interfaceDecl.sourceName) &
-      "](result, " & managedGcRuntimeMethodName("payloadOffset") &
-      "(eidoGcHandle(result)))\n"
+      ", result)\n"
     result.add "  payload[].eido_receiver = source\n"
 
     for contract in interfaceDecl.methods:
@@ -208,7 +195,7 @@ proc renderClassInterfaceAdapter(
         result.add ", arg" & $index
       result.add ")\n"
 
-  if interfaceDecl.methods.len == 0 and not managedRuntime:
+  if interfaceDecl.methods.len == 0 and not runtimeBackedObjects:
     result.add "  discard\n"
   result.add "\n"
 
@@ -216,7 +203,8 @@ proc renderClassInterfaceAdapter(
 proc renderClassInterfaceAdapters*(
   interfaces: seq[hirDeclarations.HirInterface],
   classes: seq[hirDeclarations.HirClass],
-  managedRuntime: bool = false
+  runtimeBackedObjects: bool = false,
+  runtimeBindings: RuntimeBindings = RuntimeBindings()
 ): string =
   for classDecl in classes:
     var emitted: seq[string]
@@ -230,14 +218,16 @@ proc renderClassInterfaceAdapters*(
           result.add renderClassInterfaceAdapter(
             classDecl,
             candidate,
-            managedRuntime
+            runtimeBackedObjects,
+            runtimeBindings
           )
           emitted.add candidate.sourceName
 
 ## Renders interface-extension upcasts.
 proc renderInterfaceUpcasts*(
   interfaces: seq[hirDeclarations.HirInterface],
-  managedRuntime: bool = false
+  runtimeBackedObjects: bool = false,
+  runtimeBindings: RuntimeBindings = RuntimeBindings()
 ): string =
   for source in interfaces:
     for target in interfaces:
@@ -256,18 +246,16 @@ proc renderInterfaceUpcasts*(
       ) & "(source: " & interfaceName(source.sourceName) & "): " &
         interfaceName(target.sourceName) & " =\n"
 
-      if managedRuntime:
+      if runtimeBackedObjects:
         result.add "  result = " & interfaceAllocateName(
           target.sourceName
         ) & "()\n"
-        result.add "  let sourcePayload = eidoGcPayloadAt[" &
+        result.add "  let sourcePayload = eidoMemoryPayloadAt(" &
           interfacePayloadName(source.sourceName) &
-          "](source, " & managedGcRuntimeMethodName("payloadOffset") &
-          "(eidoGcHandle(source)))\n"
-        result.add "  let targetPayload = eidoGcPayloadAt[" &
+          ", source)\n"
+        result.add "  let targetPayload = eidoMemoryPayloadAt(" &
           interfacePayloadName(target.sourceName) &
-          "](result, " & managedGcRuntimeMethodName("payloadOffset") &
-          "(eidoGcHandle(result)))\n"
+          ", result)\n"
         result.add "  targetPayload[].eido_receiver = " &
           "sourcePayload[].eido_receiver\n"
         for methodDecl in target.methods:
@@ -289,6 +277,6 @@ proc renderInterfaceUpcasts*(
             methodDecl.sourceName
           ) & "\n"
 
-      if target.methods.len == 0 and not managedRuntime:
+      if target.methods.len == 0 and not runtimeBackedObjects:
         result.add "  discard\n"
       result.add "\n"

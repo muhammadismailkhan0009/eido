@@ -1,6 +1,7 @@
 import std/[os, sequtils, strutils, unittest]
 import project/model
 import project/modules/loader
+import source/source_unit
 import stdlib/builtin_sources
 
 ## Documents the freshDir module helper behavior.
@@ -83,13 +84,16 @@ suite "Module project loading":
     check project.modules[5].children == @[BuiltinManagedGcModuleName]
     check project.modules[6].canonicalName == BuiltinManagedGcModuleName
     check project.modules[6].sourcePaths == @[
-      BuiltinManagedGcNativeSourcePath,
-      BuiltinManagedGcRuntimeSourcePath
+      BuiltinMemoryValueRegistrySourcePath,
+      BuiltinMemoryTypeRegistrySourcePath,
+      BuiltinManagedHeapAllocatorSourcePath,
+      BuiltinManagedGcRuntimeSourcePath,
+      BuiltinMemoryRuntimeSourcePath
     ]
     check project.modules[6].exports.len == 0
 
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 8
+    check project.sources.len == 11
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
@@ -98,6 +102,13 @@ suite "Module project loading":
     check project.sources[5].moduleName == BuiltinMemoryModuleName
     check project.sources[6].moduleName == BuiltinManagedGcModuleName
     check project.sources[7].moduleName == BuiltinManagedGcModuleName
+    check project.sources[8].moduleName == BuiltinManagedGcModuleName
+    check project.sources[9].moduleName == BuiltinManagedGcModuleName
+    check project.sources[10].moduleName == BuiltinManagedGcModuleName
+    for index in 0 .. 5:
+      check project.sources[index].origin == soOrdinary
+    for index in 6 .. 10:
+      check project.sources[index].origin == soCompilerRuntime
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

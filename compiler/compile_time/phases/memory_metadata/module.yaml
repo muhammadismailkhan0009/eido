@@ -1,4 +1,4 @@
-module: memory_gc
+module: memory_metadata
 
 sources:
   - Compiler.eido
@@ -7,8 +7,8 @@ sources:
   - ValueInfo.eido
   - FieldInfo.eido
   - StorageInfo.eido
-  - MemoryPlan.eido
-  - SelectedMemoryStrategy.eido
+  - MemoryMetadata.eido
+  - MemoryMetadataBuilder.eido
   - runner.eido
 
 children: []

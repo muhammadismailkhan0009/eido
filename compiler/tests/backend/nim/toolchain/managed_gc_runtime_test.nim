@@ -4,36 +4,50 @@ import pipeline/[options, project_compiler]
 import stdlib/builtin_sources
 import support/project_fixture_support
 
+## Finds one ordinary generated Eido method by its source-level suffix.
+proc generatedMethodName(generated, sourceName: string): string =
+  let suffix = "_" & sourceName & "("
+  for line in generated.splitLines:
+    let stripped = line.strip()
+    if stripped.startsWith("proc eido_method_") and suffix in stripped:
+      return stripped["proc ".len ..< stripped.find('(')]
+  raise newException(ValueError, "missing generated method '" & sourceName & "'")
+
 suite "Managed GC runtime":
-  test "collector delegates physical memory to Eido heap allocator while native bridge never allocates":
+  test "generic memory metadata and GC policy are Storage-backed Eido code":
     check "Storage<Byte>.allocateRaw(" in BuiltinManagedHeapAllocatorSource
     check "Storage<Byte>.adoptAddress(" in BuiltinManagedHeapAllocatorSource
     check "Storage<Byte>.release(" in BuiltinManagedHeapAllocatorSource
-    check "function allocationCount()" in BuiltinManagedHeapAllocatorSource
-    check "Int ManagedHeapAllocator.liveBlocks = 0;" in BuiltinManagedHeapAllocatorSource
+
+    check "Storage<Int>.allocate(" in BuiltinMemoryValueRegistrySource
+    check "Storage<Bool>.allocate(" in BuiltinMemoryValueRegistrySource
+    check "function enter(" in BuiltinMemoryValueRegistrySource
+    check "function update(" in BuiltinMemoryValueRegistrySource
+    check "function leave(" in BuiltinMemoryValueRegistrySource
+
+    check "Storage<Int>.allocate(" in BuiltinMemoryTypeRegistrySource
+    check "function registerType(" in BuiltinMemoryTypeRegistrySource
+    check "function setField(" in BuiltinMemoryTypeRegistrySource
+    check "fieldContainsIdentity" in BuiltinMemoryTypeRegistrySource
+
+    check "function memoryValueEnter(" in BuiltinMemoryRuntimeSource
+    check "function memoryTypeRegister(" in BuiltinMemoryRuntimeSource
+    check "function memoryObjectAllocate(" in BuiltinMemoryRuntimeSource
+    check "function memoryExecutionBoundary(" in BuiltinMemoryRuntimeSource
+
+    check "MemoryValueRegistry.highWaterMark()" in BuiltinManagedGcRuntimeSource
+    check "MemoryTypeRegistry.fieldContainsIdentity(" in BuiltinManagedGcRuntimeSource
+    check "MemoryTypeRegistry.fieldOffset(" in BuiltinManagedGcRuntimeSource
     check "ManagedHeapAllocator.allocate(" in BuiltinManagedGcRuntimeSource
     check "ManagedHeapAllocator.release(" in BuiltinManagedGcRuntimeSource
-    check "Storage<Byte>.allocateRaw(" notin BuiltinManagedGcRuntimeSource
-    check "Storage<Byte>.adoptAddress(" notin BuiltinManagedGcRuntimeSource
-    check "Storage<Byte>.release(" notin BuiltinManagedGcRuntimeSource
-    check "Storage<Byte>.viewAt(" notin BuiltinManagedGcRuntimeSource
-    check "Storage<Int>.viewAt(" in BuiltinManagedGcRuntimeSource
-    check "Storage<Bool>.viewAt(" in BuiltinManagedGcRuntimeSource
     check "function mark(" in BuiltinManagedGcRuntimeSource
     check "function sweep()" in BuiltinManagedGcRuntimeSource
     check "function collect()" in BuiltinManagedGcRuntimeSource
+    check "ManagedGcNative" notin BuiltinManagedGcRuntimeSource
+    check "traceAddress" notin BuiltinManagedGcRuntimeSource
+    check "destroyAddress" notin BuiltinManagedGcRuntimeSource
 
-    check "eidoStorageAllocateRaw(" notin BuiltinManagedGcSupportSource
-    check "eidoStorageRelease(" notin BuiltinManagedGcSupportSource
-    check "alloc0(" notin BuiltinManagedGcSupportSource
-    check "dealloc(" notin BuiltinManagedGcSupportSource
-    check "proc eidoGcCollect" notin BuiltinManagedGcSupportSource
-    check "proc eidoGcSweep" notin BuiltinManagedGcSupportSource
-    check "proc eidoGcMark" notin BuiltinManagedGcSupportSource
-    check "EidoManagedAllocation" notin BuiltinManagedGcSupportSource
-    check "eido_storage" notin BuiltinManagedGcSupportSource
-
-  test "managed class-owned slots are registered as permanent roots before initialization":
+  test "class-owned identity slots report generic lifetime before initialization":
     let source = """
       class Box { Int value; }
       class Registry {
@@ -47,14 +61,32 @@ suite "Managed GC runtime":
       CompilationOptions(memoryStrategy: msGc)
     )
 
-    let rootPush = generated.find("eidoGcPushRoot(addr eido_class_root_")
-    let initializer = generated.find(" = eidoGcProtected(eido_construct_")
-    check rootPush >= 0
+    let valueEnter = generated.find("_memoryValueEnter(int64(0))")
+    let slotAllocation = generated.find(
+      "eido_class_state_Registry_current = eidoStorageAllocate["
+    )
+    let initializer = generated.find(
+      "eidoStorageWrite(eido_class_state_Registry_current, int64(0),"
+    )
+    let valueUpdate = generated.find(
+      "_memoryValueUpdate(eido_class_memory_value_Registry_current"
+    )
+    check valueEnter >= 0
+    check slotAllocation >= 0
     check initializer >= 0
-    check rootPush < initializer
-    check "cast[ptr EidoManagedRef](addr eido_class_state_" in generated
+    check valueUpdate >= 0
+    check valueEnter < slotAllocation
+    check slotAllocation < initializer
+    check initializer < valueUpdate
+    check "var eido_class_state_Registry_current: EidoStorage[eido_class_Box]" in generated
+    check "eidoStorageRead(eido_class_state_Registry_current, int64(0))" in generated
+    check "runtimeRoot" notin generated
+    check "eidoGcPushRoot" notin generated
+    check "import eido_managed_gc" notin generated
+    check "EidoManagedRef" notin generated
+    check " = int64" in generated
 
-  test "generated runtime executes Eido mark sweep and reclaims unreachable cycles":
+  test "generated generic boundary executes Eido mark sweep and reclaims unreachable cycles":
     let source = """
       class Node {
         Node? next;
@@ -66,15 +98,8 @@ suite "Managed GC runtime":
       }
 
       function main() returns Int {
-        var left = Node {
-          next = none;
-          value = 20;
-        };
-        var right = Node {
-          next = none;
-          value = 22;
-        };
-
+        var left = Node { next = none; value = 20; };
+        var right = Node { next = none; value = 22; };
         left.link(right);
         right.link(left);
         return left.value + right.value;
@@ -86,20 +111,34 @@ suite "Managed GC runtime":
       CompilationOptions(memoryStrategy: msGc)
     )
 
-    check "eido_gc_runtime_allocate(" in generated
-    check "eido_gc_runtime_mark(" in generated
-    check "eido_gc_runtime_sweep()" in generated
-    check "eido_gc_runtime_collect()" in generated
-    check "eido_gc_runtime_shutdown()" in generated
+    check "_memoryObjectAllocate(" in generated
+    check "memoryObjectPayloadOffset" notin generated
+    check "template eidoMemoryPayloadAt(T: typedesc, identity: untyped)" in generated
+    check "_memoryShutdown()" in generated
+    check "_memoryTypeRegister(" in generated
+    check "_memoryTypeSetField(" in generated
+    check "_memoryValueEnter(" in generated
+    check "_memoryExecutionBoundary()" in generated
+
+    # GC policy is present only because the selected Eido runtime implements GC.
+    check "_mark(" in generated
+    check "_sweep()" in generated
+    check "_collect()" in generated
+
+    check "runtimeManaged" notin generated
+    check "runtimeRoot" notin generated
+    check "runtimeTypeSetReferenceOffset" notin generated
+    check "eido_gc_" notin generated
+    check "eido_trace_" notin generated
+    check "eido_destroy_" notin generated
+    check "eidoGcPushRoot" notin generated
     check "_allocateRaw(int64(1)," in generated
     check "_release(eido_local_" in generated
 
-    # The program's generated main runs shutdown first. This backend-only
-    # assertion then proves the unreachable cycle was swept by the Eido runtime.
-    generated.add """
-when isMainModule:
-  doAssert eido_gc_runtime_allocationCount() == 0
-"""
+    # The program's generated main runs memory shutdown first. The heap allocator's
+    # ordinary generated allocationCount method must then report no live blocks.
+    let allocationCountName = generated.generatedMethodName("allocationCount")
+    generated.add "\nwhen isMainModule:\n  doAssert " & allocationCountName & "() == 0\n"
 
     let outputPath =
       getTempDir() / ("eido_managed_gc_runtime_" & $getCurrentProcessId())

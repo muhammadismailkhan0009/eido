@@ -3,8 +3,10 @@ module: phases
 sources: []
 
 children:
-  memory_gc:
-    path: memory_gc
+  memory_metadata:
+    path: memory_metadata
+  memory_policy_gc:
+    path: memory_policy_gc
 
 dependencies: []
 exports: []

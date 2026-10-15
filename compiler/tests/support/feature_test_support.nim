@@ -20,7 +20,7 @@ proc runFeatureSource*(source: string, caseName: string): string =
   let generated = compileProjectToNim(fixtureProject(source))
   writeFile(generatedPath, generated)
 
-  if "import eido_managed_gc" in generated:
+  if "memoryObjectAllocate" in generated:
     let outputPath = generatedPath.changeFileExt("")
     defer:
       if fileExists(outputPath):

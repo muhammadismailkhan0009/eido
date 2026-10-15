@@ -10,6 +10,7 @@ type
     source: string
     sourceId: SourceId
     sourcePath: string
+    sourceOrigin: SourceOrigin
     current: int
     line: int
     column: int
@@ -21,6 +22,7 @@ proc initLexer*(source: string): Lexer =
     source: source,
     sourceId: SourceId(-1),
     sourcePath: "",
+    sourceOrigin: soOrdinary,
     current: 0,
     line: 1,
     column: 1
@@ -33,6 +35,7 @@ proc initLexer*(sourceUnit: SourceUnit): Lexer =
     source: sourceUnit.text,
     sourceId: sourceUnit.id,
     sourcePath: sourceUnit.path,
+    sourceOrigin: sourceUnit.origin,
     current: 0,
     line: 1,
     column: 1
@@ -102,7 +105,8 @@ proc makeToken(
       startOffset,
       endOffset,
       line,
-      column
+      column,
+      lexer.sourceOrigin
     )
   )
 

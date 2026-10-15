@@ -1,7 +1,7 @@
 ## Renders Eido nominal layouts for the Nim backend.
-## GC-selected classes/interfaces use one-pointer EidoManagedRef handles plus
-## explicit payload objects; manual/unplanned declarations retain the bootstrap
-## backend representation when no managed runtime representation is required.
+## Runtime-backed classes/interfaces use direct int64 identity handles plus
+## explicit payload objects; declarations without object-runtime metadata retain
+## the bootstrap backend representation.
 
 import ../../../compile_time/model
 import ../../../hir/declarations as hirDeclarations
@@ -11,11 +11,11 @@ import names
 import type_emitter
 import storage_support
 
-## Renders one managed interface method-pointer type.
-proc renderManagedInterfaceMethodType(
+## Renders one runtime-backed interface method-pointer type.
+proc renderRuntimeInterfaceMethodType(
   methodDecl: hirDeclarations.HirInterfaceMethod
 ): string =
-  result = "proc(receiver: EidoManagedRef"
+  result = "proc(receiver: int64"
   for index, parameterType in methodDecl.parameterTypes:
     result.add ", arg" & $index & ": " & renderType(parameterType)
   result.add ")"
@@ -23,7 +23,7 @@ proc renderManagedInterfaceMethodType(
     result.add ": " & renderType(methodDecl.result.typ)
   result.add " {.nimcall.}"
 
-## Renders one bootstrap closure method type when no managed runtime is selected.
+## Renders one bootstrap closure method type when no object runtime is selected.
 proc renderBootstrapInterfaceMethodType(
   methodDecl: hirDeclarations.HirInterfaceMethod
 ): string =
@@ -41,19 +41,19 @@ proc renderBootstrapInterfaceMethodType(
 proc renderNominalTypes*(
   interfaces: seq[hirDeclarations.HirInterface],
   classes: seq[hirDeclarations.HirClass],
-  plan: CompileTimeMemoryPlan = CompileTimeMemoryPlan()
+  plan: CompileTimeMemoryMetadata = CompileTimeMemoryMetadata()
 ): string =
   if interfaces.len == 0 and classes.len == 0:
     return ""
 
-  let managedRuntime = plan.types.len > 0
+  let runtimeBackedObjects = plan.types.len > 0
   result.add "type\n"
 
   # First declare stable nominal handle names.
   for interfaceDecl in interfaces:
-    if managedRuntime:
+    if runtimeBackedObjects:
       result.add "  " & interfaceName(interfaceDecl.sourceName) &
-        " = EidoManagedRef\n"
+        " = int64\n"
     else:
       result.add "  " & interfaceName(interfaceDecl.sourceName) &
         " = ref object\n"
@@ -70,9 +70,9 @@ proc renderNominalTypes*(
     if isConcreteStorageTypeName(classDecl.sourceName):
       result.add "  " & className(classDecl.sourceName) & " = EidoStorage[" &
         renderType(storageElementType(classDecl)) & "]\n"
-    elif plan.hasManagedLayout(classDecl.sourceName):
+    elif plan.hasObjectLayout(classDecl.sourceName):
       result.add "  " & className(classDecl.sourceName) &
-        " = EidoManagedRef\n"
+        " = int64\n"
     else:
       result.add "  " & className(classDecl.sourceName) & " = ref object\n"
       if classDecl.invariants.len > 0:
@@ -84,9 +84,9 @@ proc renderNominalTypes*(
           result.add "    " & fieldName(field.sourceName) &
             ": " & renderType(field.typ) & "\n"
 
-  # Managed class payloads hold fields separately from their one-pointer handles.
+  # Runtime-backed class payloads hold fields separately from their identity handles.
   for classDecl in classes:
-    if not plan.hasManagedLayout(classDecl.sourceName):
+    if not plan.hasObjectLayout(classDecl.sourceName):
       continue
 
     result.add "  " & classPayloadName(classDecl.sourceName) & " = object\n"
@@ -97,17 +97,17 @@ proc renderNominalTypes*(
         result.add "    " & fieldName(field.sourceName) &
           ": " & renderType(field.typ) & "\n"
 
-  # Managed interface boxes are themselves GC objects. The receiver is first so
-  # tracing and root representation remain one managed-reference operation.
-  if managedRuntime:
+  # Runtime-backed interface boxes carry one receiver identity plus method pointers.
+  # The receiver occupies the first payload field and is described through generic metadata.
+  if runtimeBackedObjects:
     for interfaceDecl in interfaces:
       result.add "  " & interfacePayloadName(interfaceDecl.sourceName) &
         " = object\n"
-      result.add "    eido_receiver: EidoManagedRef\n"
+      result.add "    eido_receiver: int64\n"
       for methodDecl in interfaceDecl.methods:
         result.add "    " & interfaceMethodFieldName(
           interfaceDecl.sourceName,
           methodDecl.sourceName
-        ) & ": " & renderManagedInterfaceMethodType(methodDecl) & "\n"
+        ) & ": " & renderRuntimeInterfaceMethodType(methodDecl) & "\n"
 
   result.add "\n"
