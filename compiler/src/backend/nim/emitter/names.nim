@@ -114,6 +114,10 @@ proc fieldName*(sourceName: string): string =
 proc classOwnedFieldName*(ownerName, sourceName: string): string =
   "eido_class_state_" & nominalName(ownerName) & "_" & sourceName
 
+## Builds the permanent precise-root descriptor for one managed class-owned field.
+proc classOwnedFieldRootName*(ownerName, sourceName: string): string =
+  "eido_class_root_" & nominalName(ownerName) & "_" & sourceName
+
 ## Builds the generated runtime invariant-checker name for one class.
 proc classInvariantName*(sourceName: string): string =
   "eido_invariant_" & nominalName(sourceName)

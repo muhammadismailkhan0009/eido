@@ -87,7 +87,7 @@ proc emitNim*(
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
-  result.add renderClassState(program.classes)
+  result.add renderClassStateDeclarations(program.classes, managedRuntime)
   result.add renderClassRuntimeSupport(ordinaryClasses, plan.memory)
   if managedRuntime:
     result.add renderManagedInterfaceSupport(program.interfaces)
@@ -107,6 +107,7 @@ proc emitNim*(
     ordinaryClasses,
     managedRuntime
   )
+  result.add renderClassStateInitializers(program.classes, managedRuntime)
 
   for classDecl in program.classes:
     if isManagedGcInternalClassName(classDecl.sourceName) and not managedRuntime:

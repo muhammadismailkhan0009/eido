@@ -26,6 +26,27 @@ suite "Managed GC runtime":
     check "EidoManagedAllocation" notin BuiltinManagedGcSupportSource
     check "eido_storage" notin BuiltinManagedGcSupportSource
 
+  test "managed class-owned slots are registered as permanent roots before initialization":
+    let source = """
+      class Box { Int value; }
+      class Registry {
+        Box Registry.current = Box { value = 42; };
+      }
+      function main() returns Int { return Registry.current.value; }
+    """
+
+    let generated = compileProjectToNim(
+      fixtureProject(source),
+      CompilationOptions(memoryStrategy: msGc)
+    )
+
+    let rootPush = generated.find("eidoGcPushRoot(addr eido_class_root_")
+    let initializer = generated.find(" = eidoGcProtected(eido_construct_")
+    check rootPush >= 0
+    check initializer >= 0
+    check rootPush < initializer
+    check "cast[ptr EidoManagedRef](addr eido_class_state_" in generated
+
   test "generated runtime executes Eido mark sweep and reclaims unreachable cycles":
     let source = """
       class Node {

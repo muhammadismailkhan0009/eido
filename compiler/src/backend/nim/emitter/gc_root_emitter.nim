@@ -1,4 +1,5 @@
-## Lowers strategy-selected callable roots into stack-owned precise root descriptors.
+## Lowers strategy-selected callable roots into lexical stack root descriptors.
+## Process-lifetime class-owned roots are emitted separately by class_state_emitter.
 
 import std/strutils
 import ../../../compile_time/model

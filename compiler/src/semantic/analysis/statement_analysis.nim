@@ -227,13 +227,24 @@ proc analyzeStmt*(
       let target = analyzeExpr(stmt.target, locals, functions, classes)
 
       if target.kind == hekClassFieldAccess:
-        let value = analyzeExprExpected(
-          stmt.assignedValue,
-          target.typ,
-          locals,
-          functions,
-          classes
-        )
+        let value =
+          if target.typ.kind == etkClass and
+              not isConcreteStorageTypeName(target.typ.className):
+            analyzeClassRelationshipMutationValue(
+              stmt.assignedValue,
+              target.typ,
+              locals,
+              functions,
+              classes
+            )
+          else:
+            analyzeExprExpected(
+              stmt.assignedValue,
+              target.typ,
+              locals,
+              functions,
+              classes
+            )
         return HirStmt(
           kind: hskClassFieldSet,
           span: stmt.span,

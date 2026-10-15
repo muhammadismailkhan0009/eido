@@ -152,6 +152,7 @@ eido --version
 - Named-field construction.
 - Explicit `self` receiver semantics.
 - Static/type-associated methods inferred when `self` is not required; no `static` keyword.
+- Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; managed class/interface slots are process-lifetime precise GC roots rather than instance payload.
 - Generic classes with compiler specialization.
 - Compiler-owned unified `Storage<T>` memory substrate: `Storage<Byte>.allocateRaw` is the single physical owned-allocation path; typed allocation adopts that raw backing, typed `view`/`slice` capabilities are allocation-free, `size`/`alignment` expose target layout through Storage itself, and ownership/release is compiler/runtime enforced. Higher allocation strategies, objects, and collections are intended to build above this same substrate.
 - Explicit class graph `copy` / `ref` semantics and detached class-valued returns.
@@ -283,7 +284,7 @@ The development VS Code/Cursor extension is under [`tools/vscode`](tools/vscode)
 
 ## What is not implemented yet
 
-The most important current gaps before the v0 language surface is frozen include:
+The v0 syntax/core surface is now frozen for application dogfooding. The following remain known gaps or deferred capabilities; they should be added to the language only if real Eido programs prove that the existing core cannot express them cleanly:
 
 - static interface-contract compatibility reasoning;
 - source-level contract failure diagnostics without generated Nim stack frames;

@@ -65,6 +65,55 @@ proc analyzeClassValueRelation*(
     relatedValue: value
   )
 
+## Analyzes a value stored into a persistent class relationship.
+## Fresh/detached values flow directly; existing identities require explicit copy/ref.
+proc analyzePersistentClassValue*(
+  source: astExpressions.Expr,
+  expected: EidoType,
+  locals: LocalScope,
+  functions: FunctionSymbols,
+  classes: NominalSymbols
+): HirExpr =
+  if expected.kind != etkClass or isConcreteStorageTypeName(expected.className):
+    raise newException(
+      ValueError,
+      "semantic invariant: persistent class value requires a non-Storage class target"
+    )
+
+  if source.kind == astExpressions.ekNone:
+    return analyzeExprExpected(source, expected, locals, functions, classes)
+
+  if source.kind == astExpressions.ekClassRelation:
+    result = analyzeClassValueRelation(source, locals, functions, classes)
+
+    if expected.isOptional and result.typ == requiredType(expected):
+      return HirExpr(
+        kind: hekOptionalSome,
+        span: result.span,
+        typ: expected,
+        optionalValue: result
+      )
+
+    if result.typ != expected:
+      failAt(
+        source.span,
+        "type mismatch: expected " & expected.displayName &
+          " but got " & result.typ.displayName
+      )
+    return
+
+  result = analyzeExprExpected(source, expected, locals, functions, classes)
+
+  if source.kind notin {
+    astExpressions.ekConstruct,
+    astExpressions.ekCall,
+    astExpressions.ekMethodCall
+  }:
+    failAt(
+      source.span,
+      "existing class relationship replacement requires explicit copy or ref"
+    )
+
 ## Classifies whether a class expression denotes existing or detached identity.
 proc classValueProvenance*(
   source: astExpressions.Expr,

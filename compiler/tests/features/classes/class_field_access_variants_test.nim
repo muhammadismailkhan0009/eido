@@ -96,6 +96,79 @@ suite "Class field access execution":
 
     check runFeatureSource(source, "class_owned_state") == "4"
 
+  test "class-owned managed state remains a permanent GC root":
+    let source = """
+      class Box { Int value; }
+      class Registry {
+        Box Registry.current = Box { value = 41; };
+
+        function replace() {
+          set Registry.current = Box {
+            value = Registry.current.value + 1;
+          };
+        }
+      }
+
+      function main() returns Int {
+        Registry.replace();
+        for (var i = 0; i < 160; set i = i + 1) {
+          var temporary = Box { value = i; };
+        }
+        return Registry.current.value;
+      }
+    """
+
+    check runFeatureSource(source, "class_owned_managed_root") == "42"
+
+  test "class-owned interface state keeps its concrete receiver alive":
+    let source = """
+      interface ValueSource {
+        function value() returns Int;
+      }
+      class NumberSource implements ValueSource {
+        Int amount;
+        function value() returns Int { return self.amount; }
+      }
+      class Registry {
+        ValueSource Registry.source = NumberSource { amount = 73; };
+      }
+
+      function main() returns Int {
+        for (var i = 0; i < 160; set i = i + 1) {
+          var temporary = NumberSource { amount = i; };
+        }
+        return Registry.source.value();
+      }
+    """
+
+    check runFeatureSource(source, "class_owned_interface_root") == "73"
+
+  test "explicit ref into class-owned state remains rooted after the caller exits":
+    let source = """
+      class Box { Int value; }
+      class Registry {
+        Box Registry.current = Box { value = 0; };
+        function remember(Box value) {
+          set Registry.current = ref value;
+        }
+      }
+
+      function install() {
+        var value = Box { value = 42; };
+        Registry.remember(value);
+      }
+
+      function main() returns Int {
+        install();
+        for (var i = 0; i < 160; set i = i + 1) {
+          var temporary = Box { value = i; };
+        }
+        return Registry.current.value;
+      }
+    """
+
+    check runFeatureSource(source, "class_owned_ref_root") == "42"
+
 suite "Class field access validation":
   test "rejects unknown fields and primitive receivers":
     # Given
@@ -176,5 +249,20 @@ suite "Class field access representation boundaries":
     """
 
     # When / Then
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "class-owned class relationships require explicit copy or ref":
+    let source = """
+      class Box { Int value; }
+      class Registry {
+        Box Registry.current = Box { value = 0; };
+        function remember(Box value) {
+          set Registry.current = value;
+        }
+      }
+      function main() {}
+    """
+
     expect ValueError:
       discard analyzeSource(source)

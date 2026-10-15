@@ -11,6 +11,8 @@ type
   EidoGcTraceProc* = proc(payload: pointer) {.nimcall.}
   EidoGcDestroyProc* = proc(payload: pointer) {.nimcall.}
 
+  ## Precise managed-reference root descriptor. Descriptors may live on a
+  ## callable stack or permanently beside process-lifetime class-owned state.
   EidoGcRoot* = object
     previous*: ptr EidoGcRoot
     slot*: ptr EidoManagedRef
@@ -54,7 +56,8 @@ proc eidoGcPayloadAt*[T](
     raise newException(AssertionDefect, "managed reference is nil")
   cast[ptr T](cast[uint](reference.allocation) + uint(payloadOffset))
 
-## Pushes one stack-owned precise root descriptor.
+## Pushes one precise root descriptor. Callable roots later pop in stack order;
+## process-lifetime roots remain linked until program termination.
 proc eidoGcPushRoot*(root: ptr EidoGcRoot, slot: ptr EidoManagedRef) =
   root.previous = eidoGcRoots
   root.slot = slot

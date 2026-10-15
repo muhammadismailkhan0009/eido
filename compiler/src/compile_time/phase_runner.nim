@@ -143,6 +143,10 @@ proc hasManagedConstruction(program: hirProgram.HirProgram): bool =
       return true
 
   for classDecl in program.classes:
+    for field in classDecl.classFields:
+      if not managedConstruction(field.initializer).isNil:
+        return true
+
     for methodDecl in classDecl.methods:
       if methodDecl.isNative:
         continue
@@ -170,6 +174,14 @@ proc validateManualStrategy(program: hirProgram.HirProgram) =
       )
 
   for classDecl in program.classes:
+    for field in classDecl.classFields:
+      let construction = managedConstruction(field.initializer)
+      if not construction.isNil:
+        failAt(
+          construction.span,
+          "manual memory strategy does not support class construction yet"
+        )
+
     for methodDecl in classDecl.methods:
       if methodDecl.isNative:
         continue

@@ -68,21 +68,25 @@ proc analyzeClassFieldInitializers*(
       continue
 
     let target = analyzed.classFields[classFieldIndex]
-    if target.typ.kind == etkInterface or
-        (target.typ.kind == etkClass and
-          not isConcreteStorageTypeName(target.typ.className)):
-      failAt(
-        field.span,
-        "class-owned managed fields are not yet supported"
-      )
 
-    analyzed.classFields[classFieldIndex].initializer = analyzeExprExpected(
-      field.initializer,
-      target.typ,
-      locals,
-      functions,
-      classes
-    )
+    analyzed.classFields[classFieldIndex].initializer =
+      if target.typ.kind == etkClass and
+          not isConcreteStorageTypeName(target.typ.className):
+        analyzePersistentClassValue(
+          field.initializer,
+          target.typ,
+          locals,
+          functions,
+          classes
+        )
+      else:
+        analyzeExprExpected(
+          field.initializer,
+          target.typ,
+          locals,
+          functions,
+          classes
+        )
     inc classFieldIndex
 
 ## Resolves class invariants after field and method symbols are available.
