@@ -44,6 +44,8 @@ const
   BuiltinArenaSourcePath* = "eido://stdlib/memory/arena.eido"
   BuiltinManagedGcNativeSourcePath* =
     "eido://stdlib/memory/managed/managed_gc_native.eido"
+  BuiltinManagedHeapAllocatorSourcePath* =
+    "eido://stdlib/memory/managed/managed_heap_allocator.eido"
   BuiltinManagedGcRuntimeSourcePath* =
     "eido://stdlib/memory/managed/managed_gc_runtime.eido"
 
@@ -62,6 +64,10 @@ const
   BuiltinManagedGcNativeSource* = staticRead(
     currentSourcePath().parentDir /
       "../../../stdlib/memory/managed/managed_gc_native.eido"
+  )
+  BuiltinManagedHeapAllocatorSource* = staticRead(
+    currentSourcePath().parentDir /
+      "../../../stdlib/memory/managed/managed_heap_allocator.eido"
   )
   BuiltinManagedGcRuntimeSource* = staticRead(
     currentSourcePath().parentDir /
@@ -115,6 +121,8 @@ proc embeddedStdlibSource(
     (BuiltinArenaSourcePath, BuiltinArenaSource)
   of BuiltinManagedGcManifestPath & "|managed_gc_native.eido":
     (BuiltinManagedGcNativeSourcePath, BuiltinManagedGcNativeSource)
+  of BuiltinManagedGcManifestPath & "|managed_heap_allocator.eido":
+    (BuiltinManagedHeapAllocatorSourcePath, BuiltinManagedHeapAllocatorSource)
   of BuiltinManagedGcManifestPath & "|managed_gc_runtime.eido":
     (BuiltinManagedGcRuntimeSourcePath, BuiltinManagedGcRuntimeSource)
   else:

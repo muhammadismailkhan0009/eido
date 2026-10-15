@@ -1,0 +1,23 @@
+/// Public enterprise-facing memory service.
+/// HeapRuntime and HeapState remain module-internal implementation details.
+class MemoryManager {
+    function allocate(Int bytes, Int alignment) returns MemoryBlock {
+        return HeapRuntime.allocate(bytes, alignment);
+    }
+
+    function allocateInt(Int value) returns MemoryBlock {
+        return HeapRuntime.allocateInt(value);
+    }
+
+    function stats() returns MemoryStats {
+        return HeapRuntime.stats();
+    }
+
+    function reset() {
+        HeapRuntime.reset();
+    }
+
+    function shutdown() {
+        HeapRuntime.shutdown();
+    }
+}

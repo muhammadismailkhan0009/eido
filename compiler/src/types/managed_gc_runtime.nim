@@ -6,6 +6,7 @@ import std/strutils
 const
   ManagedGcRuntimeClassName* = "ManagedGcRuntime"
   ManagedGcNativeClassName* = "ManagedGcNative"
+  ManagedHeapAllocatorClassName* = "ManagedHeapAllocator"
 
 ## Returns the source-local portion of one canonical nominal name.
 proc managedGcLocalName(name: string): string =
@@ -20,6 +21,12 @@ proc isManagedGcRuntimeClassName*(name: string): bool =
 proc isManagedGcNativeClassName*(name: string): bool =
   managedGcLocalName(name) == ManagedGcNativeClassName
 
+## Reports whether one nominal is the hidden Eido heap allocator.
+proc isManagedHeapAllocatorClassName*(name: string): bool =
+  managedGcLocalName(name) == ManagedHeapAllocatorClassName
+
 ## Reports whether one nominal belongs to compiler-internal managed-GC support.
 proc isManagedGcInternalClassName*(name: string): bool =
-  isManagedGcRuntimeClassName(name) or isManagedGcNativeClassName(name)
+  isManagedGcRuntimeClassName(name) or
+    isManagedGcNativeClassName(name) or
+    isManagedHeapAllocatorClassName(name)

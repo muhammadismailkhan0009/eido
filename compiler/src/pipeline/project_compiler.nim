@@ -17,6 +17,7 @@ import ../backend/nim/emitter/program_emitter
 ## Reports whether one source path belongs to compiler-private Eido GC runtime code.
 proc isManagedGcRuntimeSource(path: string): bool =
   path == BuiltinManagedGcNativeSourcePath or
+    path == BuiltinManagedHeapAllocatorSourcePath or
     path == BuiltinManagedGcRuntimeSourcePath
 
 ## Removes compiler-private GC runtime sources while retaining their manifest ownership.
@@ -49,6 +50,9 @@ proc withManagedGcRuntime(project: EidoProject): EidoProject =
           BuiltinManagedGcNativeSourcePath
         )
         result.modules[moduleIndex].sourcePaths.add(
+          BuiltinManagedHeapAllocatorSourcePath
+        )
+        result.modules[moduleIndex].sourcePaths.add(
           BuiltinManagedGcRuntimeSourcePath
         )
         foundStdlib = true
@@ -64,6 +68,13 @@ proc withManagedGcRuntime(project: EidoProject): EidoProject =
     nextId,
     BuiltinManagedGcNativeSourcePath,
     BuiltinManagedGcNativeSource,
+    runtimeModule
+  )
+  inc nextId
+  result.sources.add initSourceUnit(
+    nextId,
+    BuiltinManagedHeapAllocatorSourcePath,
+    BuiltinManagedHeapAllocatorSource,
     runtimeModule
   )
   inc nextId

@@ -1,0 +1,26 @@
+function main() returns Int {
+    Console.writeLine("[memory] bootstrapping Eido-owned heap state");
+
+    var left = MemoryManager.allocateInt(20);
+    var right = MemoryManager.allocateInt(22);
+    var beforeReset = MemoryManager.stats();
+
+    var answer = left.readInt() + right.readInt();
+
+    if (beforeReset.allocations != 2) {
+        MemoryManager.shutdown();
+        return -1;
+    }
+
+    MemoryManager.reset();
+    var afterReset = MemoryManager.stats();
+
+    if (afterReset.used != 0 or afterReset.allocations != 0) {
+        MemoryManager.shutdown();
+        return -2;
+    }
+
+    Console.writeLine("[memory] heap policy, accounting, and typed access ran in Eido");
+    MemoryManager.shutdown();
+    return answer;
+}

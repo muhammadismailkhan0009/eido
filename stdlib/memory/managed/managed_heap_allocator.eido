@@ -1,0 +1,48 @@
+// Compiler-private default heap allocator for managed Eido objects.
+//
+// The policy is intentionally simple: one Storage allocation per managed
+// object, reclaimed by the collector. More advanced page/pool/free-list
+// policies can replace this class later without changing GC semantics.
+class ManagedHeapAllocator {
+    Int ManagedHeapAllocator.liveBlocks = 0;
+    Int ManagedHeapAllocator.liveBytes = 0;
+
+    function allocate(Int byteCount) returns Storage<Byte> {
+        require { byteCount > 0; }
+
+        var backing = Storage<Byte>.allocateRaw(1, byteCount);
+        set ManagedHeapAllocator.liveBlocks =
+            ManagedHeapAllocator.liveBlocks + 1;
+        set ManagedHeapAllocator.liveBytes =
+            ManagedHeapAllocator.liveBytes + byteCount;
+        return backing;
+    }
+
+    function release(Int allocationAddress, Int byteCount) {
+        require {
+            allocationAddress != 0;
+            byteCount > 0;
+            ManagedHeapAllocator.liveBlocks > 0;
+            ManagedHeapAllocator.liveBytes >= byteCount;
+        }
+
+        var backing = Storage<Byte>.adoptAddress(
+            allocationAddress,
+            1,
+            byteCount
+        );
+        Storage<Byte>.release(backing);
+        set ManagedHeapAllocator.liveBlocks =
+            ManagedHeapAllocator.liveBlocks - 1;
+        set ManagedHeapAllocator.liveBytes =
+            ManagedHeapAllocator.liveBytes - byteCount;
+    }
+
+    function allocationCount() returns Int {
+        return ManagedHeapAllocator.liveBlocks;
+    }
+
+    function allocatedBytes() returns Int {
+        return ManagedHeapAllocator.liveBytes;
+    }
+}

@@ -1,0 +1,25 @@
+// Internal process runtime. The managed HeapState stored here is a permanent
+// precise root because it is class-owned managed state.
+class HeapRuntime {
+    HeapState HeapRuntime.state = HeapState.create(4096);
+
+    function allocate(Int bytes, Int alignment) returns MemoryBlock {
+        return HeapRuntime.state.allocate(bytes, alignment);
+    }
+
+    function allocateInt(Int value) returns MemoryBlock {
+        return HeapRuntime.state.allocateInt(value);
+    }
+
+    function stats() returns MemoryStats {
+        return HeapRuntime.state.stats();
+    }
+
+    function reset() {
+        HeapRuntime.state.reset();
+    }
+
+    function shutdown() {
+        HeapRuntime.state.release();
+    }
+}

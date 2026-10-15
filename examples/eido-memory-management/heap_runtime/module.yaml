@@ -1,0 +1,13 @@
+module: heap_runtime
+sources:
+  - MemoryBlock.eido
+  - MemoryStats.eido
+  - HeapState.eido
+  - HeapRuntime.eido
+  - MemoryManager.eido
+children: []
+dependencies: []
+exports:
+  - MemoryManager
+provides: {}
+adopts: []

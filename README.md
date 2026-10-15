@@ -4,7 +4,7 @@
 
 The project explores a language where architectural boundaries, object semantics, contracts, module visibility, and compiler-grounded tooling are language/toolchain concerns rather than conventions layered on top of libraries.
 
-> **Status:** pre-alpha (`0.0.1`). Eido is ready for experimentation and language development, not production use. Syntax and semantics may still change before v0 is frozen.
+> **Status:** pre-alpha (`0.0.1`). Eido is ready for experimentation and language development, not production use. The v0 core syntax/semantic surface is frozen for application dogfooding; further language changes should be driven by requirements that real Eido programs cannot express cleanly.
 
 ## Why Eido?
 
@@ -129,7 +129,7 @@ eido --help
 eido --version
 ```
 
-`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default compilation strategy; `--memory=manual` currently skips managed planning and rejects classes that require managed instance representation.
+`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default compilation strategy; managed objects use the Eido-written `ManagedGcRuntime` + `ManagedHeapAllocator` stack over `Storage<Byte>`. `--memory=manual` currently skips managed planning and rejects classes that require managed instance representation.
 
 `compile` is the lower-level standalone source path. Normal application development should currently prefer a `module.yaml` project because project compilation also provides the implicit SDK standard library and module architecture.
 
@@ -263,6 +263,18 @@ eido run -- reject "Acme GmbH"
 ```
 
 The example README documents the deliberate failure scenarios as well.
+
+## Memory-management demo
+
+[`examples/eido-memory-management`](examples/eido-memory-management) demonstrates the post-freeze memory architecture using only ordinary Eido plus the public `Storage<T>` substrate. It contains a uniquely named internal `heap_runtime` module (avoiding collisions with the implicit `eido.stdlib.memory` module) whose managed `HeapState` lives in class-owned state and therefore becomes a permanent precise root, while allocation, alignment, accounting, reset, and release policy stays in Eido.
+
+```bash
+cd examples/eido-memory-management
+eido check
+eido run
+```
+
+The example is intentionally a small bump heap rather than a second GC; its purpose is to make the Eido-owned runtime architecture visible and executable. The actual default `gc` runtime now follows the same layering: Eido `ManagedGcRuntime` collection policy delegates physical object allocation/release to the simple Eido `ManagedHeapAllocator`, which uses `Storage<Byte>` as its only backing substrate.
 
 ## Editor/tooling support
 

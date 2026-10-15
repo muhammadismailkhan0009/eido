@@ -1,0 +1,29 @@
+/// Non-owning view of one region reserved from the process heap.
+/// The owning HeapState keeps the backing Storage alive.
+class MemoryBlock {
+    Int address;
+    Int bytes;
+    Int alignment;
+
+    function size() returns Int {
+        return self.bytes;
+    }
+
+    function startingAddress() returns Int {
+        return self.address;
+    }
+
+    function writeInt(Int value) {
+        require { self.bytes >= Storage<Int>.size(); }
+        var raw = Storage<Byte>.fromAddress(self.address, 1, self.bytes);
+        var slot = Storage<Int>.viewAt(raw, 0);
+        Storage<Int>.write(slot, 0, value);
+    }
+
+    function readInt() returns Int {
+        require { self.bytes >= Storage<Int>.size(); }
+        var raw = Storage<Byte>.fromAddress(self.address, 1, self.bytes);
+        var slot = Storage<Int>.viewAt(raw, 0);
+        return Storage<Int>.read(slot, 0);
+    }
+}

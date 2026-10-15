@@ -1,0 +1,7 @@
+/// Immutable snapshot of heap bookkeeping exposed to callers.
+class MemoryStats {
+    Int capacity;
+    Int used;
+    Int remaining;
+    Int allocations;
+}

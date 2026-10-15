@@ -57,14 +57,17 @@ proc renderMethod*(
 ): string =
   result.add renderMethodSignature(methodDecl) & " =\n"
 
-  let isGcRuntimeMethod =
-    isManagedGcRuntimeClassName(methodDecl.ownerType.className)
+  # Hidden managed-runtime methods must never receive ordinary GC roots or
+  # statement safepoints. In particular, the allocator cannot recursively
+  # trigger collection while it is acquiring or releasing object backing.
+  let isManagedRuntimeMethod =
+    isManagedGcInternalClassName(methodDecl.ownerType.className)
   let roots =
-    if isGcRuntimeMethod:
+    if isManagedRuntimeMethod:
       @[]
     else:
       memoryPlan.rootsForMethod(methodDecl.methodId)
-  if memoryPlan.types.len > 0 and not isGcRuntimeMethod:
+  if memoryPlan.types.len > 0 and not isManagedRuntimeMethod:
     result.add renderMethodRootPreamble(methodDecl, roots)
 
   let hasInvariant = enforceInvariant and methodDecl.kind == mkInstance
@@ -99,7 +102,7 @@ proc renderMethod*(
       if hasInvariant: methodDecl.ownerType.className else: "",
     invariantReceiver: receiverName,
     ownerClassName: methodDecl.ownerType.className,
-    gcEnabled: memoryPlan.types.len > 0 and not isGcRuntimeMethod,
+    gcEnabled: memoryPlan.types.len > 0 and not isManagedRuntimeMethod,
     gcRootIds: roots.rootIds,
     resultRootId: resultRootId
   )

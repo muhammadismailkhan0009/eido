@@ -47,13 +47,15 @@ The compiler lowers strategy-selected roots to stack-owned root descriptors. Par
 
 Generated class trace procedures follow exactly the fields selected by the Eido strategy. Mark walks roots and recursively follows those trace procedures. Sweep destroys unreachable payloads and releases their backing Storage. Cycles therefore do not require special handling: an unreachable cycle is unmarked and swept normally.
 
-The collector runtime itself now lives largely in hidden ordinary Eido source: `stdlib/memory/managed/managed_gc_runtime.eido`. It owns class-wide heap state, the allocation-header byte layout and fields, mark/root traversal, sweep, live-count/threshold policy, safepoints, invariant depth, and shutdown collection. Header fields are typed views over raw Storage; physical memory is acquired and reclaimed through the same Storage API:
+The default managed runtime now has two hidden ordinary-Eido policy layers. `ManagedGcRuntime` owns the allocation-header byte layout, heap links, mark/root traversal, sweep, threshold policy, safepoints, invariant depth, and shutdown collection. `ManagedHeapAllocator` owns physical object backing and live allocation accounting. Its first policy is intentionally simple and functional: one raw Storage allocation per managed object, released exactly when sweep reclaims it.
 
 ```eido
-var backing = Storage<Byte>.allocateRaw(1, totalSize);
+var backing = ManagedHeapAllocator.allocate(totalSize);
 ...
-Storage<Byte>.release(backing);
+ManagedHeapAllocator.release(allocation, totalSize);
 ```
+
+`ManagedHeapAllocator` itself uses `Storage<Byte>.allocateRaw`, `adoptAddress`, and `release`, so allocator policy remains in Eido and the Storage layer remains the only physical allocation substrate.
 
 The dependency is therefore:
 
@@ -62,7 +64,9 @@ SelectedMemoryStrategy.eido      build-time policy
         ↓
 CompilationPlan
         ↓
-ManagedGcRuntime.eido            target-time policy
+ManagedGcRuntime.eido            target-time collection policy
+        ↓
+ManagedHeapAllocator.eido          target-time allocation policy
         ↓
 Storage<Byte> public Eido API
         ↓
@@ -75,7 +79,7 @@ The current collection trigger is intentionally simple: allocation pressure rais
 
 ## Runtime injection
 
-The hidden `managed_gc_native.eido` and `managed_gc_runtime.eido` files are owned by `eido.stdlib.memory.managed` for normal parser/module/LSP behavior but are not exported by that module or the umbrella stdlib. Compilation first analyzes/plans without target GC runtime code; the compiler injects and reanalyzes the hidden runtime only when `--memory=gc` actually produces managed layouts. Primitive-only and manual targets therefore carry no collector runtime merely because the files are module-owned.
+The hidden `managed_gc_native.eido`, `managed_heap_allocator.eido`, and `managed_gc_runtime.eido` files are owned by `eido.stdlib.memory.managed` for normal parser/module/LSP behavior but are not exported by that module or the umbrella stdlib. Compilation first analyzes/plans without target GC runtime code; the compiler injects and reanalyzes the hidden runtime only when the default `--memory=gc` strategy actually produces managed layouts. Primitive-only and manual targets therefore carry no collector/allocator runtime merely because the files are module-owned.
 
 ## Manual mode
 

@@ -5,13 +5,20 @@ import stdlib/builtin_sources
 import support/project_fixture_support
 
 suite "Managed GC runtime":
-  test "collector policy uses Eido Storage API while native bridge never allocates":
-    check "Storage<Byte>.allocateRaw(" in BuiltinManagedGcRuntimeSource
+  test "collector delegates physical memory to Eido heap allocator while native bridge never allocates":
+    check "Storage<Byte>.allocateRaw(" in BuiltinManagedHeapAllocatorSource
+    check "Storage<Byte>.adoptAddress(" in BuiltinManagedHeapAllocatorSource
+    check "Storage<Byte>.release(" in BuiltinManagedHeapAllocatorSource
+    check "function allocationCount()" in BuiltinManagedHeapAllocatorSource
+    check "Int ManagedHeapAllocator.liveBlocks = 0;" in BuiltinManagedHeapAllocatorSource
+    check "ManagedHeapAllocator.allocate(" in BuiltinManagedGcRuntimeSource
+    check "ManagedHeapAllocator.release(" in BuiltinManagedGcRuntimeSource
+    check "Storage<Byte>.allocateRaw(" notin BuiltinManagedGcRuntimeSource
+    check "Storage<Byte>.adoptAddress(" notin BuiltinManagedGcRuntimeSource
+    check "Storage<Byte>.release(" notin BuiltinManagedGcRuntimeSource
     check "Storage<Byte>.viewAt(" notin BuiltinManagedGcRuntimeSource
     check "Storage<Int>.viewAt(" in BuiltinManagedGcRuntimeSource
     check "Storage<Bool>.viewAt(" in BuiltinManagedGcRuntimeSource
-    check "Storage<Byte>.adoptAddress(" in BuiltinManagedGcRuntimeSource
-    check "Storage<Byte>.release(" in BuiltinManagedGcRuntimeSource
     check "function mark(" in BuiltinManagedGcRuntimeSource
     check "function sweep()" in BuiltinManagedGcRuntimeSource
     check "function collect()" in BuiltinManagedGcRuntimeSource

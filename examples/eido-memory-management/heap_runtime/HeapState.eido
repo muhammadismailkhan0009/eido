@@ -1,0 +1,79 @@
+/// Eido-owned heap state over one raw Storage backing allocation.
+class HeapState {
+    Storage<Byte> backing;
+    Int capacity;
+    Int next;
+    Int allocations;
+    Bool active;
+
+    invariant {
+        self.capacity > 0;
+        self.next >= 0;
+        self.next <= self.capacity;
+        self.allocations >= 0;
+    }
+
+    function alignUp(Int value, Int alignment) returns Int {
+        return ((value + alignment - 1) / alignment) * alignment;
+    }
+
+    function create(Int requestedCapacity) returns HeapState {
+        require { requestedCapacity > 0; }
+        return HeapState {
+            backing = Storage<Byte>.allocateRaw(1, requestedCapacity);
+            capacity = requestedCapacity;
+            next = 0;
+            allocations = 0;
+            active = true;
+        };
+    }
+
+    function allocate(Int bytes, Int alignment) returns MemoryBlock {
+        require {
+            self.active;
+            bytes > 0;
+            alignment > 0;
+            HeapState.alignUp(self.next, alignment) + bytes <= self.capacity;
+        }
+
+        var start = HeapState.alignUp(self.next, alignment);
+        set self.next = start + bytes;
+        set self.allocations = self.allocations + 1;
+
+        return MemoryBlock {
+            address = Storage<Byte>.address(self.backing) + start;
+            bytes = bytes;
+            alignment = alignment;
+        };
+    }
+
+    function allocateInt(Int value) returns MemoryBlock {
+        var block = self.allocate(
+            Storage<Int>.size(),
+            Storage<Int>.alignment()
+        );
+        block.writeInt(value);
+        return block;
+    }
+
+    function stats() returns MemoryStats {
+        return MemoryStats {
+            capacity = self.capacity;
+            used = self.next;
+            remaining = self.capacity - self.next;
+            allocations = self.allocations;
+        };
+    }
+
+    function reset() {
+        require { self.active; }
+        set self.next = 0;
+        set self.allocations = 0;
+    }
+
+    function release() {
+        require { self.active; }
+        Storage<Byte>.release(self.backing);
+        set self.active = false;
+    }
+}

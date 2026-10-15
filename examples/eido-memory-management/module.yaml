@@ -1,0 +1,9 @@
+module: eido_memory_management
+sources: []
+children:
+  heap_runtime: { path: heap_runtime }
+  app: { path: app }
+dependencies: []
+exports: []
+provides: {}
+adopts: []

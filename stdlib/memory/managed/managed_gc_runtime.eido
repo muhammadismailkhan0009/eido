@@ -1,10 +1,10 @@
 // Compiler-private managed-memory runtime policy.
 //
-// Heap state, allocation-header layout, marking, sweeping, and physical memory
-// ownership are ordinary Eido code over the public Storage API.
+// Heap/header state, marking, sweeping, and collection policy are ordinary
+// Eido code. Physical allocation/release is delegated to ManagedHeapAllocator,
+// which itself is ordinary Eido code over the public Storage API.
 class ManagedGcRuntime {
     Int ManagedGcRuntime.heapHead = 0;
-    Int ManagedGcRuntime.liveAllocations = 0;
     Int ManagedGcRuntime.collectionThreshold = 64;
 
     function alignUp(Int value, Int alignment) returns Int {
@@ -180,7 +180,7 @@ class ManagedGcRuntime {
             set totalSize = 1;
         }
 
-        var backing = Storage<Byte>.allocateRaw(1, totalSize);
+        var backing = ManagedHeapAllocator.allocate(totalSize);
         var allocation = ManagedGcRuntime.initializeHeader(
             backing,
             payloadOffset,
@@ -191,9 +191,6 @@ class ManagedGcRuntime {
         );
 
         set ManagedGcRuntime.heapHead = allocation;
-        set ManagedGcRuntime.liveAllocations =
-            ManagedGcRuntime.liveAllocations + 1;
-
         return allocation;
     }
 
@@ -303,14 +300,7 @@ class ManagedGcRuntime {
                     current,
                     ManagedGcRuntime.totalSizeOffset()
                 );
-                var backing = Storage<Byte>.adoptAddress(
-                    current,
-                    1,
-                    totalSize
-                );
-                set ManagedGcRuntime.liveAllocations =
-                    ManagedGcRuntime.liveAllocations - 1;
-                Storage<Byte>.release(backing);
+                ManagedHeapAllocator.release(current, totalSize);
             }
 
             set current = nextAllocation;
@@ -321,7 +311,7 @@ class ManagedGcRuntime {
         ManagedGcRuntime.markRoots();
         ManagedGcRuntime.sweep();
 
-        var nextThreshold = ManagedGcRuntime.liveAllocations * 2 + 1;
+        var nextThreshold = ManagedHeapAllocator.allocationCount() * 2 + 1;
 
         if (nextThreshold < 64) {
             set nextThreshold = 64;
@@ -333,7 +323,7 @@ class ManagedGcRuntime {
     function safepoint() {
         if (
             ManagedGcNative.protectionDepth() == 0 and
-            ManagedGcRuntime.liveAllocations >=
+            ManagedHeapAllocator.allocationCount() >=
                 ManagedGcRuntime.collectionThreshold
         ) {
             ManagedGcRuntime.collect();
@@ -372,7 +362,7 @@ class ManagedGcRuntime {
     }
 
     function allocationCount() returns Int {
-        return ManagedGcRuntime.liveAllocations;
+        return ManagedHeapAllocator.allocationCount();
     }
 
     function shutdown() {

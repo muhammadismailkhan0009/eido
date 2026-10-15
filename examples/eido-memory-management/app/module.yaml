@@ -1,0 +1,9 @@
+module: app
+sources:
+  - Main.eido
+children: []
+dependencies:
+  - heap_runtime
+exports: []
+provides: {}
+adopts: []
