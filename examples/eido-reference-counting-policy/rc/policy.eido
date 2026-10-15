@@ -1,0 +1,14 @@
+// External reference-counting memory policy built only from public compiler events.
+function main() {
+    MemoryPolicy.bindingEnter("RcPolicyRuntime.valueEnter");
+    MemoryPolicy.bindingWrite("RcPolicyRuntime.valueWrite");
+    MemoryPolicy.bindingLeave("RcPolicyRuntime.valueLeave");
+    MemoryPolicy.typeMetadata("RcPolicyRuntime.typeRegister");
+    MemoryPolicy.fieldMetadata("RcPolicyRuntime.fieldRegister");
+    MemoryPolicy.objectAcquire("RcPolicyRuntime.objectAcquire");
+    MemoryPolicy.executionBoundary("RcPolicyRuntime.executionBoundary");
+    MemoryPolicy.invariantEnter("RcPolicyRuntime.invariantEnter");
+    MemoryPolicy.invariantLeave("RcPolicyRuntime.invariantLeave");
+    MemoryPolicy.invariantClear("RcPolicyRuntime.invariantClear");
+    MemoryPolicy.programExit("RcPolicyRuntime.shutdown");
+}

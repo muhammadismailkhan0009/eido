@@ -1,0 +1,73 @@
+// Active identity-bearing lexical/class-owned bindings reported by the compiler.
+class RcValueRegistry {
+    Storage<Int> RcValueRegistry.values = Storage<Int>.allocate(64);
+    Storage<Bool> RcValueRegistry.active = Storage<Bool>.allocate(64);
+    Int RcValueRegistry.capacity = 64;
+    Int RcValueRegistry.highWater = 0;
+
+    function grow() {
+        var newCapacity = RcValueRegistry.capacity * 2;
+        var newValues = Storage<Int>.allocate(newCapacity);
+        var newActive = Storage<Bool>.allocate(newCapacity);
+        var index = 0;
+        while (index < RcValueRegistry.highWater) {
+            Storage<Int>.write(newValues, index, Storage<Int>.read(RcValueRegistry.values, index));
+            Storage<Bool>.write(newActive, index, Storage<Bool>.read(RcValueRegistry.active, index));
+            set index = index + 1;
+        }
+        Storage<Int>.release(RcValueRegistry.values);
+        Storage<Bool>.release(RcValueRegistry.active);
+        set RcValueRegistry.values = newValues;
+        set RcValueRegistry.active = newActive;
+        set RcValueRegistry.capacity = newCapacity;
+    }
+
+    function enter(Int identity) returns Int {
+        var index = 0;
+        while (index < RcValueRegistry.highWater) {
+            if (not Storage<Bool>.read(RcValueRegistry.active, index)) {
+                Storage<Int>.write(RcValueRegistry.values, index, identity);
+                Storage<Bool>.write(RcValueRegistry.active, index, true);
+                return index;
+            }
+            set index = index + 1;
+        }
+        if (RcValueRegistry.highWater >= RcValueRegistry.capacity) {
+            RcValueRegistry.grow();
+        }
+        var slot = RcValueRegistry.highWater;
+        Storage<Int>.write(RcValueRegistry.values, slot, identity);
+        Storage<Bool>.write(RcValueRegistry.active, slot, true);
+        set RcValueRegistry.highWater = RcValueRegistry.highWater + 1;
+        return slot;
+    }
+
+    function write(Int slot, Int identity) {
+        require { slot >= 0; slot < RcValueRegistry.highWater; }
+        Storage<Int>.write(RcValueRegistry.values, slot, identity);
+    }
+
+    function leave(Int slot) {
+        require { slot >= 0; slot < RcValueRegistry.highWater; }
+        Storage<Int>.write(RcValueRegistry.values, slot, 0);
+        Storage<Bool>.write(RcValueRegistry.active, slot, false);
+    }
+
+    function highWaterMark() returns Int { return RcValueRegistry.highWater; }
+    function isActive(Int slot) returns Bool { return Storage<Bool>.read(RcValueRegistry.active, slot); }
+    function valueAt(Int slot) returns Int { return Storage<Int>.read(RcValueRegistry.values, slot); }
+
+    function clear() {
+        var index = 0;
+        while (index < RcValueRegistry.highWater) {
+            Storage<Int>.write(RcValueRegistry.values, index, 0);
+            Storage<Bool>.write(RcValueRegistry.active, index, false);
+            set index = index + 1;
+        }
+    }
+
+    function shutdown() {
+        Storage<Int>.release(RcValueRegistry.values);
+        Storage<Bool>.release(RcValueRegistry.active);
+    }
+}

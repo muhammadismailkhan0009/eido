@@ -1,0 +1,10 @@
+module: app
+sources:
+  - Child.eido
+  - Parent.eido
+  - Main.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

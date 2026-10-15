@@ -1,0 +1,13 @@
+module: rc
+sources:
+  - rc_value_registry.eido
+  - rc_type_registry.eido
+  - rc_runtime.eido
+  - rc_policy_runtime.eido
+policySources:
+  - policy.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

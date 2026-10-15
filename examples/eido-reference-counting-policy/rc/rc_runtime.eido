@@ -1,0 +1,268 @@
+// Deferred/recounting reference-count runtime implemented entirely in Eido over Storage.
+// Stable boundaries recompute incoming counts from active bindings and object fields.
+// Unreachable cycles keep positive internal counts and are intentionally not reclaimed
+// until process shutdown, matching the classic limitation of simple reference counting.
+class RcRuntime {
+    Int RcRuntime.heapHead = 0;
+    Int RcRuntime.liveObjects = 0;
+    Int RcRuntime.boundaryReclaimed = 0;
+    Int RcRuntime.shutdownForced = 0;
+
+    function alignUp(Int value, Int alignment) returns Int {
+        return ((value + alignment - 1) / alignment) * alignment;
+    }
+
+    function nextOffset() returns Int { return 0; }
+    function referenceCountOffset() returns Int { return Storage<Int>.size(); }
+    function invariantDepthOffset() returns Int { return Storage<Int>.size() * 2; }
+    function payloadOffsetFieldOffset() returns Int { return Storage<Int>.size() * 3; }
+    function payloadSizeOffset() returns Int { return Storage<Int>.size() * 4; }
+    function totalSizeOffset() returns Int { return Storage<Int>.size() * 5; }
+    function typeIdOffset() returns Int { return Storage<Int>.size() * 6; }
+    function headerSize() returns Int { return Storage<Int>.size() * 7; }
+
+    function headerAddress(Int identity) returns Int {
+        var backlinkRaw = Storage<Byte>.fromAddress(
+            identity - Storage<Int>.size(),
+            1,
+            Storage<Int>.size()
+        );
+        var backlink = Storage<Int>.view(backlinkRaw, 0);
+        return Storage<Int>.read(backlink, 0);
+    }
+
+    function header(Int identity) returns Storage<Byte> {
+        return Storage<Byte>.fromAddress(
+            RcRuntime.headerAddress(identity),
+            1,
+            RcRuntime.headerSize()
+        );
+    }
+
+    function readInt(Int identity, Int offset) returns Int {
+        var raw = RcRuntime.header(identity);
+        var slot = Storage<Int>.viewAt(raw, offset);
+        return Storage<Int>.read(slot, 0);
+    }
+
+    function writeInt(Int identity, Int offset, Int value) {
+        var raw = RcRuntime.header(identity);
+        var slot = Storage<Int>.viewAt(raw, offset);
+        Storage<Int>.write(slot, 0, value);
+    }
+
+    function initializeHeader(
+        Storage<Byte> backing,
+        Int payloadOffset,
+        Int payloadSize,
+        Int totalSize,
+        Int typeId
+    ) returns Int {
+        var allocation = Storage<Byte>.address(backing);
+        var nextSlot = Storage<Int>.viewAt(backing, RcRuntime.nextOffset());
+        Storage<Int>.write(nextSlot, 0, RcRuntime.heapHead);
+        var countSlot = Storage<Int>.viewAt(backing, RcRuntime.referenceCountOffset());
+        Storage<Int>.write(countSlot, 0, 0);
+        var invariantSlot = Storage<Int>.viewAt(backing, RcRuntime.invariantDepthOffset());
+        Storage<Int>.write(invariantSlot, 0, 0);
+        var payloadOffsetSlot = Storage<Int>.viewAt(backing, RcRuntime.payloadOffsetFieldOffset());
+        Storage<Int>.write(payloadOffsetSlot, 0, payloadOffset);
+        var payloadSizeSlot = Storage<Int>.viewAt(backing, RcRuntime.payloadSizeOffset());
+        Storage<Int>.write(payloadSizeSlot, 0, payloadSize);
+        var totalSizeSlot = Storage<Int>.viewAt(backing, RcRuntime.totalSizeOffset());
+        Storage<Int>.write(totalSizeSlot, 0, totalSize);
+        var typeSlot = Storage<Int>.viewAt(backing, RcRuntime.typeIdOffset());
+        Storage<Int>.write(typeSlot, 0, typeId);
+        var backlink = Storage<Int>.viewAt(
+            backing,
+            payloadOffset - Storage<Int>.size()
+        );
+        Storage<Int>.write(backlink, 0, allocation);
+        return allocation;
+    }
+
+    function allocate(Int payloadSize, Int payloadAlignment, Int typeId) returns Int {
+        var effectiveAlignment = payloadAlignment + 0;
+        if (effectiveAlignment < Storage<Int>.alignment()) {
+            set effectiveAlignment = Storage<Int>.alignment();
+        }
+        var payloadOffset = RcRuntime.alignUp(
+            RcRuntime.headerSize() + Storage<Int>.size(),
+            effectiveAlignment
+        );
+        var totalSize = payloadOffset + payloadSize;
+        if (totalSize < 1) { set totalSize = 1; }
+        var backing = Storage<Byte>.allocateRaw(1, totalSize);
+        var allocation = RcRuntime.initializeHeader(
+            backing,
+            payloadOffset,
+            payloadSize,
+            totalSize,
+            typeId
+        );
+        var identity = allocation + payloadOffset;
+        set RcRuntime.heapHead = identity;
+        set RcRuntime.liveObjects = RcRuntime.liveObjects + 1;
+        return identity;
+    }
+
+    function next(Int identity) returns Int {
+        return RcRuntime.readInt(identity, RcRuntime.nextOffset());
+    }
+    function setNext(Int identity, Int nextIdentity) {
+        RcRuntime.writeInt(identity, RcRuntime.nextOffset(), nextIdentity);
+    }
+    function referenceCount(Int identity) returns Int {
+        return RcRuntime.readInt(identity, RcRuntime.referenceCountOffset());
+    }
+    function setReferenceCount(Int identity, Int count) {
+        RcRuntime.writeInt(identity, RcRuntime.referenceCountOffset(), count);
+    }
+    function payloadSize(Int identity) returns Int {
+        return RcRuntime.readInt(identity, RcRuntime.payloadSizeOffset());
+    }
+    function totalSize(Int identity) returns Int {
+        return RcRuntime.readInt(identity, RcRuntime.totalSizeOffset());
+    }
+    function typeId(Int identity) returns Int {
+        return RcRuntime.readInt(identity, RcRuntime.typeIdOffset());
+    }
+
+    function incrementReference(Int identity) {
+        if (identity == 0) { return; }
+        RcRuntime.setReferenceCount(
+            identity,
+            RcRuntime.referenceCount(identity) + 1
+        );
+    }
+
+    function resetReferenceCounts() {
+        var current = RcRuntime.heapHead;
+        while (current != 0) {
+            RcRuntime.setReferenceCount(current, 0);
+            set current = RcRuntime.next(current);
+        }
+    }
+
+    function countBindingReferences() {
+        var index = 0;
+        var limit = RcValueRegistry.highWaterMark();
+        while (index < limit) {
+            if (RcValueRegistry.isActive(index)) {
+                RcRuntime.incrementReference(RcValueRegistry.valueAt(index));
+            }
+            set index = index + 1;
+        }
+    }
+
+    function countObjectReferences() {
+        var current = RcRuntime.heapHead;
+        while (current != 0) {
+            var currentType = RcRuntime.typeId(current);
+            var fieldCount = RcTypeRegistry.fieldCount(currentType);
+            if (fieldCount > 0) {
+                var payload = Storage<Byte>.fromAddress(
+                    current,
+                    1,
+                    RcRuntime.payloadSize(current)
+                );
+                var index = 0;
+                while (index < fieldCount) {
+                    if (RcTypeRegistry.fieldContainsIdentity(currentType, index)) {
+                        var offset = RcTypeRegistry.fieldOffset(currentType, index);
+                        var slot = Storage<Int>.viewAt(payload, offset);
+                        RcRuntime.incrementReference(Storage<Int>.read(slot, 0));
+                    }
+                    set index = index + 1;
+                }
+            }
+            set current = RcRuntime.next(current);
+        }
+    }
+
+    function recount() {
+        RcRuntime.resetReferenceCounts();
+        RcRuntime.countBindingReferences();
+        RcRuntime.countObjectReferences();
+    }
+
+    function invariantEnter(Int identity) {
+        var depth = RcRuntime.readInt(identity, RcRuntime.invariantDepthOffset());
+        RcRuntime.writeInt(identity, RcRuntime.invariantDepthOffset(), depth + 1);
+    }
+    function invariantLeave(Int identity) {
+        var depth = RcRuntime.readInt(identity, RcRuntime.invariantDepthOffset());
+        RcRuntime.writeInt(identity, RcRuntime.invariantDepthOffset(), depth - 1);
+    }
+    function invariantClear(Int identity) returns Bool {
+        return RcRuntime.readInt(identity, RcRuntime.invariantDepthOffset()) == 0;
+    }
+
+    function releaseObject(Int identity) {
+        var allocation = RcRuntime.headerAddress(identity);
+        var bytes = RcRuntime.totalSize(identity);
+        var backing = Storage<Byte>.adoptAddress(allocation, 1, bytes);
+        Storage<Byte>.release(backing);
+        set RcRuntime.liveObjects = RcRuntime.liveObjects - 1;
+    }
+
+    function sweepZeroCounts(Bool boundary) returns Bool {
+        var releasedAny = false;
+        var previous = 0;
+        var current = RcRuntime.heapHead;
+        while (current != 0) {
+            var nextIdentity = RcRuntime.next(current);
+            if (
+                RcRuntime.referenceCount(current) == 0 and
+                RcRuntime.invariantClear(current)
+            ) {
+                if (previous == 0) { set RcRuntime.heapHead = nextIdentity; }
+                else { RcRuntime.setNext(previous, nextIdentity); }
+                RcRuntime.releaseObject(current);
+                if (boundary) {
+                    set RcRuntime.boundaryReclaimed = RcRuntime.boundaryReclaimed + 1;
+                }
+                set releasedAny = true;
+            } else {
+                set previous = current;
+            }
+            set current = nextIdentity;
+        }
+        return releasedAny;
+    }
+
+    function reclaimAcyclic(Bool boundary) {
+        var changed = true;
+        while (changed) {
+            RcRuntime.recount();
+            set changed = RcRuntime.sweepZeroCounts(boundary);
+        }
+    }
+
+    function executionBoundary() {
+        RcRuntime.reclaimAcyclic(true);
+    }
+
+    function releaseAllRemaining() {
+        var current = RcRuntime.heapHead;
+        set RcRuntime.heapHead = 0;
+        while (current != 0) {
+            var nextIdentity = RcRuntime.next(current);
+            RcRuntime.releaseObject(current);
+            set RcRuntime.shutdownForced = RcRuntime.shutdownForced + 1;
+            set current = nextIdentity;
+        }
+    }
+
+    function allocationCount() returns Int { return RcRuntime.liveObjects; }
+    function boundaryReclaimedCount() returns Int { return RcRuntime.boundaryReclaimed; }
+    function forcedShutdownCount() returns Int { return RcRuntime.shutdownForced; }
+
+    function shutdown() {
+        RcValueRegistry.clear();
+        RcRuntime.reclaimAcyclic(false);
+        RcRuntime.releaseAllRemaining();
+        RcValueRegistry.shutdown();
+        RcTypeRegistry.shutdown();
+    }
+}

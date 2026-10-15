@@ -1,0 +1,55 @@
+// Typed handlers bound to the compiler's generic memory-policy events.
+class RcPolicyRuntime {
+    function valueEnter(Int identity) returns Int {
+        return RcValueRegistry.enter(identity);
+    }
+
+    function valueWrite(Int slot, Int identity) {
+        RcValueRegistry.write(slot, identity);
+    }
+
+    function valueLeave(Int slot) {
+        RcValueRegistry.leave(slot);
+    }
+
+    function typeRegister(Int typeId, Int fieldCount) {
+        RcTypeRegistry.registerType(typeId, fieldCount);
+    }
+
+    function fieldRegister(
+        Int typeId,
+        Int index,
+        Int offset,
+        Bool containsIdentity
+    ) {
+        RcTypeRegistry.setField(typeId, index, offset, containsIdentity);
+    }
+
+    function objectAcquire(
+        Int payloadSize,
+        Int payloadAlignment,
+        Int typeId
+    ) returns Int {
+        return RcRuntime.allocate(payloadSize, payloadAlignment, typeId);
+    }
+
+    function executionBoundary() {
+        RcRuntime.executionBoundary();
+    }
+
+    function invariantEnter(Int identity) {
+        RcRuntime.invariantEnter(identity);
+    }
+
+    function invariantLeave(Int identity) {
+        RcRuntime.invariantLeave(identity);
+    }
+
+    function invariantClear(Int identity) returns Bool {
+        return RcRuntime.invariantClear(identity);
+    }
+
+    function shutdown() {
+        RcRuntime.shutdown();
+    }
+}

@@ -1,0 +1,83 @@
+// Object field-layout metadata used to count identity edges without tracing reachability.
+class RcTypeRegistry {
+    Storage<Int> RcTypeRegistry.fieldStarts = Storage<Int>.allocate(16);
+    Storage<Int> RcTypeRegistry.fieldCounts = Storage<Int>.allocate(16);
+    Storage<Int> RcTypeRegistry.fieldOffsets = Storage<Int>.allocate(32);
+    Storage<Bool> RcTypeRegistry.fieldIdentity = Storage<Bool>.allocate(32);
+    Int RcTypeRegistry.typeCapacity = 16;
+    Int RcTypeRegistry.fieldCapacity = 32;
+    Int RcTypeRegistry.fieldUsed = 0;
+
+    function ensureTypeCapacity(Int required) {
+        if (required <= RcTypeRegistry.typeCapacity) { return; }
+        var newCapacity = RcTypeRegistry.typeCapacity * 2;
+        while (newCapacity < required) { set newCapacity = newCapacity * 2; }
+        var newStarts = Storage<Int>.allocate(newCapacity);
+        var newCounts = Storage<Int>.allocate(newCapacity);
+        var index = 0;
+        while (index < RcTypeRegistry.typeCapacity) {
+            Storage<Int>.write(newStarts, index, Storage<Int>.read(RcTypeRegistry.fieldStarts, index));
+            Storage<Int>.write(newCounts, index, Storage<Int>.read(RcTypeRegistry.fieldCounts, index));
+            set index = index + 1;
+        }
+        Storage<Int>.release(RcTypeRegistry.fieldStarts);
+        Storage<Int>.release(RcTypeRegistry.fieldCounts);
+        set RcTypeRegistry.fieldStarts = newStarts;
+        set RcTypeRegistry.fieldCounts = newCounts;
+        set RcTypeRegistry.typeCapacity = newCapacity;
+    }
+
+    function ensureFieldCapacity(Int required) {
+        if (required <= RcTypeRegistry.fieldCapacity) { return; }
+        var newCapacity = RcTypeRegistry.fieldCapacity * 2;
+        while (newCapacity < required) { set newCapacity = newCapacity * 2; }
+        var newOffsets = Storage<Int>.allocate(newCapacity);
+        var newIdentity = Storage<Bool>.allocate(newCapacity);
+        var index = 0;
+        while (index < RcTypeRegistry.fieldUsed) {
+            Storage<Int>.write(newOffsets, index, Storage<Int>.read(RcTypeRegistry.fieldOffsets, index));
+            Storage<Bool>.write(newIdentity, index, Storage<Bool>.read(RcTypeRegistry.fieldIdentity, index));
+            set index = index + 1;
+        }
+        Storage<Int>.release(RcTypeRegistry.fieldOffsets);
+        Storage<Bool>.release(RcTypeRegistry.fieldIdentity);
+        set RcTypeRegistry.fieldOffsets = newOffsets;
+        set RcTypeRegistry.fieldIdentity = newIdentity;
+        set RcTypeRegistry.fieldCapacity = newCapacity;
+    }
+
+    function registerType(Int typeId, Int fieldCount) {
+        require { typeId >= 0; fieldCount >= 0; }
+        RcTypeRegistry.ensureTypeCapacity(typeId + 1);
+        RcTypeRegistry.ensureFieldCapacity(RcTypeRegistry.fieldUsed + fieldCount);
+        Storage<Int>.write(RcTypeRegistry.fieldStarts, typeId, RcTypeRegistry.fieldUsed);
+        Storage<Int>.write(RcTypeRegistry.fieldCounts, typeId, fieldCount);
+        set RcTypeRegistry.fieldUsed = RcTypeRegistry.fieldUsed + fieldCount;
+    }
+
+    function setField(Int typeId, Int index, Int offset, Bool containsIdentity) {
+        require { typeId >= 0; index >= 0; offset >= 0; }
+        var start = Storage<Int>.read(RcTypeRegistry.fieldStarts, typeId);
+        Storage<Int>.write(RcTypeRegistry.fieldOffsets, start + index, offset);
+        Storage<Bool>.write(RcTypeRegistry.fieldIdentity, start + index, containsIdentity);
+    }
+
+    function fieldCount(Int typeId) returns Int {
+        return Storage<Int>.read(RcTypeRegistry.fieldCounts, typeId);
+    }
+    function fieldOffset(Int typeId, Int index) returns Int {
+        var start = Storage<Int>.read(RcTypeRegistry.fieldStarts, typeId);
+        return Storage<Int>.read(RcTypeRegistry.fieldOffsets, start + index);
+    }
+    function fieldContainsIdentity(Int typeId, Int index) returns Bool {
+        var start = Storage<Int>.read(RcTypeRegistry.fieldStarts, typeId);
+        return Storage<Bool>.read(RcTypeRegistry.fieldIdentity, start + index);
+    }
+
+    function shutdown() {
+        Storage<Int>.release(RcTypeRegistry.fieldStarts);
+        Storage<Int>.release(RcTypeRegistry.fieldCounts);
+        Storage<Int>.release(RcTypeRegistry.fieldOffsets);
+        Storage<Bool>.release(RcTypeRegistry.fieldIdentity);
+    }
+}
