@@ -1,0 +1,11 @@
+module: testing
+
+sources:
+  - Assert.eido
+
+children: []
+dependencies: []
+exports:
+  - Assert
+provides: {}
+adopts: []

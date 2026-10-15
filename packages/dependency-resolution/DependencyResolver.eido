@@ -1,0 +1,143 @@
+/// Public entry point for in-memory package dependency resolution.
+class DependencyResolver {
+    function version(Int major, Int minor, Int patch) returns Version {
+        return Version.create(major, minor, patch);
+    }
+
+    function catalog(Int maxReleases, Int maxDependencies) returns PackageCatalog {
+        return PackageCatalog.create(maxReleases, maxDependencies);
+    }
+
+    function resolve(
+        PackageCatalog catalog,
+        String rootName,
+        Version minimum
+    ) returns ResolutionResult {
+        require {
+            rootName != "";
+            catalog.releaseCount() > 0;
+        }
+
+        var pendingCapacity = catalog.dependencyCount() + 1;
+        var pendingNames = Storage<String>.allocate(pendingCapacity);
+        var pendingMajors = Storage<Int>.allocate(pendingCapacity);
+        var pendingMinors = Storage<Int>.allocate(pendingCapacity);
+        var pendingPatches = Storage<Int>.allocate(pendingCapacity);
+        var selectedReleaseIds = Storage<Int>.allocate(catalog.releaseCount());
+
+        Storage<String>.write(pendingNames, 0, rootName);
+        Storage<Int>.write(pendingMajors, 0, minimum.major);
+        Storage<Int>.write(pendingMinors, 0, minimum.minor);
+        Storage<Int>.write(pendingPatches, 0, minimum.patch);
+
+        var pendingCount = 1;
+        var pendingIndex = 0;
+        var selectedCount = 0;
+        var failed = false;
+        var failureMessage = "";
+
+        while (pendingIndex < pendingCount and not failed) {
+            var requirementName = Storage<String>.read(pendingNames, pendingIndex);
+            var requirementMinimum = Version {
+                major = Storage<Int>.read(pendingMajors, pendingIndex);
+                minor = Storage<Int>.read(pendingMinors, pendingIndex);
+                patch = Storage<Int>.read(pendingPatches, pendingIndex);
+            };
+
+            var selectedPosition = -1;
+            var scan = 0;
+            while (scan < selectedCount) {
+                var selectedRelease = Storage<Int>.read(selectedReleaseIds, scan);
+                if (catalog.releaseNameAt(selectedRelease) == requirementName) {
+                    set selectedPosition = scan;
+                    set scan = selectedCount;
+                } else {
+                    set scan = scan + 1;
+                }
+            }
+
+            if (selectedPosition >= 0) {
+                var currentRelease = Storage<Int>.read(selectedReleaseIds, selectedPosition);
+                var currentVersion = catalog.releaseVersionAt(currentRelease);
+                if (not currentVersion.isAtLeast(requirementMinimum)) {
+                    set failed = true;
+                    set failureMessage = "selected release no longer satisfies dependency: " + requirementName;
+                }
+            } else {
+                var releaseId = catalog.findHighestSatisfying(
+                    requirementName,
+                    requirementMinimum
+                );
+                if (releaseId < 0) {
+                    set failed = true;
+                    set failureMessage = "no release satisfies dependency: " + requirementName;
+                } else {
+                    Storage<Int>.write(selectedReleaseIds, selectedCount, releaseId);
+                    set selectedCount = selectedCount + 1;
+
+                    var dependencyIndex = 0;
+                    while (dependencyIndex < catalog.dependencyCount()) {
+                        if (catalog.dependencyOwnerAt(dependencyIndex) == releaseId) {
+                            var dependencyMinimum = catalog.dependencyMinimumAt(dependencyIndex);
+                            Storage<String>.write(
+                                pendingNames,
+                                pendingCount,
+                                catalog.dependencyNameAt(dependencyIndex)
+                            );
+                            Storage<Int>.write(
+                                pendingMajors,
+                                pendingCount,
+                                dependencyMinimum.major
+                            );
+                            Storage<Int>.write(
+                                pendingMinors,
+                                pendingCount,
+                                dependencyMinimum.minor
+                            );
+                            Storage<Int>.write(
+                                pendingPatches,
+                                pendingCount,
+                                dependencyMinimum.patch
+                            );
+                            set pendingCount = pendingCount + 1;
+                        }
+                        set dependencyIndex = dependencyIndex + 1;
+                    }
+                }
+            }
+
+            set pendingIndex = pendingIndex + 1;
+        }
+
+        if (failed) {
+            Storage<String>.release(pendingNames);
+            Storage<Int>.release(pendingMajors);
+            Storage<Int>.release(pendingMinors);
+            Storage<Int>.release(pendingPatches);
+            Storage<Int>.release(selectedReleaseIds);
+            return ResolutionResult.failure(failureMessage);
+        }
+
+        var resolution = ResolutionResult.create(
+            catalog.releaseCount(),
+            true,
+            "resolved"
+        );
+        var selectedIndex = 0;
+        while (selectedIndex < selectedCount) {
+            var selectedRelease = Storage<Int>.read(selectedReleaseIds, selectedIndex);
+            resolution.add(
+                catalog.releaseNameAt(selectedRelease),
+                catalog.releaseVersionAt(selectedRelease)
+            );
+            set selectedIndex = selectedIndex + 1;
+        }
+
+        Storage<String>.release(pendingNames);
+        Storage<Int>.release(pendingMajors);
+        Storage<Int>.release(pendingMinors);
+        Storage<Int>.release(pendingPatches);
+        Storage<Int>.release(selectedReleaseIds);
+        return resolution;
+    }
+}

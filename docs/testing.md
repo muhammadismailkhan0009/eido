@@ -140,6 +140,18 @@ Names describe visible behavior rather than implementation details.
 
 Test support must not duplicate compiler logic or become a generic utilities directory.
 
+## Package-owned Eido tests
+
+Reusable Eido packages keep executable tests under `<package>/tests/module.yaml`. Production modules do not depend on their tests or on `packages/testing`.
+
+Run one package test module with:
+
+```text
+eido test <package-directory>
+```
+
+Use `--memory=<policy>` when the same tests should execute under another memory policy.
+
 ## Running tests
 
 Run the complete compiler + feature + integration suite with:

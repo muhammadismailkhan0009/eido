@@ -1,0 +1,89 @@
+/// Resolution outcome plus the selected package releases.
+class ResolutionResult {
+    Storage<String> packageNames;
+    Storage<Int> packageMajors;
+    Storage<Int> packageMinors;
+    Storage<Int> packagePatches;
+    Int packageCapacity;
+    Int packages;
+    Bool successFlag;
+    String statusMessage;
+    Bool active;
+
+    invariant {
+        self.packageCapacity > 0;
+        self.packages >= 0;
+        self.packages <= self.packageCapacity;
+    }
+
+    function create(Int maxPackages, Bool succeeded, String messageText) returns ResolutionResult {
+        require { maxPackages > 0; }
+        return ResolutionResult {
+            packageNames = Storage<String>.allocate(maxPackages);
+            packageMajors = Storage<Int>.allocate(maxPackages);
+            packageMinors = Storage<Int>.allocate(maxPackages);
+            packagePatches = Storage<Int>.allocate(maxPackages);
+            packageCapacity = maxPackages;
+            packages = 0;
+            successFlag = succeeded;
+            statusMessage = messageText;
+            active = true;
+        };
+    }
+
+    function failure(String messageText) returns ResolutionResult {
+        return ResolutionResult.create(1, false, messageText);
+    }
+
+    function add(String packageName, Version version) {
+        require {
+            self.active;
+            self.successFlag;
+            packageName != "";
+            self.packages < self.packageCapacity;
+        }
+        var index = self.packages;
+        Storage<String>.write(self.packageNames, index, packageName);
+        Storage<Int>.write(self.packageMajors, index, version.major);
+        Storage<Int>.write(self.packageMinors, index, version.minor);
+        Storage<Int>.write(self.packagePatches, index, version.patch);
+        set self.packages = self.packages + 1;
+    }
+
+    function succeeded() returns Bool { return self.successFlag; }
+    function message() returns String { return self.statusMessage; }
+    function packageCount() returns Int { return self.packages; }
+
+    function packageNameAt(Int index) returns String {
+        require { self.active; index >= 0; index < self.packages; }
+        return Storage<String>.read(self.packageNames, index);
+    }
+
+    function packageVersionAt(Int index) returns Version {
+        require { self.active; index >= 0; index < self.packages; }
+        return Version {
+            major = Storage<Int>.read(self.packageMajors, index);
+            minor = Storage<Int>.read(self.packageMinors, index);
+            patch = Storage<Int>.read(self.packagePatches, index);
+        };
+    }
+
+    function indexOf(String packageName) returns Int {
+        require { self.active; packageName != ""; }
+        var index = 0;
+        while (index < self.packages) {
+            if (self.packageNameAt(index) == packageName) { return index; }
+            set index = index + 1;
+        }
+        return -1;
+    }
+
+    function release() {
+        require { self.active; }
+        Storage<String>.release(self.packageNames);
+        Storage<Int>.release(self.packageMajors);
+        Storage<Int>.release(self.packageMinors);
+        Storage<Int>.release(self.packagePatches);
+        set self.active = false;
+    }
+}

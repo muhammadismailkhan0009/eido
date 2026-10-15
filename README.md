@@ -123,13 +123,14 @@ eido clean
 eido check [module.yaml]
 eido build [module.yaml] [--memory=gc|none|<policy-module>] [-o <output>]
 eido run [module.yaml] [--memory=gc|none|<policy-module>] [-- <application args...>]
+eido test [project-directory|module.yaml] [--memory=gc|none|<policy-module>]
 eido clean [module.yaml]
 eido compile <source.eido>... [--memory=gc|none|<policy-module>] -o <output>
 eido --help
 eido --version
 ```
 
-`check`, `build`, `run`, and `clean` are the normal project workflow. Supplying an explicit `module.yaml` is useful for CI or external orchestration. `--memory=gc` is the default CLI alias for the SDK policy module `eido.stdlib.memory.managed`; `--memory=none` selects no automatic policy, and `--memory=<module>` selects any loaded module that declares `policySources`. The compiler does **not** plan GC or allocate target object addresses: it produces policy-neutral layout/identity facts and generic lifecycle events. The selected Eido policy binds those events to its ordinary Eido runtime methods, and its `objectAcquire(size, alignment, typeId)` handler obtains actual storage—normally through `Storage`. The standard GC uses exactly the same policy-module path as a user policy. The SDK also ships `eido.stdlib.memory.rc`, an optional deferred/recounting reference-counting policy selectable with `--memory=eido.stdlib.memory.rc`.
+`check`, `build`, `run`, `test`, and `clean` are the normal project workflow. `eido test` resolves a project/package root and executes its conventional `tests/module.yaml` test module; an explicit project directory or production `module.yaml` may be supplied for CI or external orchestration. `--memory=gc` is the default CLI alias for the SDK policy module `eido.stdlib.memory.managed`; `--memory=none` selects no automatic policy, and `--memory=<module>` selects any loaded module that declares `policySources`. The compiler does **not** plan GC or allocate target object addresses: it produces policy-neutral layout/identity facts and generic lifecycle events. The selected Eido policy binds those events to its ordinary Eido runtime methods, and its `objectAcquire(size, alignment, typeId)` handler obtains actual storage—normally through `Storage`. The standard GC uses exactly the same policy-module path as a user policy. The SDK also ships `eido.stdlib.memory.rc`, an optional deferred/recounting reference-counting policy selectable with `--memory=eido.stdlib.memory.rc`.
 
 `compile` is the lower-level standalone source path. Normal application development should currently prefer a `module.yaml` project because project compilation also provides the implicit SDK standard library and module architecture.
 
@@ -307,7 +308,7 @@ The v0 syntax/core surface is now frozen for application dogfooding. The followi
 - a larger String/collection standard library;
 - finalized class/interface equality semantics;
 - source-level error handling;
-- an Eido testing model and `eido test`;
+- richer test discovery/reporting beyond package-owned `tests/module.yaml` execution;
 - package/dependency registry and binary SDK releases.
 
 Advanced proof optimization, cross-object invariants, atomic multi-field invariant transitions, generic functions/methods, class inheritance, and a full exception model are intentionally outside the current implemented surface.

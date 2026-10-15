@@ -1,0 +1,5 @@
+function main() {
+    VersionTests.run();
+    ResolverTests.run();
+    Console.writeLine("dependency-resolution tests passed");
+}

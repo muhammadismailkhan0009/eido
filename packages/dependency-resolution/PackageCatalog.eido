@@ -1,0 +1,155 @@
+/// In-memory package release and dependency catalog backed by primitive/String Storage tables.
+class PackageCatalog {
+    Storage<String> releaseNames;
+    Storage<Int> releaseMajors;
+    Storage<Int> releaseMinors;
+    Storage<Int> releasePatches;
+    Int releaseCapacity;
+    Int releases;
+
+    Storage<Int> dependencyOwners;
+    Storage<String> dependencyNames;
+    Storage<Int> dependencyMajors;
+    Storage<Int> dependencyMinors;
+    Storage<Int> dependencyPatches;
+    Int dependencyCapacity;
+    Int dependencies;
+    Bool active;
+
+    invariant {
+        self.releaseCapacity > 0;
+        self.dependencyCapacity > 0;
+        self.releases >= 0;
+        self.releases <= self.releaseCapacity;
+        self.dependencies >= 0;
+        self.dependencies <= self.dependencyCapacity;
+    }
+
+    function create(Int maxReleases, Int maxDependencies) returns PackageCatalog {
+        require {
+            maxReleases > 0;
+            maxDependencies > 0;
+        }
+        return PackageCatalog {
+            releaseNames = Storage<String>.allocate(maxReleases);
+            releaseMajors = Storage<Int>.allocate(maxReleases);
+            releaseMinors = Storage<Int>.allocate(maxReleases);
+            releasePatches = Storage<Int>.allocate(maxReleases);
+            releaseCapacity = maxReleases;
+            releases = 0;
+            dependencyOwners = Storage<Int>.allocate(maxDependencies);
+            dependencyNames = Storage<String>.allocate(maxDependencies);
+            dependencyMajors = Storage<Int>.allocate(maxDependencies);
+            dependencyMinors = Storage<Int>.allocate(maxDependencies);
+            dependencyPatches = Storage<Int>.allocate(maxDependencies);
+            dependencyCapacity = maxDependencies;
+            dependencies = 0;
+            active = true;
+        };
+    }
+
+    function addRelease(String name, Version version) returns Int {
+        require {
+            self.active;
+            name != "";
+            self.releases < self.releaseCapacity;
+        }
+        var index = self.releases;
+        Storage<String>.write(self.releaseNames, index, name);
+        Storage<Int>.write(self.releaseMajors, index, version.major);
+        Storage<Int>.write(self.releaseMinors, index, version.minor);
+        Storage<Int>.write(self.releasePatches, index, version.patch);
+        set self.releases = self.releases + 1;
+        return index;
+    }
+
+    function addDependency(Int ownerRelease, String name, Version minimum) {
+        require {
+            self.active;
+            ownerRelease >= 0;
+            ownerRelease < self.releases;
+            name != "";
+            self.dependencies < self.dependencyCapacity;
+        }
+        var index = self.dependencies;
+        Storage<Int>.write(self.dependencyOwners, index, ownerRelease);
+        Storage<String>.write(self.dependencyNames, index, name);
+        Storage<Int>.write(self.dependencyMajors, index, minimum.major);
+        Storage<Int>.write(self.dependencyMinors, index, minimum.minor);
+        Storage<Int>.write(self.dependencyPatches, index, minimum.patch);
+        set self.dependencies = self.dependencies + 1;
+    }
+
+    function releaseCount() returns Int { return self.releases; }
+    function dependencyCount() returns Int { return self.dependencies; }
+
+    function releaseNameAt(Int index) returns String {
+        require { index >= 0; index < self.releases; }
+        return Storage<String>.read(self.releaseNames, index);
+    }
+
+    function releaseVersionAt(Int index) returns Version {
+        require { index >= 0; index < self.releases; }
+        return Version {
+            major = Storage<Int>.read(self.releaseMajors, index);
+            minor = Storage<Int>.read(self.releaseMinors, index);
+            patch = Storage<Int>.read(self.releasePatches, index);
+        };
+    }
+
+    function dependencyOwnerAt(Int index) returns Int {
+        require { index >= 0; index < self.dependencies; }
+        return Storage<Int>.read(self.dependencyOwners, index);
+    }
+
+    function dependencyNameAt(Int index) returns String {
+        require { index >= 0; index < self.dependencies; }
+        return Storage<String>.read(self.dependencyNames, index);
+    }
+
+    function dependencyMinimumAt(Int index) returns Version {
+        require { index >= 0; index < self.dependencies; }
+        return Version {
+            major = Storage<Int>.read(self.dependencyMajors, index);
+            minor = Storage<Int>.read(self.dependencyMinors, index);
+            patch = Storage<Int>.read(self.dependencyPatches, index);
+        };
+    }
+
+    function findHighestSatisfying(String name, Version minimum) returns Int {
+        require { self.active; name != ""; }
+        var best = -1;
+        var index = 0;
+        while (index < self.releases) {
+            if (self.releaseNameAt(index) == name) {
+                var candidate = self.releaseVersionAt(index);
+                if (candidate.isAtLeast(minimum)) {
+                    if (best < 0) {
+                        set best = index;
+                    } else {
+                        var currentBest = self.releaseVersionAt(best);
+                        if (candidate.isGreaterThan(currentBest)) {
+                            set best = index;
+                        }
+                    }
+                }
+            }
+            set index = index + 1;
+        }
+        return best;
+    }
+
+    function release() {
+        require { self.active; }
+        Storage<String>.release(self.releaseNames);
+        Storage<Int>.release(self.releaseMajors);
+        Storage<Int>.release(self.releaseMinors);
+        Storage<Int>.release(self.releasePatches);
+        Storage<Int>.release(self.dependencyOwners);
+        Storage<String>.release(self.dependencyNames);
+        Storage<Int>.release(self.dependencyMajors);
+        Storage<Int>.release(self.dependencyMinors);
+        Storage<Int>.release(self.dependencyPatches);
+        set self.active = false;
+    }
+}

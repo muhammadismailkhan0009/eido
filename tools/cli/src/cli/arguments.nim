@@ -13,12 +13,14 @@ type
     ccCheck,
     ccDoc,
     ccRun,
+    ccTest,
     ccClean,
     ccCompile
 
   CliOptions* = object
     command*: CliCommand
     modulePath*: string
+    testTarget*: string
     outputPath*: string
     sourcePaths*: seq[string]
     applicationArgs*: seq[string]
@@ -37,6 +39,7 @@ proc usage*(): string =
   "  eido doc [module.yaml] [-o <directory>]\n" &
   "  eido doc --stdlib [-o <directory>]\n" &
   "  eido run [module.yaml] [--memory=gc|manual|none|<policy-module>] [-- <application args...>]\n" &
+  "  eido test [project-directory|module.yaml] [--memory=gc|manual|none|<policy-module>]\n" &
   "  eido clean [module.yaml]\n" &
   "  eido compile <source.eido>... [--memory=gc|manual|none|<policy-module>] -o <output>\n" &
   "  eido --help\n" &
@@ -144,6 +147,22 @@ proc parseRun(args: seq[string]): CliOptions =
     if index < args.len:
       result.applicationArgs = args[index .. ^1]
 
+## Parses package/project test execution with optional memory policy.
+proc parseTest(args: seq[string]): CliOptions =
+  result.command = ccTest
+  result.memoryPolicy = DefaultMemoryPolicy
+  var index = 1
+
+  if index < args.len and not args[index].startsWith("-"):
+    result.testTarget = args[index]
+    inc index
+
+  while index < args.len:
+    if parseMemoryOption(args[index], result):
+      inc index
+      continue
+    raise newException(ValueError, usage())
+
 ## Parses standalone source compilation without the project/module loader.
 proc parseCompile(args: seq[string]): CliOptions =
   result.command = ccCompile
@@ -192,6 +211,7 @@ proc parseArgs*(args: seq[string]): CliOptions =
   of "check": parseManifestOnly(args, ccCheck)
   of "doc": parseDoc(args)
   of "run": parseRun(args)
+  of "test": parseTest(args)
   of "clean": parseManifestOnly(args, ccClean)
   of "compile": parseCompile(args)
   else: raise newException(ValueError, usage())

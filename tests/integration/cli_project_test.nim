@@ -1,5 +1,5 @@
 import std/[os, osproc, strutils, unittest]
-import cli/[arguments, build_command, check_command, doc_command, project_layout, run_command]
+import cli/[arguments, build_command, check_command, doc_command, project_layout, run_command, test_command]
 
 proc freshProject(name: string): string =
   result = getTempDir() / ("eido_cli_" & name & "_" & $getCurrentProcessId())
@@ -21,6 +21,7 @@ suite "CLI project integration":
     check parseArgs(@["check"]).command == ccCheck
     check parseArgs(@["doc"]).command == ccDoc
     check parseArgs(@["run", "--", "approve", "Acme"]).command == ccRun
+    check parseArgs(@["test"]).command == ccTest
     check parseArgs(@["clean"]).command == ccClean
 
   test "parses standalone compilation independently of module projects":
@@ -28,6 +29,19 @@ suite "CLI project integration":
     check options.command == ccCompile
     check options.sourcePaths == @["Main.eido", "Helper.eido"]
     check options.outputPath == "app"
+
+  test "parses test targets and memory policy selection":
+    let directoryTarget = parseArgs(@[
+      "test", "packages/dependency-resolution", "--memory=eido.stdlib.memory.rc"
+    ])
+    check directoryTarget.command == ccTest
+    check directoryTarget.testTarget == "packages/dependency-resolution"
+    check directoryTarget.memoryPolicy.moduleName == "eido.stdlib.memory.rc"
+
+    let manifestTarget = parseArgs(@[
+      "test", "packages/dependency-resolution/module.yaml"
+    ])
+    check manifestTarget.testTarget == "packages/dependency-resolution/module.yaml"
 
   test "parses memory policy selection for build run and compile":
     let buildOptions = parseArgs(@["build", "--memory=manual"])
@@ -124,6 +138,38 @@ suite "CLI project integration":
 
     check exitCode == 0
     check fileExists(layout.executablePath)
+  test "test command discovers and runs project-owned tests":
+    let root = freshProject("test_command")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    createDir(root / "tests")
+    writeFile(root / "module.yaml", """
+      module: sample
+      sources: []
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "tests" / "module.yaml", """
+      module: sample_tests
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "tests" / "Main.eido", "function main() {}")
+
+    check resolveTestManifest(root) == root / "tests" / "module.yaml"
+    check resolveTestManifest(root / "module.yaml") == root / "tests" / "module.yaml"
+    check runProjectTests(root) == 0
+
   test "no automatic policy builds a primitive module with implicit stdlib":
     let root = freshProject("manual_strategy")
     defer:

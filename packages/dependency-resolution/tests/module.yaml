@@ -1,0 +1,17 @@
+module: dependency_resolution_tests
+
+sources:
+  - VersionTests.eido
+  - ResolverTests.eido
+  - Main.eido
+
+children:
+  dependency_resolution: { path: .. }
+  testing: { path: ../../testing }
+
+dependencies: []
+exports: []
+provides: {}
+adopts:
+  - dependency_resolution.DependencyResolver
+  - testing.Assert

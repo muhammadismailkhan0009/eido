@@ -5,7 +5,7 @@ import ../../../compiler/src/diagnostics/[errors, formatting]
 import ../../../compiler/src/project/discovery
 import cli/[
   arguments, build_command, check_command, clean_command, doc_command,
-  project_layout, run_command, version
+  project_layout, run_command, test_command, version
 ]
 
 ## Resolves the explicit or discovered project manifest for project-oriented commands.
@@ -82,6 +82,11 @@ when isMainModule:
         layout,
         options.memoryPolicy
       )
+      if exitCode != 0:
+        quit(exitCode)
+
+    of ccTest:
+      let exitCode = runProjectTests(options.testTarget, options.memoryPolicy)
       if exitCode != 0:
         quit(exitCode)
 

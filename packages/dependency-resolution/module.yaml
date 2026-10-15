@@ -1,0 +1,14 @@
+module: dependency_resolution
+
+sources:
+  - Version.eido
+  - PackageCatalog.eido
+  - ResolutionResult.eido
+  - DependencyResolver.eido
+
+children: []
+dependencies: []
+exports:
+  - DependencyResolver
+provides: {}
+adopts: []

@@ -1,0 +1,41 @@
+/// Semantic version used by the dependency resolver.
+class Version {
+    Int major;
+    Int minor;
+    Int patch;
+
+    invariant {
+        self.major >= 0;
+        self.minor >= 0;
+        self.patch >= 0;
+    }
+
+    function create(Int requestedMajor, Int requestedMinor, Int requestedPatch) returns Version {
+        require {
+            requestedMajor >= 0;
+            requestedMinor >= 0;
+            requestedPatch >= 0;
+        }
+        return Version {
+            major = requestedMajor;
+            minor = requestedMinor;
+            patch = requestedPatch;
+        };
+    }
+
+    function isAtLeast(Version minimum) returns Bool {
+        if (self.major > minimum.major) { return true; }
+        if (self.major < minimum.major) { return false; }
+        if (self.minor > minimum.minor) { return true; }
+        if (self.minor < minimum.minor) { return false; }
+        return self.patch >= minimum.patch;
+    }
+
+    function isGreaterThan(Version other) returns Bool {
+        if (self.major > other.major) { return true; }
+        if (self.major < other.major) { return false; }
+        if (self.minor > other.minor) { return true; }
+        if (self.minor < other.minor) { return false; }
+        return self.patch > other.patch;
+    }
+}

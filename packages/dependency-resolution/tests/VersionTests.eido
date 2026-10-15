@@ -1,0 +1,12 @@
+class VersionTests {
+    function run() {
+        var low = DependencyResolver.version(1, 4, 9);
+        var same = DependencyResolver.version(1, 4, 9);
+        var high = DependencyResolver.version(2, 0, 0);
+
+        Assert.isTrue(same.isAtLeast(low), "equal version satisfies minimum");
+        Assert.isTrue(high.isAtLeast(low), "higher version satisfies minimum");
+        Assert.isFalse(low.isGreaterThan(high), "lower version is not greater");
+        Assert.isTrue(high.isGreaterThan(low), "higher major version is greater");
+    }
+}

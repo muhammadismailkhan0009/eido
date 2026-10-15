@@ -1,0 +1,23 @@
+/// Minimal assertion helpers for Eido package tests.
+class Assert {
+    function fail(String message) {
+        Console.errorLine("assertion failed: " + message);
+        Process.exit(1);
+    }
+
+    function isTrue(Bool value, String message) {
+        if (not value) { Assert.fail(message); }
+    }
+
+    function isFalse(Bool value, String message) {
+        if (value) { Assert.fail(message); }
+    }
+
+    function equalInt(Int actual, Int expected, String message) {
+        if (actual != expected) { Assert.fail(message); }
+    }
+
+    function equalString(String actual, String expected, String message) {
+        if (actual != expected) { Assert.fail(message); }
+    }
+}

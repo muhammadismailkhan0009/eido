@@ -1,0 +1,61 @@
+class ResolverTests {
+    function run() {
+        ResolverTests.selectsHighestCompatibleSharedDependency();
+        ResolverTests.reportsMissingRoot();
+    }
+
+    function selectsHighestCompatibleSharedDependency() {
+        var catalog = DependencyResolver.catalog(8, 8);
+        var appRelease = catalog.addRelease("app", DependencyResolver.version(1, 0, 0));
+        var webRelease = catalog.addRelease("web", DependencyResolver.version(2, 1, 0));
+        var databaseRelease = catalog.addRelease("database", DependencyResolver.version(3, 0, 0));
+        catalog.addRelease("logging", DependencyResolver.version(1, 0, 0));
+        catalog.addRelease("logging", DependencyResolver.version(1, 7, 0));
+        catalog.addRelease("logging", DependencyResolver.version(2, 0, 0));
+
+        catalog.addDependency(appRelease, "web", DependencyResolver.version(2, 0, 0));
+        catalog.addDependency(appRelease, "database", DependencyResolver.version(3, 0, 0));
+        catalog.addDependency(webRelease, "logging", DependencyResolver.version(1, 4, 0));
+        catalog.addDependency(databaseRelease, "logging", DependencyResolver.version(1, 5, 0));
+
+        var resolution = DependencyResolver.resolve(
+            catalog,
+            "app",
+            DependencyResolver.version(1, 0, 0)
+        );
+
+        Assert.isTrue(resolution.succeeded(), "resolution should succeed");
+        Assert.equalInt(resolution.packageCount(), 4, "shared dependency is selected once");
+
+        var loggingIndex = resolution.indexOf("logging");
+        Assert.isTrue(loggingIndex >= 0, "logging should be selected");
+        var loggingVersion = resolution.packageVersionAt(loggingIndex);
+        Assert.equalInt(loggingVersion.major, 2, "highest compatible logging major");
+        Assert.equalInt(loggingVersion.minor, 0, "highest compatible logging minor");
+        Assert.equalInt(loggingVersion.patch, 0, "highest compatible logging patch");
+
+        resolution.release();
+        catalog.release();
+    }
+
+    function reportsMissingRoot() {
+        var catalog = DependencyResolver.catalog(2, 1);
+        catalog.addRelease("known", DependencyResolver.version(1, 0, 0));
+
+        var resolution = DependencyResolver.resolve(
+            catalog,
+            "missing",
+            DependencyResolver.version(1, 0, 0)
+        );
+
+        Assert.isFalse(resolution.succeeded(), "missing root should fail resolution");
+        Assert.equalString(
+            resolution.message(),
+            "no release satisfies dependency: missing",
+            "missing root failure should be descriptive"
+        );
+
+        resolution.release();
+        catalog.release();
+    }
+}
