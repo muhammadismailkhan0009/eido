@@ -24,10 +24,10 @@ proc classifyStorageValue*(
     if source.receiver.kind == astExpressions.ekIdentifier and
         isConcreteStorageTypeName(source.receiver.name):
       if source.methodName in [
-          "allocate", "allocateRaw", "fromAddress", "adoptAddress"
+          "allocate", "allocateRaw", "fromAddress"
       ]:
         return svpOwned
-      if source.methodName in ["view", "viewAt", "slice"]:
+      if source.methodName in ["borrowAddress", "view", "viewAt", "slice"]:
         return svpBorrowed
     if analyzed.kind == hekMethodCall and
         analyzed.methodCall.dispatchKind == hmdClass and

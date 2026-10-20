@@ -9,6 +9,19 @@ import type_emitter
 import expression_emitter
 import runtime_bindings
 
+## Reports whether one concrete Storage specialization still uses a native release bridge.
+proc hasNativeStorageRelease(
+  classes: seq[hirDeclarations.HirClass],
+  storageName: string
+): bool =
+  for classDecl in classes:
+    if classDecl.sourceName != storageName:
+      continue
+    for methodDecl in classDecl.methods:
+      if methodDecl.sourceName == "release":
+        return methodDecl.isNative
+  false
+
 ## Renders class-owned mutable slots as inline process-lifetime backend values.
 proc renderClassStateDeclarations*(
   classes: seq[hirDeclarations.HirClass],
@@ -25,7 +38,8 @@ proc renderClassStateDeclarations*(
         ) & ": int64\n"
 
       if field.typ.kind == etkClass and
-          isConcreteStorageTypeName(field.typ.className):
+          isConcreteStorageTypeName(field.typ.className) and
+          hasNativeStorageRelease(classes, field.typ.className):
         result.add "proc " & classOwnedFieldReleaseName(
           classDecl.sourceName,
           field.sourceName

@@ -10,7 +10,7 @@ class StringRuntime {
     }
 
     function header(Int value) returns Storage<Byte> {
-        return Storage<Byte>.fromAddress(
+        return Storage<Byte>.borrowAddress(
             value,
             1,
             StringRuntime.payloadOffset()
@@ -28,7 +28,7 @@ class StringRuntime {
 
     function bytes(Int value) returns Storage<Byte> {
         var length = StringRuntime.stringLength(value);
-        return Storage<Byte>.fromAddress(
+        return Storage<Byte>.borrowAddress(
             value + StringRuntime.payloadOffset(),
             length,
             1
@@ -121,7 +121,7 @@ class StringRuntime {
         while (current != 0) {
             var nextValue = StringRuntime.next(current);
             var length = StringRuntime.stringLength(current);
-            var backing = Storage<Byte>.adoptAddress(
+            var backing = Storage<Byte>.fromAddress(
                 current,
                 1,
                 StringRuntime.totalSize(length)

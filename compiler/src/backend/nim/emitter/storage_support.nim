@@ -1,109 +1,124 @@
-## Renders thin specialization glue from compiler-owned Storage<T> methods
-## to the ordinary Nim implementation in the eido_storage runtime module.
+## Renders backend glue only for compiler-backed Storage operations.
+## Normal typed Storage<T> behavior is implemented in SDK Eido source.
 
 import ../../../hir/declarations as hirDeclarations
 import ../../../types/[function_result, model, storage]
 import names
 import type_emitter
 
-## Returns the concrete element type carried by one synthetic Storage<T> class.
+## Returns the concrete element type carried by one Storage<T> class.
 proc storageElementType*(classDecl: hirDeclarations.HirClass): EidoType =
   if not isConcreteStorageTypeName(classDecl.sourceName):
-    raise newException(
-      ValueError,
-      "backend invariant: expected Storage<T> class"
-    )
+    raise newException(ValueError, "backend invariant: expected Storage<T> class")
 
   for methodDecl in classDecl.methods:
-    if methodDecl.sourceName == "read" and
-        methodDecl.result.kind == frSingle:
+    if methodDecl.sourceName == "read" and methodDecl.result.kind == frSingle:
       return methodDecl.result.typ
 
-  raise newException(
-    ValueError,
-    "backend invariant: Storage<T> has no typed read method"
-  )
+  raise newException(ValueError, "backend invariant: Storage<T> has no typed read method")
 
-## Renders one concrete Storage<T> API specialization as runtime calls.
-proc renderStorageClassSupport(
-  classDecl: hirDeclarations.HirClass
-): string =
-  let storageType = className(classDecl.sourceName)
-  let byteStorageType = className("Storage<Byte>")
+## Reports whether one concrete Storage specialization declares a native method.
+proc hasNativeMethod(classDecl: hirDeclarations.HirClass, name: string): bool =
+  for methodDecl in classDecl.methods:
+    if methodDecl.isNative and methodDecl.sourceName == name:
+      return true
+  false
+
+## Renders one native Storage method only when the analyzed specialization declares it.
+proc renderStorageClassSupport(classDecl: hirDeclarations.HirClass): string =
+  let owner = classDecl.sourceName
+  let storageType = className(owner)
+  let rawType = className(rawStorageTypeName(owner))
   let element = storageElementType(classDecl)
   let elementType = renderType(element)
-  let allocateName = storageMethodName(classDecl.sourceName, "allocate")
-  let viewName = storageMethodName(classDecl.sourceName, "view")
-  let viewAtName = storageMethodName(classDecl.sourceName, "viewAt")
-  let sliceName = storageMethodName(classDecl.sourceName, "slice")
-  let capacityName = storageMethodName(classDecl.sourceName, "capacity")
-  let addressName = storageMethodName(classDecl.sourceName, "address")
-  let readName = storageMethodName(classDecl.sourceName, "read")
-  let writeName = storageMethodName(classDecl.sourceName, "write")
-  let releaseName = storageMethodName(classDecl.sourceName, "release")
-  let sizeName = storageMethodName(classDecl.sourceName, "size")
-  let alignmentName = storageMethodName(classDecl.sourceName, "alignment")
 
-  result.add "proc " & allocateName & "(allocations: int64): " &
-    storageType & " =\n"
-  result.add "  eidoStorageAllocate[" & elementType & "](allocations)\n\n"
+  template methodNameFor(name: string): string = storageMethodName(owner, name)
 
-  if element == etByte:
-    let allocateRawName = storageMethodName(classDecl.sourceName, "allocateRaw")
-    let fromAddressName = storageMethodName(classDecl.sourceName, "fromAddress")
-    let adoptAddressName = storageMethodName(classDecl.sourceName, "adoptAddress")
-    result.add "proc " & allocateRawName &
+  if classDecl.hasNativeMethod("allocate"):
+    result.add "proc " & methodNameFor("allocate") & "(allocations: int64): " & storageType & " =\n"
+    result.add "  eidoStorageAllocateRaw(allocations, int64(1))\n\n"
+
+  if classDecl.hasNativeMethod("allocateRaw"):
+    result.add "proc " & methodNameFor("allocateRaw") &
       "(allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
     result.add "  eidoStorageAllocateRaw(allocations, bytesPerAllocation)\n\n"
-    result.add "proc " & fromAddressName &
-      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " &
-      storageType & " =\n"
+
+  if classDecl.hasNativeMethod("fromAddress"):
+    result.add "proc " & methodNameFor("fromAddress") &
+      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
     result.add "  eidoStorageFromAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
-    result.add "proc " & adoptAddressName &
-      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " &
-      storageType & " =\n"
-    result.add "  eidoStorageAdoptAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
 
-  result.add "proc " & viewName & "(storage: " & byteStorageType &
-    ", start: int64): " & storageType & " =\n"
-  result.add "  eidoStorageView[" & elementType & "](storage, start)\n\n"
+  if classDecl.hasNativeMethod("borrowAddress"):
+    result.add "proc " & methodNameFor("borrowAddress") &
+      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
+    result.add "  eidoStorageBorrowAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
 
-  result.add "proc " & viewAtName & "(storage: " & byteStorageType &
-    ", byteOffset: int64): " & storageType & " =\n"
-  result.add "  eidoStorageViewAt[" & elementType & "](storage, byteOffset)\n\n"
+  if classDecl.hasNativeMethod("view"):
+    result.add "proc " & methodNameFor("view") & "(storage: " & rawType &
+      ", start: int64): " & storageType & " =\n"
+    result.add "  eidoStorageSlice[int8](storage, start, storage.capacity - start)\n\n"
 
-  result.add "proc " & sliceName & "(storage: " & storageType &
-    ", start: int64, count: int64): " & storageType & " =\n"
-  result.add "  eidoStorageSlice[" & elementType &
-    "](storage, start, count)\n\n"
+  if classDecl.hasNativeMethod("viewAt"):
+    result.add "proc " & methodNameFor("viewAt") & "(storage: " & rawType &
+      ", byteOffset: int64): " & storageType & " =\n"
+    result.add "  eidoStorageRawViewAt(storage, byteOffset)\n\n"
 
-  result.add "proc " & capacityName & "(storage: " & storageType &
-    "): int64 =\n"
-  result.add "  eidoStorageCapacity[" & elementType & "](storage)\n\n"
+  if classDecl.hasNativeMethod("slice"):
+    result.add "proc " & methodNameFor("slice") & "(storage: " & storageType &
+      ", start: int64, count: int64): " & storageType & " =\n"
+    result.add "  eidoStorageSlice[" & elementType & "](storage, start, count)\n\n"
 
-  result.add "proc " & addressName & "(storage: " & storageType &
-    "): int64 =\n"
-  result.add "  eidoStorageAddress[" & elementType & "](storage)\n\n"
+  if classDecl.hasNativeMethod("capacity"):
+    result.add "proc " & methodNameFor("capacity") & "(storage: " & storageType & "): int64 =\n"
+    result.add "  eidoStorageCapacity[" & elementType & "](storage)\n\n"
 
-  result.add "proc " & readName & "(storage: " & storageType &
-    ", index: int64): " & elementType & " =\n"
-  result.add "  eidoStorageRead[" & elementType & "](storage, index)\n\n"
+  if classDecl.hasNativeMethod("address"):
+    result.add "proc " & methodNameFor("address") & "(storage: " & storageType & "): int64 =\n"
+    result.add "  eidoStorageAddress[" & elementType & "](storage)\n\n"
 
-  result.add "proc " & writeName & "(storage: " & storageType &
-    ", index: int64, value: " & elementType & ") =\n"
-  result.add "  eidoStorageWrite[" & elementType &
-    "](storage, index, value)\n\n"
+  if classDecl.hasNativeMethod("read"):
+    result.add "proc " & methodNameFor("read") & "(storage: " & storageType &
+      ", index: int64): " & elementType & " =\n"
+    result.add "  eidoStorageRead[" & elementType & "](storage, index)\n\n"
 
-  result.add "proc " & releaseName & "(storage: var " & storageType & ") =\n"
-  result.add "  eidoStorageRelease[" & elementType & "](storage)\n\n"
+  if classDecl.hasNativeMethod("write"):
+    result.add "proc " & methodNameFor("write") & "(storage: " & storageType &
+      ", index: int64, value: " & elementType & ") =\n"
+    result.add "  eidoStorageWrite[" & elementType & "](storage, index, value)\n\n"
 
-  result.add "proc " & sizeName & "(): int64 =\n"
-  result.add "  eidoStorageSize[" & elementType & "]()\n\n"
+  if classDecl.hasNativeMethod("release"):
+    result.add "proc " & methodNameFor("release") & "(storage: var " & storageType & ") =\n"
+    result.add "  eidoStorageRelease[" & elementType & "](storage)\n\n"
 
-  result.add "proc " & alignmentName & "(): int64 =\n"
-  result.add "  eidoStorageAlignment[" & elementType & "]()\n\n"
+  if classDecl.hasNativeMethod("size"):
+    result.add "proc " & methodNameFor("size") & "(): int64 =\n"
+    result.add "  eidoStorageSize[" & elementType & "]()\n\n"
 
-## Renders specialization glue for every concrete Storage<T> used by the program.
+  if classDecl.hasNativeMethod("alignment"):
+    result.add "proc " & methodNameFor("alignment") & "(): int64 =\n"
+    result.add "  eidoStorageAlignment[" & elementType & "]()\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalFromRaw):
+    result.add "proc " & methodNameFor(StorageInternalFromRaw) & "(storage: " & rawType &
+      "): " & storageType & " =\n"
+    result.add "  eidoStorageFromRaw[" & elementType & "](storage)\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalRaw):
+    result.add "proc " & methodNameFor(StorageInternalRaw) & "(storage: " & storageType &
+      "): " & rawType & " =\n"
+    result.add "  eidoStorageRaw[" & elementType & "](storage)\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalRead):
+    result.add "proc " & methodNameFor(StorageInternalRead) & "(storage: " & storageType &
+      ", index: int64): " & elementType & " =\n"
+    result.add "  eidoStorageRead[" & elementType & "](storage, index)\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalWrite):
+    result.add "proc " & methodNameFor(StorageInternalWrite) & "(storage: " & storageType &
+      ", index: int64, value: " & elementType & ") =\n"
+    result.add "  eidoStorageWrite[" & elementType & "](storage, index, value)\n\n"
+
+## Renders compiler-backed glue for every concrete Storage type used by the program.
 proc renderStorageSupport*(classes: seq[hirDeclarations.HirClass]): string =
   for classDecl in classes:
     if isConcreteStorageTypeName(classDecl.sourceName):

@@ -4,6 +4,7 @@ import pipeline/[options, project_compiler]
 import stdlib/builtin_sources
 import support/project_fixture_support
 
+## Finds the generated Nim procedure name for one Eido method by source name.
 proc generatedMethodName(generated, sourceName: string): string =
   let suffix = "_" & sourceName & "("
   for line in generated.splitLines:
@@ -16,7 +17,7 @@ suite "SDK reference-counting runtime":
   test "RC policy is ordinary embedded Eido over Storage":
     check "MemoryPolicy.objectAcquire" in BuiltinRcPolicySource
     check "Storage<Byte>.allocateRaw(" in BuiltinRcRuntimeSource
-    check "Storage<Byte>.adoptAddress(" in BuiltinRcRuntimeSource
+    check "Storage<Byte>.fromAddress(" in BuiltinRcRuntimeSource
     check "function recount()" in BuiltinRcRuntimeSource
     check "function reclaimAcyclic(" in BuiltinRcRuntimeSource
     check "native function" notin BuiltinRcRuntimeSource
@@ -49,6 +50,14 @@ suite "SDK reference-counting runtime":
     check "MemoryValueRegistry" notin generated
     check "_objectAcquire(" in generated
     check "_executionBoundary()" in generated
+
+    # RC itself uses the SDK Eido Storage<T> layer over the raw byte substrate.
+    check "eidoStorageAllocateRaw" in generated
+    check "eidoStorageFromRaw[int64]" in generated
+    check "eidoStorageRaw[int64]" in generated
+    check "eidoStorageAllocate[int64]" notin generated
+    check "eidoStorageView[int64]" notin generated
+    check "eidoStorageViewAt[int64]" notin generated
 
     let allocationCount = generated.generatedMethodName("allocationCount")
     let reclaimedCount = generated.generatedMethodName("boundaryReclaimedCount")

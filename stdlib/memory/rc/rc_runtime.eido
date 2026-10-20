@@ -22,7 +22,7 @@ class RcRuntime {
     function headerSize() returns Int { return Storage<Int>.size() * 7; }
 
     function headerAddress(Int identity) returns Int {
-        var backlinkRaw = Storage<Byte>.fromAddress(
+        var backlinkRaw = Storage<Byte>.borrowAddress(
             identity - Storage<Int>.size(),
             1,
             Storage<Int>.size()
@@ -32,7 +32,7 @@ class RcRuntime {
     }
 
     function header(Int identity) returns Storage<Byte> {
-        return Storage<Byte>.fromAddress(
+        return Storage<Byte>.borrowAddress(
             RcRuntime.headerAddress(identity),
             1,
             RcRuntime.headerSize()
@@ -161,7 +161,7 @@ class RcRuntime {
             var currentType = RcRuntime.typeId(current);
             var fieldCount = RcTypeRegistry.fieldCount(currentType);
             if (fieldCount > 0) {
-                var payload = Storage<Byte>.fromAddress(
+                var payload = Storage<Byte>.borrowAddress(
                     current,
                     1,
                     RcRuntime.payloadSize(current)
@@ -201,7 +201,7 @@ class RcRuntime {
     function releaseObject(Int identity) {
         var allocation = RcRuntime.headerAddress(identity);
         var bytes = RcRuntime.totalSize(identity);
-        var backing = Storage<Byte>.adoptAddress(allocation, 1, bytes);
+        var backing = Storage<Byte>.fromAddress(allocation, 1, bytes);
         Storage<Byte>.release(backing);
         set RcRuntime.liveObjects = RcRuntime.liveObjects - 1;
     }

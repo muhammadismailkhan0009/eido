@@ -100,6 +100,12 @@ proc analyzeStaticMethodCall(
 
   let target = owner.getMethod(expr.methodName)
   if isConcreteStorageTypeName(owner.name):
+    if isStorageInternalMethodName(target.name) and
+        not isStorageSdkSourcePath(expr.span.sourcePath):
+      failAt(
+        expr.span,
+        "Storage compiler bridge '" & target.name & "' is not public API"
+      )
     if target.name == "release":
       validateStorageReleaseOwner(expr, locals)
 

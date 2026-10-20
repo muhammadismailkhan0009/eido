@@ -34,9 +34,9 @@ proc inferStorageExpr(
     if expr.receiver.kind == ekIdentifier and
         isConcreteStorageTypeName(expr.receiver.name):
       case expr.methodName
-      of "allocate", "allocateRaw", "fromAddress", "adoptAddress":
+      of "allocate", "allocateRaw", "fromAddress":
         sriOwned
-      of "view", "viewAt", "slice":
+      of "borrowAddress", "view", "viewAt", "slice":
         sriBorrowed
       else:
         sriUnknown

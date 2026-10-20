@@ -72,10 +72,11 @@ proc collectModuleDeclarations(
     interfaces[key] = sourceInterface
 
   for sourceClass in source.classes:
-    if isStorageTypeConstructor(sourceClass.name):
+    if isStorageTypeConstructor(sourceClass.name) and
+        not isSdkStorageDeclaration(sourceClass.moduleName, sourceClass.name):
       failAt(
         sourceClass.span,
-        "type name 'Storage' is reserved by the Eido toolchain"
+        "type name 'Storage' is reserved by the Eido SDK"
       )
     let key = declarationKey(
       sourceClass.moduleName,

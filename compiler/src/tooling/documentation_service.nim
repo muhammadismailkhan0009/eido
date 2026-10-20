@@ -9,7 +9,6 @@ import ../frontend/ast/[declarations, program, type_references]
 import ../frontend/parser/project_parser
 import ../project/model
 import ../semantic/analysis/[method_classification, program_analysis]
-import ../semantic/generics/storage_specialization
 import ../semantic/modules/architecture_validation
 import ../source/[source_unit, span]
 import ../types/method_kind
@@ -225,107 +224,6 @@ proc sourceDeclarations(
     cmp(left.name, right.name)
   )
 
-## Returns documentation text for one compiler-provided Storage operation.
-proc storageDocumentation(name: string): string =
-  case name
-  of "allocate":
-    "Allocates owning typed storage with capacity for the requested number of values."
-  of "allocateRaw":
-    "Allocates owning raw byte-backed storage. Available only on Storage<Byte>."
-  of "fromAddress":
-    "Creates a non-owning raw descriptor for an existing address. Available only on Storage<Byte>."
-  of "adoptAddress":
-    "Reconstructs ownership of an existing raw allocation so it can later be released. Available only on Storage<Byte>."
-  of "view":
-    "Creates a borrowed typed view over raw Storage<Byte>."
-  of "viewAt":
-    "Creates a borrowed one-slot typed view at a checked byte offset in raw storage."
-  of "slice":
-    "Creates an allocation-free borrowed subrange."
-  of "capacity":
-    "Returns the number of typed allocation slots described by the storage value."
-  of "address":
-    "Returns the live base address of the storage value."
-  of "read":
-    "Reads one typed value by slot index."
-  of "write":
-    "Writes one typed value by slot index."
-  of "release":
-    "Releases an owning storage root."
-  of "size":
-    "Returns the target storage width of one T value in bytes."
-  of "alignment":
-    "Returns the target alignment requirement of T in bytes."
-  else:
-    ""
-
-## Builds the compiler-provided generic Storage API reference.
-proc compilerProvidedStorage(): DocumentationDeclaration =
-  let compilerSpan = initSourceSpan(
-    SourceId(-1),
-    "<compiler>",
-    0,
-    0,
-    1,
-    1
-  )
-  let genericElement = TypeRef(
-    span: compilerSpan,
-    name: "T",
-    arguments: @[],
-    isOptional: false
-  )
-  let byteElement = TypeRef(
-    span: compilerSpan,
-    name: "Byte",
-    arguments: @[],
-    isOptional: false
-  )
-
-  let genericStorage = specializeStorageClass("Storage<T>", genericElement)
-  let byteStorage = specializeStorageClass("Storage<Byte>", byteElement)
-
-  var members: seq[DocumentationMember]
-  for methodDecl in genericStorage.methods:
-    members.add DocumentationMember(
-      name: methodDecl.name,
-      signature: callableSignature(methodDecl),
-      documentation: storageDocumentation(methodDecl.name),
-      kind: dmkMethod,
-      isStatic: true,
-      isNative: true
-    )
-
-  let byteOnlyNames = ["allocateRaw", "fromAddress", "adoptAddress"]
-  for methodDecl in byteStorage.methods:
-    if methodDecl.name notin byteOnlyNames:
-      continue
-    members.add DocumentationMember(
-      name: methodDecl.name,
-      signature: callableSignature(methodDecl),
-      documentation: storageDocumentation(methodDecl.name),
-      kind: dmkMethod,
-      isStatic: true,
-      isNative: true,
-      availability: "Storage<Byte> only"
-    )
-
-  DocumentationDeclaration(
-    name: "Storage<T>",
-    canonicalName: "Storage<T>",
-    moduleName: "<compiler>",
-    sourcePath: "<compiler>",
-    signature: "class Storage<T>",
-    documentation:
-      "Foundational low-level memory capability provided by the compiler. " &
-      "Its API is public Eido surface; physical allocation mechanics belong to the backend/runtime.",
-    kind: ddkClass,
-    visibility: dvPublic,
-    origin: doCompiler,
-    visibleFrom: @["all Eido source"],
-    members: members
-  )
-
 ## Builds a complete documentation reference for one module-aware Eido project.
 ## The project is semantically checked as a library so documentation does not
 ## require an executable main function.
@@ -351,4 +249,3 @@ proc buildDocumentationReference*(project: EidoProject): DocumentationReference 
   result.modules.sort(proc(left, right: DocumentationModule): int =
     cmp(left.name, right.name)
   )
-  result.compilerProvided.add compilerProvidedStorage()

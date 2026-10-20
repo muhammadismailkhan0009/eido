@@ -132,12 +132,34 @@ proc resolveMemoryPolicyModule(
       "module '" & result.canonicalName & "' is not a memory policy module"
     )
 
+## Adds the SDK Storage<T> source to raw source-set projects that do not come
+## through the module loader. Module-aware projects already receive it through
+## the standard-library manifest dependency tree.
+proc withSdkStorageSource(project: EidoProject): EidoProject =
+  result = project
+  if project.sources.len == 0 or project.modules.len > 0:
+    return
+
+  var nextSourceId = 0
+  for source in result.sources:
+    if source.path == BuiltinStorageSourcePath:
+      return
+    nextSourceId = max(nextSourceId, source.id.value + 1)
+
+  result.sources.add initSourceUnit(
+    nextSourceId,
+    BuiltinStorageSourcePath,
+    BuiltinStorageSource,
+    BuiltinStorageModuleName
+  )
+
 ## Analyzes every source in one Eido project into resolved typed HIR.
 ## Example: a function in service.eido can resolve a class declared in account.eido.
 proc analyzeProject*(project: EidoProject): hirProgram.HirProgram =
-  var parsed = parseProject(project)
-  resolveModuleArchitecture(parsed, project)
-  analyzeProgram(parsed, project.target)
+  let effectiveProject = project.withSdkStorageSource()
+  var parsed = parseProject(effectiveProject)
+  resolveModuleArchitecture(parsed, effectiveProject)
+  analyzeProgram(parsed, effectiveProject.target)
 
 ## Compiles one Eido project through semantic analysis to generated Nim source.
 ## Example: an executable project emits one Nim program containing declarations from all supplied Eido files.

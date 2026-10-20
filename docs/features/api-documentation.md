@@ -61,11 +61,11 @@ Each public declaration records the modules from which it is visible, so re-expo
 
 Members of a reachable concrete class are documented according to the ordinary class rules. This intentionally exposes architectural consequences. For example, if a class becomes public through an exported signature, its readable/constructible fields are part of the current public surface even when the class was not an explicit export root.
 
-## Compiler-provided API
+## SDK and compiler-private capabilities
 
-Some Eido APIs are synthesized by the compiler rather than declared in `.eido` source.
+Public SDK APIs declared in `.eido` source are documented through the same module/public-surface model as application code. For example, `Storage<T>` is owned by `eido.stdlib.storage` and appears as an ordinary SDK source declaration.
 
-The generator lists these separately as **Compiler-provided API**. The first such surface is `Storage<T>`; its signatures are derived from the same compiler specialization implementation used during semantic analysis. Byte-only raw operations are marked explicitly.
+Compiler-private representation bridges and backend support symbols are not promoted into the public reference. Raw `Storage<Byte>` operations that are compiler-backed remain implementation capabilities attached to that SDK abstraction rather than a separate compiler-owned public type.
 
 ## What is not API
 

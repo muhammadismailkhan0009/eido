@@ -107,7 +107,6 @@ proc qualifyTypeRef(
   rootModule: string
 ) =
   if source.name notin typeParameters and
-      not isStorageTypeConstructor(source.name) and
       source.name notin ["Bool", "Byte", "Short", "Int", "Float", "Char", "String"]:
     source.name = resolveVisibleNominal(
       source.name,

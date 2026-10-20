@@ -1,7 +1,7 @@
 ## Compiles the complete test suite once, then executes isolated test selectors in parallel processes.
 ## Example: compiler suites remain grouped while expensive language feature cases run independently across available cores.
 
-import std/[algorithm, os, osproc, sets, strutils]
+import std/[algorithm, monotimes, os, osproc, sets, strutils, times]
 
 ## Extracts a quoted name from a static unittest `suite` or `test` declaration.
 ## Example: `suite "Arithmetic":` yields `Arithmetic`.
@@ -13,8 +13,19 @@ proc unittestName(line, prefix: string): string =
 
   stripped[prefix.len + 2 .. ^3]
 
+type
+  RunningSelector = object
+    index: int
+    process: Process
+    startedAt: MonoTime
+
+## Formats elapsed wall-clock time for one completed selector.
+proc elapsedLabel(startedAt: MonoTime): string =
+  let elapsed = getMonoTime() - startedAt
+  formatFloat(elapsed.inMilliseconds.float / 1000.0, ffDecimal, 2) & "s"
+
 ## Discovers selectors, compiles the aggregate once, and runs selectors in isolated parallel processes.
-## Example: EIDO_TEST_JOBS=4 limits both aggregate compilation and selector execution to four workers.
+## EIDO_TEST_JOBS may lower concurrency but never exceed half of detected processors.
 proc runTests() =
   let compilerRoot = currentSourcePath().parentDir.parentDir
   let testsRoot = compilerRoot / "tests"
@@ -27,13 +38,14 @@ proc runTests() =
   if detectedJobs <= 0:
     detectedJobs = 1
 
-  var jobs = max(1, detectedJobs - 4)
+  let maximumJobs = max(1, detectedJobs div 2)
+  var jobs = maximumJobs
   let jobsOverride = getEnv("EIDO_TEST_JOBS")
   if jobsOverride.len > 0:
     try:
       let requestedJobs = parseInt(jobsOverride)
       if requestedJobs > 0:
-        jobs = requestedJobs
+        jobs = min(requestedJobs, maximumJobs)
       else:
         raise newException(
           ValueError,
@@ -73,7 +85,7 @@ proc runTests() =
     selectors.add testSelector
   selectors.sort()
 
-  jobs = 4#min(jobs, selectors.len)
+  jobs = min(jobs, max(1, selectors.len))
 
   let executable =
     getTempDir() / ("eido_test_suite_" & $getCurrentProcessId())
@@ -95,28 +107,49 @@ proc runTests() =
   if execCmd(compileCommand) != 0:
     quit(1)
 
-  var commands: seq[string]
-  for selector in selectors:
-    commands.add(
-      quoteShell(executable) & " " & quoteShell(selector)
-    )
-
   echo "Running ", compilerSuites.len, " compiler suites + ",
     featureTests.len, " feature tests with ", jobs, " workers"
 
-  proc reportResult(index: int, process: Process) =
-    let (lines, childExitCode) = process.readLines()
+  var active: seq[RunningSelector]
+  var nextSelector = 0
+  var exitCode = 0
+
+  while nextSelector < selectors.len or active.len > 0:
+    while nextSelector < selectors.len and active.len < jobs:
+      active.add RunningSelector(
+        index: nextSelector,
+        process: startProcess(
+          executable,
+          args = @[selectors[nextSelector]],
+          options = {poStdErrToStdOut}
+        ),
+        startedAt: getMonoTime()
+      )
+      inc nextSelector
+
+    var finishedIndex = -1
+    while finishedIndex < 0:
+      for index, runningSelector in active:
+        if not runningSelector.process.running:
+          finishedIndex = index
+          break
+      if finishedIndex < 0:
+        sleep(10)
+
+    let finished = active[finishedIndex]
+    let (lines, childExitCode) = finished.process.readLines()
+    finished.process.close()
+
+    let status = if childExitCode == 0: "PASS" else: "FAIL"
+    echo "[", status, "] ", selectors[finished.index], " (", finished.startedAt.elapsedLabel(), ")"
+
     if childExitCode != 0:
-      stderr.writeLine("FAILED: " & selectors[index])
+      if exitCode == 0:
+        exitCode = childExitCode
       for line in lines:
         stderr.writeLine(line)
 
-  let exitCode = execProcesses(
-    commands,
-    n = jobs,
-    options = {poStdErrToStdOut},
-    afterRunEvent = reportResult
-  )
+    active.delete(finishedIndex)
 
   if exitCode != 0:
     quit(exitCode)

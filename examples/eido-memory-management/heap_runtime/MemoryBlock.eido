@@ -15,14 +15,14 @@ class MemoryBlock {
 
     function writeInt(Int value) {
         require { self.bytes >= Storage<Int>.size(); }
-        var raw = Storage<Byte>.fromAddress(self.address, 1, self.bytes);
+        var raw = Storage<Byte>.borrowAddress(self.address, 1, self.bytes);
         var slot = Storage<Int>.viewAt(raw, 0);
         Storage<Int>.write(slot, 0, value);
     }
 
     function readInt() returns Int {
         require { self.bytes >= Storage<Int>.size(); }
-        var raw = Storage<Byte>.fromAddress(self.address, 1, self.bytes);
+        var raw = Storage<Byte>.borrowAddress(self.address, 1, self.bytes);
         var slot = Storage<Int>.viewAt(raw, 0);
         return Storage<Int>.read(slot, 0);
     }

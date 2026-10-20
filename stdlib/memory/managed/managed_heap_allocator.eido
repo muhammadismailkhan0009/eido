@@ -1,4 +1,4 @@
-// Compiler-private default heap allocator for managed Eido objects.
+// SDK managed-policy heap allocator written in Eido over Storage.
 //
 // The policy is intentionally simple: one Storage allocation per managed
 // object, reclaimed by the collector. More advanced page/pool/free-list
@@ -26,7 +26,7 @@ class ManagedHeapAllocator {
             ManagedHeapAllocator.liveBytes >= byteCount;
         }
 
-        var backing = Storage<Byte>.adoptAddress(
+        var backing = Storage<Byte>.fromAddress(
             allocationAddress,
             1,
             byteCount

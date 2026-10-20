@@ -16,7 +16,7 @@ proc generatedMethodName(generated, sourceName: string): string =
 suite "Managed GC runtime":
   test "generic memory metadata and GC policy are Storage-backed Eido code":
     check "Storage<Byte>.allocateRaw(" in BuiltinManagedHeapAllocatorSource
-    check "Storage<Byte>.adoptAddress(" in BuiltinManagedHeapAllocatorSource
+    check "Storage<Byte>.fromAddress(" in BuiltinManagedHeapAllocatorSource
     check "Storage<Byte>.release(" in BuiltinManagedHeapAllocatorSource
 
     check "Storage<Int>.allocate(" in BuiltinMemoryValueRegistrySource
@@ -130,6 +130,14 @@ suite "Managed GC runtime":
     check "eidoGcPushRoot" notin generated
     check "_allocateRaw(int64(1)," in generated
     check "_release(eido_local_" in generated
+
+    # The managed policy uses the SDK Eido Storage<T> layer over raw Storage<Byte>.
+    check "eidoStorageAllocateRaw" in generated
+    check "eidoStorageFromRaw[int64]" in generated
+    check "eidoStorageRaw[int64]" in generated
+    check "eidoStorageAllocate[int64]" notin generated
+    check "eidoStorageView[int64]" notin generated
+    check "eidoStorageViewAt[int64]" notin generated
 
     # The program's generated main runs memory shutdown first. The heap allocator's
     # ordinary generated allocationCount method must then report no live blocks.

@@ -1,4 +1,5 @@
 import std/[os, unittest]
+import std/strutils
 import project/model
 import project/modules/loader
 import tooling/compiler_service
@@ -36,3 +37,35 @@ suite "Storage project integration":
       loadModuleProject(root / "module.yaml", ptExecutable)
     )
     check checked.success
+
+  test "compiler Storage representation bridges are not public application API":
+    let root = getTempDir() / ("eido_storage_private_bridge_" & $getCurrentProcessId())
+    if dirExists(root):
+      removeDir(root)
+    createDir(root)
+    defer:
+      removeDir(root)
+
+    writeFile(root / "module.yaml", """
+      module: storageapp
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    writeFile(root / "Main.eido", """
+      function main() returns Int {
+        var storage = Storage<Int>.allocate(1);
+        return Storage<Int>.compilerRead(storage, 0);
+      }
+    """)
+
+    let checked = checkProject(
+      loadModuleProject(root / "module.yaml", ptExecutable)
+    )
+    check not checked.success
+    check checked.diagnostics.len == 1
+    check "is not public API" in checked.diagnostics[0].message

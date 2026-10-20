@@ -89,7 +89,7 @@ suite "Generated API documentation":
     check helper.visibility == dvInternal
     check helper.documentation.len == 0
 
-  test "includes compiler-provided Storage API separately from source declarations":
+  test "includes Storage as an ordinary SDK Eido declaration":
     let root = freshDocumentationProject("storage")
     defer:
       if dirExists(root):
@@ -111,22 +111,27 @@ suite "Generated API documentation":
       loadModuleProject(root / "module.yaml", ptLibrary)
     )
 
-    check reference.compilerProvided.len == 1
-    let storage = reference.compilerProvided[0]
-    check storage.name == "Storage<T>"
-    check storage.origin == doCompiler
+    check reference.compilerProvided.len == 0
+    let storage = findDeclaration(reference, "eido.stdlib.storage.Storage")
+    check storage.name == "Storage"
+    check storage.signature == "class Storage<T>"
+    check storage.origin == doSource
     check storage.visibility == dvPublic
 
-    var rawFound = false
+    var allocateFound = false
+    var sizeFound = false
     for member in storage.members:
-      if member.name == "allocateRaw":
-        rawFound = true
-        check member.availability == "Storage<Byte> only"
-    check rawFound
+      if member.name == "allocate":
+        allocateFound = true
+        check not member.isNative
+      if member.name == "size":
+        sizeFound = true
+        check member.isNative
+    check allocateFound
+    check sizeFound
 
     let html = renderDocumentationHtml(reference)
     let json = renderDocumentationJson(reference)
-    check "Compiler-provided API" in html
-    check "Module-internal" in html
+    check "eido.stdlib.storage" in html
     check "Storage&lt;T&gt;" in html
-    check "\"origin\": \"Compiler-provided\"" in json
+    check "\"origin\": \"Source\"" in json

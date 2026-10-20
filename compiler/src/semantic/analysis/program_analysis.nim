@@ -198,9 +198,10 @@ proc analyzeProgram*(
       let storageResultProvenance =
         if isConcreteStorageTypeName(sourceClass.name):
           case sourceMethod.name
-          of "allocate", "allocateRaw", "fromAddress", "adoptAddress":
+          of "allocate", "allocateRaw", "fromAddress",
+              StorageInternalFromRaw, StorageInternalRaw:
             svpOwned
-          of "view", "viewAt", "slice":
+          of "borrowAddress", "view", "viewAt", "slice":
             svpBorrowed
           else:
             svpNotStorage

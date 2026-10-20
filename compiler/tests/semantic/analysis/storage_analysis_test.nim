@@ -3,7 +3,7 @@ import support/compiler_test_support
 import types/[method_kind, model]
 
 suite "Storage semantics":
-  test "materializes typed Storage with its toolchain operations":
+  test "materializes Eido typed Storage over the raw Byte capability":
     let source = """
       function main() returns Int {
         var storage = Storage<Int>.allocate(3);
@@ -20,26 +20,38 @@ suite "Storage semantics":
       storage = program.classes[1]
     check storage.typ == classType("Storage<Int>")
     check storage.fields.len == 0
-    check storage.methods.len == 11
-    var hasSize = false
-    var hasAlignment = false
+    check storage.methods.len == 15
+
+    var eidoPublicMethods = 0
+    var layoutMethods = 0
+    var privateBridges = 0
     for methodDecl in storage.methods:
-      check methodDecl.isNative
       check methodDecl.kind == mkStatic
-      if methodDecl.sourceName == "size":
-        hasSize = true
+      case methodDecl.sourceName
+      of "allocate", "view", "viewAt", "slice", "capacity", "address",
+          "read", "write", "release":
+        inc eidoPublicMethods
+        check not methodDecl.isNative
+      of "size", "alignment":
+        inc layoutMethods
+        check methodDecl.isNative
         check methodDecl.result.typ == etInt
-      if methodDecl.sourceName == "alignment":
-        hasAlignment = true
-        check methodDecl.result.typ == etInt
-    check hasSize
-    check hasAlignment
+      of "compilerFromRaw", "compilerRaw", "compilerRead", "compilerWrite":
+        inc privateBridges
+        check methodDecl.isNative
+      else:
+        check false
+    check eidoPublicMethods == 9
+    check layoutMethods == 2
+    check privateBridges == 4
 
     var byteStorage = program.classes[0]
     if byteStorage.typ != classType("Storage<Byte>"):
       byteStorage = program.classes[1]
     check byteStorage.typ == classType("Storage<Byte>")
     check byteStorage.methods.len == 14
+    for methodDecl in byteStorage.methods:
+      check methodDecl.isNative
 
   test "rejects nominal element storage until identity ownership is defined":
     let source = """
@@ -190,6 +202,19 @@ suite "Storage semantics":
         var raw = Storage<Byte>.allocateRaw(2, 8);
         var ints = Storage<Int>.view(raw, 0);
         Storage<Int>.release(ints);
+      }
+    """
+
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "borrowAddress storage cannot release backing memory":
+    let source = """
+      function main() {
+        var raw = Storage<Byte>.allocateRaw(1, 8);
+        var address = Storage<Byte>.address(raw);
+        var borrowed = Storage<Byte>.borrowAddress(address, 1, 8);
+        Storage<Byte>.release(borrowed);
       }
     """
 

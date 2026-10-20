@@ -7,6 +7,7 @@ import frontend/lexer/scanner
 import frontend/parser/program_parser
 import project/model
 import source/source_unit
+import stdlib/builtin_sources
 
 type
   FixtureDeclarationRange = tuple[startOffset, endOffset: int]
@@ -48,5 +49,14 @@ proc fixtureProject*(
       "fixture_" & $index & ".eido",
       source[declarationRange.startOffset ..< declarationRange.endOffset]
     )
+
+  # Standalone feature fixtures still exercise the real SDK Eido Storage<T>
+  # template instead of a compiler-synthesized typed compatibility surface.
+  sources.add initSourceUnit(
+    sources.len,
+    BuiltinStorageSourcePath,
+    BuiltinStorageSource,
+    BuiltinStorageModuleName
+  )
 
   initProject(target, sources)

@@ -101,10 +101,19 @@ proc specializeTypeRef(
         "Storage currently supports primitive and String element types; got '" &
           elementType.name & "'"
       )
-    let name = concreteName(StorageTypeConstructorName, @[elementType])
-    context.queueInstantiation(
-      StorageTypeConstructorName, name, @[elementType]
-    )
+
+    if elementType.name != "Byte" and source.name notin context.templates:
+      failAt(
+        source.span,
+        "typed Storage requires the SDK Storage<T> template"
+      )
+
+    let storageBase =
+      if source.name in context.templates: source.name
+      else: StorageTypeConstructorName
+    let name = concreteName(storageBase, @[elementType])
+    context.queueInstantiation(storageBase, name, @[elementType])
+
     if elementType.name != "Byte":
       let byteType = TypeRef(
         span: source.span,
@@ -113,8 +122,8 @@ proc specializeTypeRef(
         isOptional: false
       )
       context.queueInstantiation(
-        StorageTypeConstructorName,
-        concreteName(StorageTypeConstructorName, @[byteType]),
+        storageBase,
+        concreteName(storageBase, @[byteType]),
         @[byteType]
       )
     return flatTypeRef(source, name, source.isOptional)
@@ -434,7 +443,11 @@ proc specializeClass(
 
   var methods: seq[FunctionDecl]
   for methodDecl in source.methods:
-    if source.typeParameters.len > 0 and methodDecl.isNative:
+    if source.typeParameters.len > 0 and methodDecl.isNative and
+        not (
+          isSdkStorageDeclaration(source.moduleName, source.name) and
+          methodDecl.name in ["size", "alignment"]
+        ):
       failAt(
         methodDecl.span,
         "generic classes cannot declare native functions in v0"
@@ -647,7 +660,11 @@ proc validateTemplateShape(
       )
     methodNames.incl methodDecl.name
 
-    if source.typeParameters.len > 0 and methodDecl.isNative:
+    if source.typeParameters.len > 0 and methodDecl.isNative and
+        not (
+          isSdkStorageDeclaration(source.moduleName, source.name) and
+          methodDecl.name in ["size", "alignment"]
+        ):
       failAt(
         methodDecl.span,
         "generic classes cannot declare native functions in v0"
@@ -671,10 +688,11 @@ proc specializeGenericClasses*(source: Program): Program =
     context.interfaceNames.incl interfaceDecl.name
 
   for classDecl in source.classes:
-    if isStorageTypeConstructor(classDecl.name):
+    if isStorageTypeConstructor(classDecl.name) and
+        not isSdkStorageDeclaration(classDecl.moduleName, classDecl.name):
       failAt(
         classDecl.span,
-        "type name 'Storage' is reserved by the Eido toolchain"
+        "type name 'Storage' is reserved by the Eido SDK"
       )
     if classDecl.name in context.templates:
       failAt(classDecl.span, "duplicate class '" & classDecl.name & "'")
@@ -721,16 +739,42 @@ proc specializeGenericClasses*(source: Program): Program =
   var index = 0
   while index < context.queue.len:
     let request = context.queue[index]
-    if request.templateName == StorageTypeConstructorName:
-      result.classes.add specializeStorageClass(
-        request.concreteName, request.arguments[0]
+
+    if isStorageTypeConstructor(request.templateName) and
+        request.arguments.len == 1 and request.arguments[0].name == "Byte":
+      let moduleName =
+        if request.templateName in context.templates:
+          context.templates[request.templateName].moduleName
+        else:
+          ""
+      result.classes.add specializeRawStorageClass(
+        request.concreteName,
+        request.arguments[0],
+        moduleName
       )
-    else:
+    elif request.templateName in context.templates:
       let classTemplate = context.templates[request.templateName]
-      result.classes.add specializeClass(
+      var concrete = specializeClass(
         context,
         classTemplate,
         request.arguments,
         request.concreteName
+      )
+      if isStorageTypeConstructor(request.templateName):
+        let byteType = TypeRef(
+          span: request.arguments[0].span,
+          name: "Byte",
+          arguments: @[],
+          isOptional: false
+        )
+        concrete.addTypedStorageBridges(
+          request.arguments[0],
+          concreteName(request.templateName, @[byteType])
+        )
+      result.classes.add concrete
+    else:
+      failAt(
+        request.arguments[0].span,
+        "unknown generic class template '" & request.templateName & "'"
       )
     inc index

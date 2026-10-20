@@ -7,6 +7,7 @@ import ../../../semantic/symbols/ids
 import ../../../hir/expressions as hirExpressions
 import ../../../types/function_result
 import ../../../types/method_kind
+import ../../../types/storage
 import ../../../source/span
 import runtime_bindings
 import names
@@ -15,6 +16,14 @@ import statement_emitter
 import contract_emitter
 import normal_exit
 import instrumentation_emitter
+
+## Reports whether one Eido Storage<T>.release method consumes its descriptor in place.
+proc isTypedStorageRelease(methodDecl: hirDeclarations.HirMethod): bool =
+  methodDecl.kind == mkStatic and
+    methodDecl.sourceName == "release" and
+    isConcreteStorageTypeName(methodDecl.ownerType.className) and
+    not isRawStorageTypeName(methodDecl.ownerType.className) and
+    methodDecl.parameters.len == 1
 
 ## Renders one generated method signature with a receiver only for instance methods.
 proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
@@ -31,11 +40,13 @@ proc renderMethodSignature*(methodDecl: hirDeclarations.HirMethod): string =
       ": " & renderType(methodDecl.ownerType)
     hasPreviousParameter = true
 
-  for parameter in methodDecl.parameters:
+  for index, parameter in methodDecl.parameters:
     if hasPreviousParameter:
       result.add ", "
-    result.add localName(parameter.localId, parameter.sourceName) &
-      ": " & renderType(parameter.typ)
+    result.add localName(parameter.localId, parameter.sourceName) & ": "
+    if methodDecl.isTypedStorageRelease and index == 0:
+      result.add "var "
+    result.add renderType(parameter.typ)
     hasPreviousParameter = true
 
   result.add ")"
@@ -51,15 +62,19 @@ proc renderMethod*(
 ): string =
   result.add renderMethodSignature(methodDecl) & " =\n"
 
-  # Compiler-runtime implementation methods consume metadata; they must not
-  # recursively report their own lexical lifetime/boundary events.
-  let isHiddenRuntimeMethod = methodDecl.span.isHiddenRuntime
+  # Compiler/runtime substrate methods consume or implement memory policy; they
+  # must not recursively report their own lexical lifetime/boundary events.
+  # Storage stays a public SDK module, but its implementation sits below every
+  # memory policy and is therefore instrumentation-exempt as well.
+  let suppressMemoryInstrumentation =
+    methodDecl.span.isHiddenRuntime or
+    isStorageSdkSourcePath(methodDecl.span.sourcePath)
   let identityValues =
-    if isHiddenRuntimeMethod:
+    if suppressMemoryInstrumentation:
       @[]
     else:
       memoryMetadata.identityValuesForMethod(methodDecl.methodId)
-  if memoryMetadata.types.len > 0 and not isHiddenRuntimeMethod:
+  if memoryMetadata.types.len > 0 and not suppressMemoryInstrumentation:
     result.add renderMethodValuePreamble(methodDecl, identityValues, runtimeBindings)
 
   let hasInvariant = enforceInvariant and methodDecl.kind == mkInstance
@@ -94,7 +109,8 @@ proc renderMethod*(
       if hasInvariant: methodDecl.ownerType.className else: "",
     invariantReceiver: receiverName,
     ownerClassName: methodDecl.ownerType.className,
-    instrumentationEnabled: memoryMetadata.types.len > 0 and not isHiddenRuntimeMethod,
+    instrumentationEnabled:
+      memoryMetadata.types.len > 0 and not suppressMemoryInstrumentation,
     identityValueIds: identityValues.identityValueIds,
     resultIdentityValueId: resultIdentityValueId,
     runtimeBindings: runtimeBindings
@@ -131,3 +147,10 @@ proc renderMethod*(
       result.add renderStmtAt(stmt, 2, exitContext)
     if methodDecl.result.kind == frNone:
       result.add renderNormalExitChecks(exitContext, 2)
+
+  if methodDecl.isTypedStorageRelease:
+    let storageParameter = methodDecl.parameters[0]
+    result.add "  " & localName(
+      storageParameter.localId,
+      storageParameter.sourceName
+    ) & " = default(" & renderType(storageParameter.typ) & ")\n"

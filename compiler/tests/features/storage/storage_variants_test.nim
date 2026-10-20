@@ -116,6 +116,55 @@ suite "Storage execution":
 
     check runNativeFeatureSource(source, "storage_class_owned_release") == "42"
 
+  test "typed release invalidates an instance field descriptor":
+    let source = """
+      class Buffer {
+        Storage<Int> storage;
+
+        function close() {
+          Storage<Int>.release(self.storage);
+        }
+      }
+
+      function main() {
+        var buffer = Buffer {
+          storage = Storage<Int>.allocate(1);
+        };
+        buffer.close();
+        buffer.close();
+      }
+    """
+
+    let execution = runFailingNativeFeatureSource(
+      source,
+      "storage_instance_field_double_release"
+    )
+    check execution.exitCode != 0
+    check "Eido storage access after release" in execution.output
+
+  test "typed release invalidates a class-owned field descriptor":
+    let source = """
+      class Buffer {
+        Storage<Int> Buffer.storage = Storage<Int>.allocate(1);
+
+        function close() {
+          Storage<Int>.release(Buffer.storage);
+        }
+      }
+
+      function main() {
+        Buffer.close();
+        Buffer.close();
+      }
+    """
+
+    let execution = runFailingNativeFeatureSource(
+      source,
+      "storage_class_owned_double_release"
+    )
+    check execution.exitCode != 0
+    check "Eido storage access after release" in execution.output
+
   test "creates allocation-free typed views over byte storage":
     let source = """
       function main() returns Int {
@@ -148,18 +197,18 @@ suite "Storage execution":
 
     check runNativeFeatureSource(source, "storage_byte_offset_view") == "42"
 
-  test "can explicitly recover raw Storage ownership from its address":
+  test "can reconstruct owning raw Storage from its address":
     let source = """
       function main() returns Int {
         var original = Storage<Byte>.allocateRaw(1, 8);
         var address = Storage<Byte>.address(original);
-        var recovered = Storage<Byte>.adoptAddress(address, 1, 8);
+        var recovered = Storage<Byte>.fromAddress(address, 1, 8);
         Storage<Byte>.release(recovered);
         return 42;
       }
     """
 
-    check runNativeFeatureSource(source, "storage_adopt_address") == "42"
+    check runNativeFeatureSource(source, "storage_from_address_owner") == "42"
 
   test "slices typed storage without allocating backing memory":
     let source = """
@@ -206,14 +255,19 @@ suite "Storage execution":
     check execution.exitCode != 0
     check "does not fit raw allocation block" in execution.output
 
-  test "fromAddress creates consecutive external raw blocks without freeing them":
+  test "borrowAddress creates non-owning raw storage over an existing address":
     let source = """
       function main() returns Int {
-        var raw = Storage<Byte>.fromAddress(0, 0, 64);
-        var size = Storage<Byte>.capacity(raw);
-        Storage<Byte>.release(raw);
-        return size;
+        var owner = Storage<Byte>.allocateRaw(1, 8);
+        var address = Storage<Byte>.address(owner);
+        var borrowed = Storage<Byte>.borrowAddress(address, 1, 8);
+        var borrowedInt = Storage<Int>.view(borrowed, 0);
+        Storage<Int>.write(borrowedInt, 0, 42);
+        var ownerInt = Storage<Int>.view(owner, 0);
+        var value = Storage<Int>.read(ownerInt, 0);
+        Storage<Byte>.release(owner);
+        return value;
       }
     """
 
-    check runNativeFeatureSource(source, "storage_from_address") == "0"
+    check runNativeFeatureSource(source, "storage_borrow_address") == "42"

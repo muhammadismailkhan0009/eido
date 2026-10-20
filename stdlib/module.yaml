@@ -5,6 +5,7 @@ sources: []
 children:
   process: { path: process }
   io: { path: io }
+  storage: { path: storage }
   memory: { path: memory }
   text: { path: text }
   runtime: { path: runtime }
@@ -14,6 +15,7 @@ dependencies: []
 exports:
   - process.Process
   - io.Console
+  - storage.Storage
 
 provides: {}
 adopts: []

@@ -1,0 +1,13 @@
+module: storage
+
+sources:
+  - storage.eido
+
+children: []
+dependencies: []
+
+exports:
+  - Storage
+
+provides: {}
+adopts: []

@@ -1,4 +1,5 @@
-## Nim-backend implementation of Eido's compiler-owned Storage<T> substrate.
+## Nim-backend implementation of Eido's raw Storage<Byte> substrate and
+## private representation bridges used by the SDK Eido Storage<T> wrapper.
 ## Handles are allocation-free values; owning allocation operations alone acquire backing memory.
 
 type
@@ -58,40 +59,43 @@ proc eidoStorageAllocateRaw*(
   if result.data.isNil:
     raise newException(OutOfMemDefect, "Eido raw storage allocation failed")
 
-## Transfers one owning raw allocation descriptor into an owning typed descriptor.
-## No backing memory is acquired here; the bytes always come from allocateRaw.
-proc eidoStorageAdoptRaw[T](storage: EidoStorage[int8]): EidoStorage[T] =
+## Reinterprets one raw Storage<Byte> descriptor as typed storage without
+## changing ownership, release, capacity, or stride semantics.
+proc eidoStorageFromRaw*[T](storage: EidoStorage[int8]): EidoStorage[T] =
   requireEidoStorageLive(storage)
-  if not storage.rawBlocks or not storage.ownsMemory or not storage.releasable:
-    raise newException(
-      AssertionDefect,
-      "Eido typed allocation requires owning raw Storage<Byte>"
-    )
+  if not storage.rawBlocks:
+    raise newException(ValueError, "typed Storage requires raw Storage<Byte>")
   if int64(sizeof(T)) > storage.strideBytes:
     raise newException(
       ValueError,
-      "Eido typed allocation type does not fit raw allocation block"
+      "Eido storage view type does not fit raw allocation block"
     )
 
   let targetAddress = cast[uint](storage.data)
   if not storage.data.isNil and targetAddress mod uint(alignof(T)) != 0'u:
-    raise newException(ValueError, "Eido typed allocation is misaligned")
+    raise newException(ValueError, "Eido storage view is misaligned")
   if storage.capacity > 1 and
       uint(storage.strideBytes) mod uint(alignof(T)) != 0'u:
-    raise newException(ValueError, "Eido typed allocation stride is misaligned")
+    raise newException(ValueError, "Eido storage view stride is misaligned")
 
   result.data = cast[ptr UncheckedArray[T]](storage.data)
   result.capacity = storage.capacity
   result.strideBytes = storage.strideBytes
-  result.ownsMemory = true
-  result.releasable = true
+  result.ownsMemory = storage.ownsMemory
+  result.releasable = storage.releasable
   result.rawBlocks = false
-  result.live = true
+  result.live = storage.live
 
-## Allocates one owning typed region by composing the raw allocation substrate.
-proc eidoStorageAllocate*[T](allocations: int64): EidoStorage[T] =
-  let raw = eidoStorageAllocateRaw(allocations, int64(sizeof(T)))
-  eidoStorageAdoptRaw[T](raw)
+## Exposes a typed descriptor as the equivalent raw Storage<Byte> capability.
+proc eidoStorageRaw*[T](storage: EidoStorage[T]): EidoStorage[int8] =
+  requireEidoStorageLive(storage)
+  result.data = cast[ptr UncheckedArray[int8]](storage.data)
+  result.capacity = storage.capacity
+  result.strideBytes = storage.strideBytes
+  result.ownsMemory = storage.ownsMemory
+  result.releasable = storage.releasable
+  result.rawBlocks = true
+  result.live = storage.live
 
 ## Reports the target byte width of one typed Storage slot.
 proc eidoStorageSize*[T](): int64 =
@@ -101,7 +105,8 @@ proc eidoStorageSize*[T](): int64 =
 proc eidoStorageAlignment*[T](): int64 =
   int64(alignof(T))
 
-## Creates a releasable raw block sequence beginning at an explicit address.
+## Creates an owning raw descriptor for an existing allocation at an explicit address.
+## The caller must provide an address whose lifetime Storage is responsible for.
 proc eidoStorageFromAddress*(
   startingAddress: int64,
   allocations: int64,
@@ -110,27 +115,8 @@ proc eidoStorageFromAddress*(
   if startingAddress < 0:
     raise newException(ValueError, "Eido storage starting address cannot be negative")
   requireEidoStorageLayout(allocations, bytesPerAllocation)
-
-  result.data = cast[ptr UncheckedArray[int8]](uint(startingAddress))
-  result.capacity = allocations
-  result.strideBytes = bytesPerAllocation
-  result.ownsMemory = false
-  result.releasable = true
-  result.rawBlocks = true
-  result.live = true
-
-## Reconstructs ownership of an existing raw allocation at an explicit address.
-## The caller must provide an address previously obtained from owning Storage.
-proc eidoStorageAdoptAddress*(
-  startingAddress: int64,
-  allocations: int64,
-  bytesPerAllocation: int64
-): EidoStorage[int8] =
-  if startingAddress < 0:
-    raise newException(ValueError, "Eido storage starting address cannot be negative")
-  requireEidoStorageLayout(allocations, bytesPerAllocation)
   if allocations > 0 and startingAddress == 0:
-    raise newException(ValueError, "owning Storage cannot adopt a nil address")
+    raise newException(ValueError, "owning Storage cannot use a nil address")
 
   result.data = cast[ptr UncheckedArray[int8]](uint(startingAddress))
   result.capacity = allocations
@@ -140,60 +126,48 @@ proc eidoStorageAdoptAddress*(
   result.rawBlocks = true
   result.live = true
 
-## Creates an allocation-free typed view over consecutive raw allocation blocks.
-proc eidoStorageView*[T](
-  storage: EidoStorage[int8],
-  start: int64
-): EidoStorage[T] =
-  requireEidoStorageLive(storage)
-  if not storage.rawBlocks:
-    raise newException(ValueError, "Eido storage view requires raw Storage<Byte>")
-  if start < 0 or start >= storage.capacity:
-    raise newException(IndexDefect, "Eido storage view out of bounds")
-  if int64(sizeof(T)) > storage.strideBytes:
-    raise newException(ValueError, "Eido storage view type does not fit raw allocation block")
+## Creates a non-owning raw descriptor for existing memory at an explicit address.
+## Borrowed address storage may be read/written but cannot release its backing memory.
+proc eidoStorageBorrowAddress*(
+  startingAddress: int64,
+  allocations: int64,
+  bytesPerAllocation: int64
+): EidoStorage[int8] =
+  if startingAddress < 0:
+    raise newException(ValueError, "Eido storage starting address cannot be negative")
+  requireEidoStorageLayout(allocations, bytesPerAllocation)
 
-  let targetAddress =
-    cast[uint](storage.data) + uint(start) * uint(storage.strideBytes)
-  if targetAddress mod uint(alignof(T)) != 0'u:
-    raise newException(ValueError, "Eido storage view is misaligned")
-
-  let viewCapacity = storage.capacity - start
-  if viewCapacity > 1 and
-      uint(storage.strideBytes) mod uint(alignof(T)) != 0'u:
-    raise newException(ValueError, "Eido storage view is misaligned")
-
-  result.data = cast[ptr UncheckedArray[T]](targetAddress)
-  result.capacity = viewCapacity
-  result.strideBytes = storage.strideBytes
+  result.data = cast[ptr UncheckedArray[int8]](uint(startingAddress))
+  result.capacity = allocations
+  result.strideBytes = bytesPerAllocation
   result.ownsMemory = false
   result.releasable = false
-  result.rawBlocks = false
+  result.rawBlocks = true
   result.live = true
 
-## Creates one allocation-free typed view at a byte offset inside the first raw block.
-proc eidoStorageViewAt*[T](
+## Creates a borrowed raw descriptor at a byte offset inside the first raw block.
+## The remaining bytes in that block become the new raw stride so a later typed
+## reinterpretation can validate whether its element representation fits.
+proc eidoStorageRawViewAt*(
   storage: EidoStorage[int8],
   byteOffset: int64
-): EidoStorage[T] =
+): EidoStorage[int8] =
   requireEidoStorageLive(storage)
   if not storage.rawBlocks:
     raise newException(ValueError, "Eido byte-offset view requires raw Storage<Byte>")
   if storage.capacity <= 0:
     raise newException(IndexDefect, "Eido byte-offset view requires a raw block")
-  if byteOffset < 0 or int64(sizeof(T)) > storage.strideBytes - byteOffset:
-    raise newException(ValueError, "Eido byte-offset view type does not fit raw allocation block")
+  if byteOffset < 0 or byteOffset >= storage.strideBytes:
+    raise newException(ValueError, "Eido byte offset is outside raw allocation block")
 
-  let targetAddress = cast[uint](storage.data) + uint(byteOffset)
-  if targetAddress mod uint(alignof(T)) != 0'u:
-    raise newException(ValueError, "Eido byte-offset view is misaligned")
-
-  result.data = cast[ptr UncheckedArray[T]](targetAddress)
+  result.data = cast[ptr UncheckedArray[int8]](
+    cast[uint](storage.data) + uint(byteOffset)
+  )
   result.capacity = 1
-  result.strideBytes = int64(sizeof(T))
+  result.strideBytes = storage.strideBytes - byteOffset
   result.ownsMemory = false
   result.releasable = false
-  result.rawBlocks = false
+  result.rawBlocks = true
   result.live = true
 
 ## Creates an allocation-free borrowed subrange of existing storage slots.

@@ -136,17 +136,17 @@ However, these fallbacks are dangerous architectural fossils. If manual object s
 
 Recommendation: remove the unused `class_emitter.nim` and explicitly constrain or rename the bootstrap nominal path before adding another object strategy.
 
-## Finding F5 — `Storage.adoptAddress` is an intentionally unsafe ownership reconstruction capability
+## Finding F5 — `Storage.fromAddress` is an intentionally unsafe ownership reconstruction capability
 
 **Priority: P2 safety, not an ownership-architecture violation**
 
-`Storage<Byte>.adoptAddress(address, ...)` reconstructs an owning Storage descriptor from an integer address. The native implementation will eventually call `dealloc` on that address when released.
+`Storage<Byte>.fromAddress(address, ...)` constructs an owning Storage descriptor from an integer address. Releasing that descriptor will eventually call `dealloc` on the supplied address. `borrowAddress` is the separate non-owning fixed-address capability for memory whose lifetime belongs elsewhere.
 
-The current API contract says the address must originate from an owning Storage allocation, and the managed heap follows that rule. The compiler does not currently prove this provenance, so ordinary source can forge an integer address and claim ownership.
+The owning API contract therefore requires the address to refer to an allocation whose lifetime Storage is responsible for. The compiler does not currently prove that provenance, so ordinary source can forge an integer address and claim ownership.
 
 This does not create a second allocator—the resulting owner is still Storage—but it weakens memory safety and can make Storage free memory it never acquired.
 
-Recommendation: when borrow/lifetime/provenance analysis matures, track ownership tokens/addresses strongly enough to prove `adoptAddress` provenance, or restrict this operation to trusted/runtime code if general source does not need it.
+Recommendation: when borrow/lifetime/provenance analysis matures, track ownership tokens/addresses strongly enough to prove owning `fromAddress` provenance, or restrict this operation to trusted/runtime code if general source does not need it.
 ## Finding F6 — class-owned slots are inline representation, not dynamic owners
 
 **Status: compliant.**
@@ -209,7 +209,7 @@ Runtime interface boxes use the same policy-selected object acquisition and are 
 Source class-owned slots are inline process-lifetime backend representation. They may contain Storage descriptors or identity handles, but any dynamic backing those values reference is owned by Storage or the selected Eido runtime/policy; the slot itself performs no allocation.
 ### Storage substrate
 
-`EidoStorage[T]` is an allocation-free descriptor. `eidoStorageAllocateRaw` is the single hosted owned-backing allocation path and uses `alloc0`; `eidoStorageRelease` returns owned backing with `dealloc`. Typed allocate/view/slice operations compose or reinterpret that descriptor rather than acquiring a second hidden region.
+`EidoStorage[T]` is an allocation-free descriptor. `eidoStorageAllocateRaw` is the single hosted owned-backing allocation path and uses `alloc0`; `eidoStorageRelease` returns owned backing with `dealloc`. The public typed `Storage<T>` operations now live in SDK Eido source and orchestrate raw `Storage<Byte>` descriptors; private backend representation bridges reinterpret/load/store without acquiring a second hidden region.
 
 Using `alloc0`/`dealloc` here is architecturally allowed: this is the physical backend implementation of Storage itself, not a competing target memory policy.
 
@@ -229,7 +229,7 @@ Generated type IDs, layout constants, function/method pointers, and static strin
 
 ### Raw Storage addresses are intentionally low level
 
-`address`, `fromAddress`, and `adoptAddress` expose pointer-like capability through `Int`. This is useful for runtimes, embedded memory, and FFI, but it means future safety work must distinguish trusted low-level use from ordinary safe code.
+`address`, owning `fromAddress`, and non-owning `borrowAddress` expose pointer-like capability through `Int`. This is useful for runtimes, embedded memory, MMIO, and FFI, but it means future safety work must distinguish trusted low-level use from ordinary safe code.
 
 ### GC mark recursion is unbounded by policy metadata
 
@@ -274,7 +274,7 @@ Acceptance criteria:
 
 ### P2 — tighten Storage address provenance
 
-Prove or restrict `adoptAddress` ownership reconstruction. This is primarily a safety task and can follow the normal-path ownership fixes.
+Prove or restrict owning `fromAddress` reconstruction. `borrowAddress` remains the explicit non-owning path for fixed/external addresses. This is primarily a safety task and can follow the normal-path ownership fixes.
 
 ### P3 — remove/isolate bootstrap ownership fossils
 

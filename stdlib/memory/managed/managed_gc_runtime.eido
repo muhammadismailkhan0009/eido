@@ -46,7 +46,7 @@ class ManagedGcRuntime {
     }
 
     function headerAddress(Int identity) returns Int {
-        var backlinkRaw = Storage<Byte>.fromAddress(
+        var backlinkRaw = Storage<Byte>.borrowAddress(
             identity - Storage<Int>.size(),
             1,
             Storage<Int>.size()
@@ -55,7 +55,7 @@ class ManagedGcRuntime {
         return Storage<Int>.read(backlink, 0);
     }
     function header(Int identity) returns Storage<Byte> {
-        return Storage<Byte>.fromAddress(
+        return Storage<Byte>.borrowAddress(
             ManagedGcRuntime.headerAddress(identity),
             1,
             ManagedGcRuntime.headerSize()
@@ -146,7 +146,7 @@ class ManagedGcRuntime {
         var typeId = ManagedGcRuntime.typeId(allocation);
         var count = MemoryTypeRegistry.fieldCount(typeId);
         if (count == 0) { return; }
-        var payload = Storage<Byte>.fromAddress(
+        var payload = Storage<Byte>.borrowAddress(
             allocation,
             1,
             ManagedGcRuntime.payloadSize(allocation)

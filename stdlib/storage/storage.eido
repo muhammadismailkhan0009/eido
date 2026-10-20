@@ -1,0 +1,47 @@
+// Typed Storage is ordinary Eido orchestration over the compiler-provided raw Storage<Byte> capability.
+class Storage<T> {
+    function allocate(Int allocations) returns Storage<T> {
+        var raw = Storage<Byte>.allocateRaw(allocations, Storage<T>.size());
+        return Storage<T>.compilerFromRaw(raw);
+    }
+
+    function view(Storage<Byte> raw, Int start) returns Storage<T> {
+        var borrowed = Storage<Byte>.view(raw, start);
+        return Storage<T>.compilerFromRaw(borrowed);
+    }
+
+    function viewAt(Storage<Byte> raw, Int byteOffset) returns Storage<T> {
+        var borrowed = Storage<Byte>.viewAt(raw, byteOffset);
+        return Storage<T>.compilerFromRaw(borrowed);
+    }
+
+    function slice(Storage<T> storage, Int start, Int count) returns Storage<T> {
+        var raw = Storage<T>.compilerRaw(storage);
+        var borrowed = Storage<Byte>.slice(raw, start, count);
+        return Storage<T>.compilerFromRaw(borrowed);
+    }
+
+    function capacity(Storage<T> storage) returns Int {
+        return Storage<Byte>.capacity(Storage<T>.compilerRaw(storage));
+    }
+
+    function address(Storage<T> storage) returns Int {
+        return Storage<Byte>.address(Storage<T>.compilerRaw(storage));
+    }
+
+    function read(Storage<T> storage, Int index) returns T {
+        return Storage<T>.compilerRead(storage, index);
+    }
+
+    function write(Storage<T> storage, Int index, T value) {
+        Storage<T>.compilerWrite(storage, index, value);
+    }
+
+    function release(Storage<T> storage) {
+        var raw = Storage<T>.compilerRaw(storage);
+        Storage<Byte>.release(raw);
+    }
+
+    native function size() returns Int;
+    native function alignment() returns Int;
+}
