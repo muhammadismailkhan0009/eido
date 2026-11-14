@@ -109,6 +109,27 @@ proc lowerPhaseModuleToNim(
     lrcString
   )
 
+  # The private compile-time String runtime is ordinary Eido code over
+  # Storage. Give the phase the same SDK Storage source/visibility as targets,
+  # rather than relying on a previously cached phase executable.
+  sourceUnits.add initSourceUnit(
+    sourceUnits.len, BuiltinStorageSourcePath,
+    BuiltinStorageSource, BuiltinStorageModuleName
+  )
+  let storageModule = moduleModel.ModuleSpec(
+    name: "storage",
+    canonicalName: BuiltinStorageModuleName,
+    parentName: "",
+    manifestPath: BuiltinStorageManifestPath,
+    directory: "<eido-sdk>/stdlib/storage",
+    sourcePaths: @[BuiltinStorageSourcePath],
+    children: @[],
+    dependencies: @[],
+    exports: @["Storage"],
+    provides: @[],
+    adopts: @[]
+  )
+
   let phaseModule = moduleModel.ModuleSpec(
     name: manifest.name,
     canonicalName: canonicalName,
@@ -117,7 +138,7 @@ proc lowerPhaseModuleToNim(
     directory: phaseDirectory,
     sourcePaths: sourcePaths,
     children: @[],
-    dependencies: @[],
+    dependencies: @[BuiltinStorageModuleName],
     exports: @[],
     provides: @[],
     adopts: @[]
@@ -125,7 +146,7 @@ proc lowerPhaseModuleToNim(
   let project = projectModel.initModuleProject(
     projectModel.ptExecutable,
     sourceUnits,
-    @[phaseModule],
+    @[phaseModule, storageModule],
     canonicalName
   )
 
