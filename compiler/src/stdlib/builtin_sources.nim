@@ -12,6 +12,7 @@ const
   BuiltinProcessModuleName* = "eido.stdlib.process"
   BuiltinIoModuleName* = "eido.stdlib.io"
   BuiltinStorageModuleName* = "eido.stdlib.storage"
+  BuiltinCollectionsModuleName* = "eido.stdlib.collections"
   BuiltinMemoryModuleName* = "eido.stdlib.memory"
   BuiltinTextModuleName* = "eido.stdlib.text"
   BuiltinRuntimeModuleName* = "eido.stdlib.runtime"
@@ -22,6 +23,7 @@ const
   BuiltinProcessManifestPath* = "<eido-sdk>/stdlib/process/module.yaml"
   BuiltinIoManifestPath* = "<eido-sdk>/stdlib/io/module.yaml"
   BuiltinStorageManifestPath* = "<eido-sdk>/stdlib/storage/module.yaml"
+  BuiltinCollectionsManifestPath* = "<eido-sdk>/stdlib/collections/module.yaml"
   BuiltinMemoryManifestPath* = "<eido-sdk>/stdlib/memory/module.yaml"
   BuiltinTextManifestPath* = "<eido-sdk>/stdlib/text/module.yaml"
   BuiltinRuntimeManifestPath* = "<eido-sdk>/stdlib/runtime/module.yaml"
@@ -40,6 +42,9 @@ const
   )
   BuiltinStorageManifestSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/storage/module.yaml"
+  )
+  BuiltinCollectionsManifestSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/collections/module.yaml"
   )
   BuiltinMemoryManifestSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/memory/module.yaml"
@@ -61,6 +66,9 @@ const
   BuiltinProcessSourcePath* = "eido://stdlib/process/process.eido"
   BuiltinConsoleSourcePath* = "eido://stdlib/io/console.eido"
   BuiltinStorageSourcePath* = "eido://stdlib/storage/storage.eido"
+  BuiltinArraySourcePath* = "eido://stdlib/collections/array.eido"
+  BuiltinStorageArraySourcePath* = "eido://stdlib/collections/storage_array.eido"
+  BuiltinArraysSourcePath* = "eido://stdlib/collections/arrays.eido"
   BuiltinStringRuntimeSourcePath* = "eido://stdlib/text/string_runtime.eido"
   BuiltinCopyRuntimeSourcePath* = "eido://stdlib/runtime/copy_runtime.eido"
   BuiltinManagedIdentityIndexSourcePath* =
@@ -96,6 +104,15 @@ const
   )
   BuiltinStorageSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/storage/storage.eido"
+  )
+  BuiltinArraySource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/collections/array.eido"
+  )
+  BuiltinStorageArraySource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/collections/storage_array.eido"
+  )
+  BuiltinArraysSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/collections/arrays.eido"
   )
   BuiltinStringRuntimeSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/text/string_runtime.eido"
@@ -169,6 +186,8 @@ proc embeddedStdlibManifest(manifestPath: string): string =
     BuiltinIoManifestSource
   of BuiltinStorageManifestPath:
     BuiltinStorageManifestSource
+  of BuiltinCollectionsManifestPath:
+    BuiltinCollectionsManifestSource
   of BuiltinMemoryManifestPath:
     BuiltinMemoryManifestSource
   of BuiltinTextManifestPath:
@@ -199,6 +218,12 @@ proc embeddedStdlibSource(
     (BuiltinConsoleSourcePath, BuiltinConsoleSource)
   of BuiltinStorageManifestPath & "|storage.eido":
     (BuiltinStorageSourcePath, BuiltinStorageSource)
+  of BuiltinCollectionsManifestPath & "|array.eido":
+    (BuiltinArraySourcePath, BuiltinArraySource)
+  of BuiltinCollectionsManifestPath & "|storage_array.eido":
+    (BuiltinStorageArraySourcePath, BuiltinStorageArraySource)
+  of BuiltinCollectionsManifestPath & "|arrays.eido":
+    (BuiltinArraysSourcePath, BuiltinArraysSource)
   of BuiltinTextManifestPath & "|string_runtime.eido":
     (BuiltinStringRuntimeSourcePath, BuiltinStringRuntimeSource)
   of BuiltinRuntimeManifestPath & "|copy_runtime.eido":

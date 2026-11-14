@@ -89,18 +89,21 @@ suite "Module manifest parsing":
 
     check manifest.name == "stdlib"
     check manifest.sources.len == 0
-    check manifest.children.len == 6
+    check manifest.children.len == 7
     check manifest.children[0].name == "process"
     check manifest.children[1].name == "io"
     check manifest.children[2].name == "storage"
-    check manifest.children[3].name == "memory"
-    check manifest.children[4].name == "text"
-    check manifest.children[5].name == "runtime"
+    check manifest.children[3].name == "collections"
+    check manifest.children[4].name == "memory"
+    check manifest.children[5].name == "text"
+    check manifest.children[6].name == "runtime"
     check manifest.dependencies.len == 0
     check manifest.exports == @[
       "process.Process",
       "io.Console",
-      "storage.Storage"
+      "storage.Storage",
+      "collections.Array",
+      "collections.Arrays"
     ]
     check manifest.provides.len == 0
     check manifest.adopts.len == 0

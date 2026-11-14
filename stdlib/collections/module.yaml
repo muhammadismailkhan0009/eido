@@ -1,0 +1,17 @@
+module: collections
+
+sources:
+  - array.eido
+  - storage_array.eido
+  - arrays.eido
+
+children: []
+dependencies:
+  - storage
+
+exports:
+  - Array
+  - Arrays
+
+provides: {}
+adopts: []

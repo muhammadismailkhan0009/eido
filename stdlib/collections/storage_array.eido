@@ -1,0 +1,19 @@
+class StorageArray<T> implements Array<T> {
+    Storage<T> storage;
+
+    function size() returns Int {
+        return Storage<T>.capacity(self.storage);
+    }
+
+    function get(Int index) returns T {
+        return Storage<T>.read(self.storage, index);
+    }
+
+    function setAt(Int index, T value) {
+        Storage<T>.write(self.storage, index, value);
+    }
+
+    function release() {
+        Storage<T>.release(self.storage);
+    }
+}

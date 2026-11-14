@@ -1,0 +1,7 @@
+class Arrays<T> {
+    function create(Int length) returns Array<T> {
+        return StorageArray<T> {
+            storage = Storage<T>.allocate(length);
+        };
+    }
+}

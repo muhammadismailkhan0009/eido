@@ -6,6 +6,7 @@ children:
   process: { path: process }
   io: { path: io }
   storage: { path: storage }
+  collections: { path: collections }
   memory: { path: memory }
   text: { path: text }
   runtime: { path: runtime }
@@ -16,6 +17,8 @@ exports:
   - process.Process
   - io.Console
   - storage.Storage
+  - collections.Array
+  - collections.Arrays
 
 provides: {}
 adopts: []

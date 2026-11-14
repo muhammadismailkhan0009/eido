@@ -1,0 +1,6 @@
+interface Array<T> {
+    function size() returns Int;
+    function get(Int index) returns T;
+    function setAt(Int index, T value);
+    function release();
+}

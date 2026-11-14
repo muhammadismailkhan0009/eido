@@ -240,6 +240,9 @@ Process.argument(index)
 Process.exit(code)
 Console.writeLine(value)
 Console.errorLine(value)
+Storage<T>
+Array<T>
+Arrays<T>.create(length)
 ```
 
 The public Eido source does not reference Nim symbols. Backend-specific support remains an implementation detail of the current Nim backend.
@@ -304,7 +307,7 @@ The v0 syntax/core surface is now frozen for application dogfooding. The followi
 - static interface-contract compatibility reasoning;
 - source-level contract failure diagnostics without generated Nim stack frames;
 - a finalized constructor/initialization model;
-- collections and `for-each` iteration;
+- the broader collection family (dynamic lists, maps, sets) and `for-each` iteration; fixed-size `Array<T>` is implemented;
 - enums and constants;
 - a larger String/collection standard library;
 - finalized class/interface equality semantics;
