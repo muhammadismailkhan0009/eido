@@ -31,6 +31,31 @@ proc renderMethodCall*(call: hirExpressions.HirMethodCall): string =
       argument.classFieldName
     ) & "()"
 
+  # Fresh constructions and explicit copies initialize a Storage-owned
+  # payload directly, rather than first allocating a managed root object.
+  if call.kind == mkStatic and
+      isConcreteStorageTypeName(call.ownerType.className) and
+      call.methodName == "write" and call.arguments.len == 3:
+    let value = call.arguments[2]
+    let storageOwner = call.ownerType.className
+    if value.kind == hirExpressions.hekConstruct and
+        storageElementName(storageOwner) == value.constructedTypeName:
+      var construction = storageMethodName(storageOwner, "writeConstruct") &
+        "(" & renderExpr(call.arguments[0]) & ", " &
+        renderExpr(call.arguments[1])
+      for field in value.fields:
+        construction.add ", arg_" & fieldName(field.sourceName) &
+          " = " & renderExpr(field.value)
+      construction.add ")"
+      return protectIdentityTemporaries(construction, true)
+    if value.kind == hirExpressions.hekClassRelation and
+        value.classRelationKind == hirExpressions.hcvrCopy:
+      let copying = storageMethodName(storageOwner, "writeCopy") & "(" &
+        renderExpr(call.arguments[0]) & ", " &
+        renderExpr(call.arguments[1]) & ", " &
+        renderExpr(value.relatedValue) & ")"
+      return protectIdentityTemporaries(copying, true)
+
   let renderedName =
     if call.isNative and
         isConcreteStorageTypeName(call.ownerType.className):

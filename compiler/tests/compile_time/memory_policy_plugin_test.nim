@@ -90,6 +90,50 @@ suite "User-selectable Eido memory policy modules":
     nimCompiler.compileWithNim(generated, outputPath, generatedPath)
     check execProcess(outputPath).strip() == "7"
 
+  test "custom memory policy need not implement Storage lifecycle callbacks":
+    let root = freshPolicyProject("missing_storage_region_handlers")
+    defer:
+      if dirExists(root):
+        removeDir(root)
+
+    writePolicyFixture(
+      root,
+      """
+        class CustomMemoryRuntime {
+          function acquire(Int payloadSize, Int payloadAlignment, Int typeId) returns Int {
+            var backing = Storage<Byte>.allocateRaw(1, payloadSize);
+            return Storage<Byte>.address(backing);
+          }
+        }
+      """,
+      """
+        function main() {
+          MemoryPolicy.objectAcquire("CustomMemoryRuntime.acquire");
+        }
+      """
+    )
+    writeFile(root / "Main.eido", """
+      class Box { Int value; }
+      function main() returns Int {
+        var boxes = Storage<Box>.allocate(1);
+        Storage<Box>.write(boxes, 0, Box { value = 7; });
+        var value = Storage<Box>.read(boxes, 0).value;
+        Storage<Box>.release(boxes);
+        return value;
+      }
+    """)
+
+    let project = loadModuleProject(root / "module.yaml", ptExecutable)
+    let generated = compileProjectToNim(
+      project,
+      CompilationOptions(memoryPolicy: selectMemoryPolicy("app.policy"))
+    )
+    check "writeConstruct" in generated
+    check "storageRegionEnter" notin generated
+    let outputPath = root / "inline_storage_app"
+    nimCompiler.compileWithNim(generated, outputPath)
+    check execProcess(outputPath).strip() == "7"
+
   test "selected handler must satisfy the generic event signature":
     let root = freshPolicyProject("bad_signature")
     defer:

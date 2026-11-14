@@ -63,6 +63,10 @@ const
   BuiltinStorageSourcePath* = "eido://stdlib/storage/storage.eido"
   BuiltinStringRuntimeSourcePath* = "eido://stdlib/text/string_runtime.eido"
   BuiltinCopyRuntimeSourcePath* = "eido://stdlib/runtime/copy_runtime.eido"
+  BuiltinManagedIdentityIndexSourcePath* =
+    "eido://stdlib/memory/managed/identity_index.eido"
+  BuiltinRcIdentityIndexSourcePath* =
+    "eido://stdlib/memory/rc/identity_index.eido"
   BuiltinMemoryValueRegistrySourcePath* =
     "eido://stdlib/memory/managed/memory_value_registry.eido"
   BuiltinMemoryTypeRegistrySourcePath* =
@@ -98,6 +102,14 @@ const
   )
   BuiltinCopyRuntimeSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/runtime/copy_runtime.eido"
+  )
+  BuiltinManagedIdentityIndexSource* = staticRead(
+    currentSourcePath().parentDir /
+      "../../../stdlib/memory/managed/identity_index.eido"
+  )
+  BuiltinRcIdentityIndexSource* = staticRead(
+    currentSourcePath().parentDir /
+      "../../../stdlib/memory/rc/identity_index.eido"
   )
   BuiltinMemoryValueRegistrySource* = staticRead(
     currentSourcePath().parentDir /
@@ -197,6 +209,8 @@ proc embeddedStdlibSource(
     (BuiltinMemoryTypeRegistrySourcePath, BuiltinMemoryTypeRegistrySource)
   of BuiltinManagedGcManifestPath & "|managed_heap_allocator.eido":
     (BuiltinManagedHeapAllocatorSourcePath, BuiltinManagedHeapAllocatorSource)
+  of BuiltinManagedGcManifestPath & "|identity_index.eido":
+    (BuiltinManagedIdentityIndexSourcePath, BuiltinManagedIdentityIndexSource)
   of BuiltinManagedGcManifestPath & "|managed_gc_runtime.eido":
     (BuiltinManagedGcRuntimeSourcePath, BuiltinManagedGcRuntimeSource)
   of BuiltinManagedGcManifestPath & "|memory_runtime.eido":
@@ -207,6 +221,8 @@ proc embeddedStdlibSource(
     (BuiltinRcValueRegistrySourcePath, BuiltinRcValueRegistrySource)
   of BuiltinRcManifestPath & "|rc_type_registry.eido":
     (BuiltinRcTypeRegistrySourcePath, BuiltinRcTypeRegistrySource)
+  of BuiltinRcManifestPath & "|identity_index.eido":
+    (BuiltinRcIdentityIndexSourcePath, BuiltinRcIdentityIndexSource)
   of BuiltinRcManifestPath & "|rc_runtime.eido":
     (BuiltinRcRuntimeSourcePath, BuiltinRcRuntimeSource)
   of BuiltinRcManifestPath & "|rc_policy_runtime.eido":

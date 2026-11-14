@@ -102,6 +102,7 @@ class RcRuntime {
         );
         var identity = allocation + payloadOffset;
         set RcRuntime.heapHead = identity;
+        RcIdentityIndex.add(identity);
         set RcRuntime.liveObjects = RcRuntime.liveObjects + 1;
         return identity;
     }
@@ -129,7 +130,7 @@ class RcRuntime {
     }
 
     function incrementReference(Int identity) {
-        if (identity == 0) { return; }
+        if (identity == 0 or not RcIdentityIndex.contains(identity)) { return; }
         RcRuntime.setReferenceCount(
             identity,
             RcRuntime.referenceCount(identity) + 1
@@ -187,14 +188,17 @@ class RcRuntime {
     }
 
     function invariantEnter(Int identity) {
+        if (not RcIdentityIndex.contains(identity)) { return; }
         var depth = RcRuntime.readInt(identity, RcRuntime.invariantDepthOffset());
         RcRuntime.writeInt(identity, RcRuntime.invariantDepthOffset(), depth + 1);
     }
     function invariantLeave(Int identity) {
+        if (not RcIdentityIndex.contains(identity)) { return; }
         var depth = RcRuntime.readInt(identity, RcRuntime.invariantDepthOffset());
         RcRuntime.writeInt(identity, RcRuntime.invariantDepthOffset(), depth - 1);
     }
     function invariantClear(Int identity) returns Bool {
+        if (not RcIdentityIndex.contains(identity)) { return true; }
         return RcRuntime.readInt(identity, RcRuntime.invariantDepthOffset()) == 0;
     }
 
@@ -202,6 +206,7 @@ class RcRuntime {
         var allocation = RcRuntime.headerAddress(identity);
         var bytes = RcRuntime.totalSize(identity);
         var backing = Storage<Byte>.fromAddress(allocation, 1, bytes);
+        RcIdentityIndex.remove(identity);
         Storage<Byte>.release(backing);
         set RcRuntime.liveObjects = RcRuntime.liveObjects - 1;
     }
@@ -263,6 +268,7 @@ class RcRuntime {
         RcRuntime.reclaimAcyclic(false);
         RcRuntime.releaseAllRemaining();
         RcValueRegistry.shutdown();
+        RcIdentityIndex.shutdown();
         RcTypeRegistry.shutdown();
     }
 }

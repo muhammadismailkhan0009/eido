@@ -93,6 +93,7 @@ suite "Module project loading":
       BuiltinMemoryValueRegistrySourcePath,
       BuiltinMemoryTypeRegistrySourcePath,
       BuiltinManagedHeapAllocatorSourcePath,
+      BuiltinManagedIdentityIndexSourcePath,
       BuiltinManagedGcRuntimeSourcePath,
       BuiltinMemoryRuntimeSourcePath
     ]
@@ -105,6 +106,7 @@ suite "Module project loading":
     check project.modules[8].sourcePaths == @[
       BuiltinRcValueRegistrySourcePath,
       BuiltinRcTypeRegistrySourcePath,
+      BuiltinRcIdentityIndexSourcePath,
       BuiltinRcRuntimeSourcePath,
       BuiltinRcPolicyRuntimeSourcePath
     ]
@@ -121,28 +123,28 @@ suite "Module project loading":
     check project.modules[10].exports.len == 0
 
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 16
+    check project.sources.len == 18
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
     check project.sources[3].moduleName == BuiltinIoModuleName
     check project.sources[4].moduleName == BuiltinStorageModuleName
-    for index in 5 .. 9:
+    for index in 5 .. 10:
       check project.sources[index].moduleName == BuiltinManagedGcModuleName
-    for index in 10 .. 13:
+    for index in 11 .. 15:
       check project.sources[index].moduleName == BuiltinRcModuleName
-    check project.sources[14].moduleName == BuiltinTextModuleName
-    check project.sources[15].moduleName == BuiltinRuntimeModuleName
+    check project.sources[16].moduleName == BuiltinTextModuleName
+    check project.sources[17].moduleName == BuiltinRuntimeModuleName
     for index in 0 .. 4:
       check project.sources[index].origin == soOrdinary
       check project.sources[index].runtimeCapability == lrcNone
-    for index in 5 .. 13:
+    for index in 5 .. 15:
       check project.sources[index].origin == soMemoryPolicyRuntime
       check project.sources[index].runtimeCapability == lrcNone
-    check project.sources[14].origin == soLanguageRuntime
-    check project.sources[14].runtimeCapability == lrcString
-    check project.sources[15].origin == soLanguageRuntime
-    check project.sources[15].runtimeCapability == lrcClassCopy
+    check project.sources[16].origin == soLanguageRuntime
+    check project.sources[16].runtimeCapability == lrcString
+    check project.sources[17].origin == soLanguageRuntime
+    check project.sources[17].runtimeCapability == lrcClassCopy
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

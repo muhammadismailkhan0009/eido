@@ -1,8 +1,16 @@
 import std/unittest
 import support/compiler_test_support
-import types/[method_kind, model]
+import types/[method_kind, model, storage]
 
 suite "Storage semantics":
+  test "recognizes qualified Storage with qualified class arguments":
+    let name = "eido.stdlib.storage.Storage<app.Box>"
+    check isConcreteStorageTypeName(name)
+    check storageElementName(name) == "app.Box"
+    check rawStorageTypeName(name) == "eido.stdlib.storage.Storage<Byte>"
+    check isRawStorageTypeName(rawStorageTypeName(name))
+    check isConcreteStorageTypeName("Storage<app.Box<app.Item>>")
+
   test "materializes Eido typed Storage over the raw Byte capability":
     let source = """
       function main() returns Int {
@@ -53,15 +61,118 @@ suite "Storage semantics":
     for methodDecl in byteStorage.methods:
       check methodDecl.isNative
 
-  test "rejects nominal element storage until identity ownership is defined":
+  test "supports nominal class payloads in typed Storage":
+    let source = """
+      class Account { Int balance; }
+      function main() returns Int {
+        var storage = Storage<Account>.allocate(1);
+        Storage<Account>.write(storage, 0, Account { balance = 10; });
+        var stored = ref Storage<Account>.read(storage, 0);
+        var balance = stored.balance;
+        Storage<Account>.release(storage);
+        return balance;
+      }
+    """
+
+    let program = analyzeSource(source)
+    check program.classes.len >= 3
+
+  test "supports generic class specializations as Storage elements":
+    let source = """
+      class Box<T> {
+        T value;
+      }
+      function main() returns Int {
+        var values = Storage<Box<Int>>.allocate(1);
+        Storage<Box<Int>>.write(values, 0, Box<Int> { value = 5; });
+        var entry = ref Storage<Box<Int>>.read(values, 0);
+        var value = entry.value;
+        Storage<Box<Int>>.release(values);
+        return value;
+      }
+    """
+    discard analyzeSource(source)
+
+  test "Storage class writes require explicit relationships":
     let source = """
       class Account { Int balance; }
       function main() {
         var account = Account { balance = 10; };
-        var storage = Storage<Account>.allocate(1);
+        var values = Storage<Account>.allocate(1);
+        Storage<Account>.write(values, 0, account);
       }
     """
+    expect ValueError:
+      discard analyzeSource(source)
 
+  test "inline Storage rejects ref writes because payloads are not pointer slots":
+    let source = """
+      class Account { Int balance; }
+      function main() {
+        var original = Account { balance = 10; };
+        var values = Storage<Account>.allocate(1);
+        Storage<Account>.write(values, 0, ref original);
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "inline Storage allows explicitly copied class payloads":
+    let source = """
+      class Account { Int balance; }
+      function main() {
+        var original = Account { balance = 10; };
+        var values = Storage<Account>.allocate(1);
+        Storage<Account>.write(values, 0, copy original);
+        Storage<Account>.release(values);
+      }
+    """
+    discard analyzeSource(source)
+
+  test "inline Storage does not silently copy a temporary class result":
+    let source = """
+      class Account { Int balance; }
+      function makeAccount() returns Account {
+        return Account { balance = 2; };
+      }
+      function main() {
+        var values = Storage<Account>.allocate(1);
+        Storage<Account>.write(values, 0, makeAccount());
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "Storage class reads require ref or copy for persistent bindings":
+    let source = """
+      class Account { Int balance; }
+      function main() {
+        var values = Storage<Account>.allocate(1);
+        Storage<Account>.write(values, 0, Account { balance = 10; });
+        var account = Storage<Account>.read(values, 0);
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "Storage class raw views borrow existing inline payloads":
+    let source = """
+      class Account { Int balance; }
+      function main() {
+        var raw = Storage<Byte>.allocateRaw(2, Storage<Account>.size());
+        var accounts = Storage<Account>.view(raw, 0);
+        Storage<Account>.write(accounts, 0, Account { balance = 12; });
+        Storage<Byte>.release(raw);
+      }
+    """
+    discard analyzeSource(source)
+
+  test "rejects storage of nested owning descriptors":
+    let source = """
+      function main() {
+        var storage = Storage<Storage<Int>>.allocate(1);
+      }
+    """
     expect ValueError:
       discard analyzeSource(source)
 

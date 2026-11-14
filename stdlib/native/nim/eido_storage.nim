@@ -201,6 +201,11 @@ proc eidoStorageAddress*[T](storage: EidoStorage[T]): int64 =
   requireEidoStorageLive(storage)
   int64(cast[uint](storage.data))
 
+## Returns the address of one inline typed slot as an object identity.
+## No allocation, reference ownership, or policy bookkeeping occurs here.
+proc eidoStorageSlotIdentity*[T](storage: EidoStorage[T], index: int64): int64 =
+  int64(eidoStorageSlotAddress(storage, index))
+
 ## Reads one typed slot after live and bounds validation.
 proc eidoStorageRead*[T](storage: EidoStorage[T], index: int64): T =
   let address = eidoStorageSlotAddress(storage, index)

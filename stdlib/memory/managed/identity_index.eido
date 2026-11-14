@@ -1,0 +1,87 @@
+// Policy-owned index for distinguishing managed identities from raw Storage
+// addresses. Open addressing keeps validation O(1) on average, rather than
+// scanning all managed allocations during tracing/recounting.
+class ManagedIdentityIndex {
+    Storage<Int> ManagedIdentityIndex.keys = Storage<Int>.allocate(64);
+    Int ManagedIdentityIndex.capacity = 64;
+    Int ManagedIdentityIndex.used = 0;
+
+    function hash(Int identity, Int count) returns Int {
+        var shifted = identity / Storage<Int>.alignment();
+        return shifted - (shifted / count) * count;
+    }
+    function next(Int slot, Int count) returns Int {
+        var following = slot + 1;
+        if (following == count) { return 0; }
+        return following;
+    }
+    function insertInto(Storage<Int> keys, Int count, Int identity) {
+        var slot = ManagedIdentityIndex.hash(identity, count);
+        while (Storage<Int>.read(keys, slot) != 0) {
+            set slot = ManagedIdentityIndex.next(slot, count);
+        }
+        Storage<Int>.write(keys, slot, identity);
+    }
+    function grow() {
+        var newCapacity = ManagedIdentityIndex.capacity * 2;
+        var newKeys = Storage<Int>.allocate(newCapacity);
+        var index = 0;
+        while (index < ManagedIdentityIndex.capacity) {
+            var value = Storage<Int>.read(ManagedIdentityIndex.keys, index);
+            if (value != 0) {
+                ManagedIdentityIndex.insertInto(newKeys, newCapacity, value);
+            }
+            set index = index + 1;
+        }
+        Storage<Int>.release(ManagedIdentityIndex.keys);
+        set ManagedIdentityIndex.keys = newKeys;
+        set ManagedIdentityIndex.capacity = newCapacity;
+    }
+    function add(Int identity) {
+        if ((ManagedIdentityIndex.used + 1) * 2 >= ManagedIdentityIndex.capacity) {
+            ManagedIdentityIndex.grow();
+        }
+        ManagedIdentityIndex.insertInto(ManagedIdentityIndex.keys, ManagedIdentityIndex.capacity, identity);
+        set ManagedIdentityIndex.used = ManagedIdentityIndex.used + 1;
+    }
+    function contains(Int identity) returns Bool {
+        if (identity == 0) { return false; }
+        var slot = ManagedIdentityIndex.hash(identity, ManagedIdentityIndex.capacity);
+        var probes = 0;
+        while (probes < ManagedIdentityIndex.capacity) {
+            var found = Storage<Int>.read(ManagedIdentityIndex.keys, slot);
+            if (found == identity) { return true; }
+            if (found == 0) { return false; }
+            set slot = ManagedIdentityIndex.next(slot, ManagedIdentityIndex.capacity);
+            set probes = probes + 1;
+        }
+        return false;
+    }
+    function remove(Int identity) {
+        var slot = ManagedIdentityIndex.hash(identity, ManagedIdentityIndex.capacity);
+        var probes = 0;
+        while (probes < ManagedIdentityIndex.capacity) {
+            var found = Storage<Int>.read(ManagedIdentityIndex.keys, slot);
+            if (found == 0) { return; }
+            if (found == identity) {
+                Storage<Int>.write(ManagedIdentityIndex.keys, slot, 0);
+                set ManagedIdentityIndex.used = ManagedIdentityIndex.used - 1;
+                // Reinsert the remainder of the probe cluster. This avoids
+                // tombstones and keeps lookup bounded after repeated frees.
+                set slot = ManagedIdentityIndex.next(slot, ManagedIdentityIndex.capacity);
+                while (Storage<Int>.read(ManagedIdentityIndex.keys, slot) != 0) {
+                    var displaced = Storage<Int>.read(ManagedIdentityIndex.keys, slot);
+                    Storage<Int>.write(ManagedIdentityIndex.keys, slot, 0);
+                    ManagedIdentityIndex.insertInto(ManagedIdentityIndex.keys, ManagedIdentityIndex.capacity, displaced);
+                    set slot = ManagedIdentityIndex.next(slot, ManagedIdentityIndex.capacity);
+                }
+                return;
+            }
+            set slot = ManagedIdentityIndex.next(slot, ManagedIdentityIndex.capacity);
+            set probes = probes + 1;
+        }
+    }
+    function shutdown() {
+        Storage<Int>.release(ManagedIdentityIndex.keys);
+    }
+}

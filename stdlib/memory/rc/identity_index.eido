@@ -1,0 +1,87 @@
+// Policy-owned index for distinguishing managed identities from raw Storage
+// addresses. Open addressing keeps validation O(1) on average, rather than
+// scanning all managed allocations during tracing/recounting.
+class RcIdentityIndex {
+    Storage<Int> RcIdentityIndex.keys = Storage<Int>.allocate(64);
+    Int RcIdentityIndex.capacity = 64;
+    Int RcIdentityIndex.used = 0;
+
+    function hash(Int identity, Int count) returns Int {
+        var shifted = identity / Storage<Int>.alignment();
+        return shifted - (shifted / count) * count;
+    }
+    function next(Int slot, Int count) returns Int {
+        var following = slot + 1;
+        if (following == count) { return 0; }
+        return following;
+    }
+    function insertInto(Storage<Int> keys, Int count, Int identity) {
+        var slot = RcIdentityIndex.hash(identity, count);
+        while (Storage<Int>.read(keys, slot) != 0) {
+            set slot = RcIdentityIndex.next(slot, count);
+        }
+        Storage<Int>.write(keys, slot, identity);
+    }
+    function grow() {
+        var newCapacity = RcIdentityIndex.capacity * 2;
+        var newKeys = Storage<Int>.allocate(newCapacity);
+        var index = 0;
+        while (index < RcIdentityIndex.capacity) {
+            var value = Storage<Int>.read(RcIdentityIndex.keys, index);
+            if (value != 0) {
+                RcIdentityIndex.insertInto(newKeys, newCapacity, value);
+            }
+            set index = index + 1;
+        }
+        Storage<Int>.release(RcIdentityIndex.keys);
+        set RcIdentityIndex.keys = newKeys;
+        set RcIdentityIndex.capacity = newCapacity;
+    }
+    function add(Int identity) {
+        if ((RcIdentityIndex.used + 1) * 2 >= RcIdentityIndex.capacity) {
+            RcIdentityIndex.grow();
+        }
+        RcIdentityIndex.insertInto(RcIdentityIndex.keys, RcIdentityIndex.capacity, identity);
+        set RcIdentityIndex.used = RcIdentityIndex.used + 1;
+    }
+    function contains(Int identity) returns Bool {
+        if (identity == 0) { return false; }
+        var slot = RcIdentityIndex.hash(identity, RcIdentityIndex.capacity);
+        var probes = 0;
+        while (probes < RcIdentityIndex.capacity) {
+            var found = Storage<Int>.read(RcIdentityIndex.keys, slot);
+            if (found == identity) { return true; }
+            if (found == 0) { return false; }
+            set slot = RcIdentityIndex.next(slot, RcIdentityIndex.capacity);
+            set probes = probes + 1;
+        }
+        return false;
+    }
+    function remove(Int identity) {
+        var slot = RcIdentityIndex.hash(identity, RcIdentityIndex.capacity);
+        var probes = 0;
+        while (probes < RcIdentityIndex.capacity) {
+            var found = Storage<Int>.read(RcIdentityIndex.keys, slot);
+            if (found == 0) { return; }
+            if (found == identity) {
+                Storage<Int>.write(RcIdentityIndex.keys, slot, 0);
+                set RcIdentityIndex.used = RcIdentityIndex.used - 1;
+                // Reinsert the remainder of the probe cluster. This avoids
+                // tombstones and keeps lookup bounded after repeated frees.
+                set slot = RcIdentityIndex.next(slot, RcIdentityIndex.capacity);
+                while (Storage<Int>.read(RcIdentityIndex.keys, slot) != 0) {
+                    var displaced = Storage<Int>.read(RcIdentityIndex.keys, slot);
+                    Storage<Int>.write(RcIdentityIndex.keys, slot, 0);
+                    RcIdentityIndex.insertInto(RcIdentityIndex.keys, RcIdentityIndex.capacity, displaced);
+                    set slot = RcIdentityIndex.next(slot, RcIdentityIndex.capacity);
+                }
+                return;
+            }
+            set slot = RcIdentityIndex.next(slot, RcIdentityIndex.capacity);
+            set probes = probes + 1;
+        }
+    }
+    function shutdown() {
+        Storage<Int>.release(RcIdentityIndex.keys);
+    }
+}

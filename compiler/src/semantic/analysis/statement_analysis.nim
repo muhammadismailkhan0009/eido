@@ -99,13 +99,14 @@ proc analyzeStmt*(
       else:
         analyzeExpr(stmt.initializer, locals, functions, classes)
 
-    if initializer.typ.kind == etkClass and
+    if initializer.typ.kind == etkClass and (
         stmt.initializer.kind notin {
           astExpressions.ekConstruct,
           astExpressions.ekCall,
           astExpressions.ekMethodCall,
           astExpressions.ekClassRelation
-        }:
+        } or isStorageIdentityRead(stmt.initializer)
+    ):
       failAt(
         stmt.initializer.span,
         "existing class local binding requires explicit copy or ref"

@@ -6,6 +6,7 @@
 import ../../../compile_time/model
 import ../../../hir/declarations as hirDeclarations
 import ../../../types/function_result
+import ../../../types/model
 import ../../../types/storage
 import names
 import type_emitter
@@ -68,8 +69,16 @@ proc renderNominalTypes*(
 
   for classDecl in classes:
     if isConcreteStorageTypeName(classDecl.sourceName):
+      let element = storageElementType(classDecl)
+      let physicalType =
+        if element.kind == etkClass and
+            not isConcreteStorageTypeName(element.className) and
+            plan.hasObjectLayout(element.className):
+          classPayloadName(element.className)
+        else:
+          renderType(element)
       result.add "  " & className(classDecl.sourceName) & " = EidoStorage[" &
-        renderType(storageElementType(classDecl)) & "]\n"
+        physicalType & "]\n"
     elif plan.hasObjectLayout(classDecl.sourceName):
       result.add "  " & className(classDecl.sourceName) &
         " = int64\n"

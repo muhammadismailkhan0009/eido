@@ -82,7 +82,6 @@ proc emitNim*(
   result.add "\n"
   result.add renderNominalTypes(program.interfaces, ordinaryClasses, plan.memory)
   result.add renderMemoryMetadata(plan.memory, program.interfaces)
-  result.add renderStorageSupport(ordinaryClasses)
 
   # Runtime-backed generated helpers may call ordinary Eido runtime methods, so
   # all Eido-bodied methods are forward-declared before helper emission.
@@ -96,6 +95,7 @@ proc emitNim*(
       result.add renderSignature(fn) & "\n"
 
   result.add "\n"
+  result.add renderStorageSupport(ordinaryClasses, plan.memory)
   if stringRuntimeEnabled:
     result.add renderStringRuntimeSupport(program)
   if copyRuntimeEnabled:
@@ -135,6 +135,9 @@ proc emitNim*(
     result.add renderClassCopiers(ordinaryClasses, plan.memory)
 
   result.add renderClassInvariantCheckers(ordinaryClasses)
+  result.add renderInlineStorageWrites(
+    ordinaryClasses, plan.memory, copySupportRequired
+  )
   result.add renderInterfaceUpcasts(
     program.interfaces,
     runtimeBackedObjects,

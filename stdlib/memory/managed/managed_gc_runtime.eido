@@ -128,6 +128,7 @@ class ManagedGcRuntime {
         );
         var identity = allocation + payloadOffset;
         set ManagedGcRuntime.heapHead = identity;
+        ManagedIdentityIndex.add(identity);
         return identity;
     }
 
@@ -139,7 +140,7 @@ class ManagedGcRuntime {
     function typeId(Int allocation) returns Int { return ManagedGcRuntime.readInt(allocation, ManagedGcRuntime.typeIdOffset()); }
 
     function mark(Int allocation) {
-        if (allocation == 0) { return; }
+        if (allocation == 0 or not ManagedIdentityIndex.contains(allocation)) { return; }
         if (ManagedGcRuntime.marked(allocation)) { return; }
         ManagedGcRuntime.setMarked(allocation, true);
 
@@ -185,6 +186,7 @@ class ManagedGcRuntime {
                 if (previous == 0) { set ManagedGcRuntime.heapHead = nextAllocation; }
                 else { ManagedGcRuntime.setNext(previous, nextAllocation); }
                 var totalSize = ManagedGcRuntime.readInt(current, ManagedGcRuntime.totalSizeOffset());
+                ManagedIdentityIndex.remove(current);
                 ManagedHeapAllocator.release(
                     ManagedGcRuntime.headerAddress(current),
                     totalSize
@@ -215,14 +217,17 @@ class ManagedGcRuntime {
     }
 
     function invariantEnter(Int allocation) {
+        if (not ManagedIdentityIndex.contains(allocation)) { return; }
         var depth = ManagedGcRuntime.readInt(allocation, ManagedGcRuntime.invariantDepthOffset());
         ManagedGcRuntime.writeInt(allocation, ManagedGcRuntime.invariantDepthOffset(), depth + 1);
     }
     function invariantLeave(Int allocation) {
+        if (not ManagedIdentityIndex.contains(allocation)) { return; }
         var depth = ManagedGcRuntime.readInt(allocation, ManagedGcRuntime.invariantDepthOffset());
         ManagedGcRuntime.writeInt(allocation, ManagedGcRuntime.invariantDepthOffset(), depth - 1);
     }
     function invariantClear(Int allocation) returns Bool {
+        if (not ManagedIdentityIndex.contains(allocation)) { return true; }
         return ManagedGcRuntime.readInt(allocation, ManagedGcRuntime.invariantDepthOffset()) == 0;
     }
     function allocationCount() returns Int { return ManagedHeapAllocator.allocationCount(); }
@@ -231,6 +236,7 @@ class ManagedGcRuntime {
         MemoryValueRegistry.clear();
         ManagedGcRuntime.collect();
         MemoryValueRegistry.shutdown();
+        ManagedIdentityIndex.shutdown();
         MemoryTypeRegistry.shutdown();
     }
 }

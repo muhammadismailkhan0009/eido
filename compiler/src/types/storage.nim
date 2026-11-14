@@ -12,9 +12,12 @@ const
   StorageInternalRead* = "compilerRead"
   StorageInternalWrite* = "compilerWrite"
 
-## Returns the source-local portion of a canonical nominal name.
+## Returns the source-local outer Storage name, ignoring module separators
+## inside generic arguments (e.g. eido.stdlib.storage.Storage<app.Box>).
 proc storageLocalName(name: string): string =
-  let separator = name.rfind('.')
+  let genericStart = name.find('<')
+  let outerEnd = if genericStart < 0: name.len else: genericStart
+  let separator = name[0 ..< outerEnd].rfind('.')
   if separator < 0: name else: name[separator + 1 .. ^1]
 
 ## Reports whether a name denotes the Storage generic type constructor.

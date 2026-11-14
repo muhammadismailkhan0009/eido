@@ -113,6 +113,38 @@ proc renderPublicCopier(
     "(source)\n"
   result.add "  " & copyMemoEndName() & "()\n\n"
 
+## Copies an existing class graph into a Storage-owned root without
+## allocating a second root payload. Nested referenced objects follow the
+## existing explicit graph-copy semantics and memoized cycle handling.
+proc renderCopyInto(classDecl: hirDeclarations.HirClass): string =
+  let owner = classDecl.sourceName
+  let sourceType = className(owner)
+  result.add "proc " & classCopyIntoName(owner) & "(destination, source: " &
+    sourceType & ") =\n"
+  result.add "  if source == int64(0):\n"
+  result.add "    raise newException(ValueError, \"cannot copy absent class into Storage\")\n"
+  result.add "  if destination == source:\n"
+  result.add "    raise newException(ValueError, \"inline Storage copy source and destination cannot be the same object\")\n"
+  result.add "  " & copyMemoBeginName() & "()\n"
+  result.add "  " & copyMemoRememberName() & "(source, destination)\n"
+
+  for field in classDecl.fields:
+    let getter = classFieldGetName(owner, field.sourceName)
+    let setter = classFieldSetName(owner, field.sourceName)
+    let fieldValue = getter & "(source)"
+    if field.typ.kind == etkClass and
+        not isConcreteStorageTypeName(field.typ.className):
+      result.add "  if eidoMemoryPresent(" & fieldValue & "):\n"
+      result.add "    " & setter & "(destination, " &
+        classCopyInternalName(field.typ.className) & "(" & fieldValue & "))\n"
+      result.add "  else:\n"
+      result.add "    " & setter & "(destination, default(" &
+        className(field.typ.className) & "))\n"
+    else:
+      result.add "  " & setter & "(destination, " & fieldValue & ")\n"
+
+  result.add "  " & copyMemoEndName() & "()\n\n"
+
 ## Renders all copy support needed by the program's nominal classes.
 proc renderClassCopiers*(
   classes: seq[hirDeclarations.HirClass],
@@ -131,3 +163,6 @@ proc renderClassCopiers*(
     result.add renderInternalCopier(classDecl, plan)
   for classDecl in copyableClasses:
     result.add renderPublicCopier(classDecl)
+  for classDecl in copyableClasses:
+    if plan.hasObjectLayout(classDecl.sourceName):
+      result.add renderCopyInto(classDecl)

@@ -111,7 +111,60 @@ Storage parameters are borrowed. Ordinary Eido callable results preserve inferre
 
 ## Current element support
 
-Primitive and `String` elements are currently supported. Nominal/class elements remain intentionally rejected until identity-bearing values stored inside raw Storage participate correctly in the selected lifetime policy (for example GC tracing/root discovery). This restriction is separate from the Storage layering described here.
+Primitive, `String`, and concrete nominal **class** elements are supported,
+including generic instances such as `Storage<Box<Int>>`.
+
+`Storage<Class>` reserves contiguous **inline class payloads**. Its stride and
+alignment come from the existing class layout, not the size of a reference.
+The raw allocator remains the same `Storage<Byte>.allocateRaw` implementation.
+A slot's address is its class identity; reading or borrowing that identity
+does not allocate an object through the memory policy.
+
+```eido
+class Account { Int balance; }
+function main() returns Int {
+    var accounts = Storage<Account>.allocate(2);
+    Storage<Account>.write(accounts, 0, Account { balance = 10; });
+    Storage<Account>.write(accounts, 1, Account { balance = 20; });
+    var first = ref Storage<Account>.read(accounts, 0);
+    var total = first.balance + Storage<Account>.read(accounts, 1).balance;
+    Storage<Account>.release(accounts);
+    return total;
+}
+```
+
+A fresh construction directly inside `write` initializes that slot in place
+without first acquiring an object through the selected managed policy.
+When writing an existing class object into inline Storage, use explicit
+`copy original`. The existing detached graph-copy rules apply, with the
+copy's root allocated directly in the destination slot. `ref original` is
+**not** a valid write to an inline class-payload slot: a reference is not
+another object payload. Directly writing an arbitrary class-returning
+function/method result is also deferred, because its managed temporary
+would otherwise be copied implicitly into raw Storage; instead, explicitly
+copy an existing object or construct a fresh literal directly in the slot. Use `ref Storage<Class>.read(...)` to reference an
+already initialized slot, or `copy Storage<Class>.read(...)` to create an
+independent object using the selected policy.
+
+`release` frees the entire region owned by Storage. Any references into
+released slots become invalid; Storage does not track such aliases or
+control their lifetime. Read/write through borrowed `view`, `viewAt`, and
+`slice` use the same inline representation without owning the backing.
+As with other raw memory, **only read class slots after initialization**;
+uninitialized slots have no safe class value or runtime initialization trap.
+
+**Policy boundary:** Explicit Storage regions are not implicitly owned or
+traced by the selected GC/RC policy. The standard policies only reclaim
+objects that they themselves allocate. References to manually allocated
+Storage objects are not GC roots, and references *inside* an inline payload
+do not automatically protect other managed allocations. A memory policy
+that wants to manage or trace external Storage must implement that
+bookkeeping explicitly in Eido. No compiler `storageRegionEnter` or
+`storageRegionLeave` callback is mandatory.
+
+Interface-valued elements, optional inline class elements, and nested
+owning Storage descriptors are not supported yet. The current borrow
+analysis is not a complete lifetime/alias checker.
 
 ## Backend boundary
 

@@ -17,13 +17,35 @@ proc analyzeMethodArguments(
     )
 
   for index, argument in expr.methodArguments:
-    result.add analyzeExprExpected(
-      argument,
-      target.parameterTypes[index],
-      locals,
-      functions,
-      classes
-    )
+    let expected = target.parameterTypes[index]
+    # Inline class slots own their payload: an existing object requires
+    # explicit copy, never a stored alias/reference.
+    if expr.receiver.kind == astExpressions.ekIdentifier and
+        isConcreteStorageTypeName(expr.receiver.name) and
+        expr.methodName == "write" and index == 2 and
+        expected.kind == etkClass and
+        not isConcreteStorageTypeName(expected.className):
+      # Inline class payloads are constructed directly, or detached via
+      # explicit copy. Bare factory returns could otherwise allocate a
+      # managed temporary and silently bit-copy it into manual memory.
+      if argument.kind notin {
+          astExpressions.ekConstruct, astExpressions.ekClassRelation
+      }:
+        failAt(argument.span,
+          "inline Storage<Class>.write requires direct class construction " &
+          "or explicit copy of an existing class object")
+      if argument.kind == astExpressions.ekClassRelation and
+          argument.relationKind == astExpressions.cvrRef:
+        failAt(argument.span,
+          "inline Storage<Class> cannot store a ref as an object payload; " &
+          "use copy for an independent value or reference the original directly")
+      result.add analyzePersistentClassValue(
+        argument, expected, locals, functions, classes
+      )
+    else:
+      result.add analyzeExprExpected(
+        argument, expected, locals, functions, classes
+      )
 
 ## Analyzes arguments against one interface method contract.
 proc analyzeInterfaceMethodArguments(
@@ -108,7 +130,6 @@ proc analyzeStaticMethodCall(
       )
     if target.name == "release":
       validateStorageReleaseOwner(expr, locals)
-
   if target.kind != mkStatic:
     failAt(
       expr.span,

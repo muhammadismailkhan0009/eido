@@ -113,7 +113,7 @@ invariantClear(Int identity) -> Bool
 programExit()
 ```
 
-A runtime-backed class requires `objectAcquire`; classes with invariants additionally require the invariant lifecycle handlers. Other instrumentation is optional and receives meaning only from the selected policy.
+A runtime-backed class requires `objectAcquire`; classes with invariants additionally require the invariant lifecycle handlers. Explicit inline `Storage<Class>` allocations remain separate from policy-owned objects: no automatic region lifecycle callback is required, and GC/RC do not implicitly trace these unmanaged slots. Policies can implement their own management for external regions in Eido. Other instrumentation is optional and receives meaning only from the selected policy.
 
 ## Compiler boundary
 

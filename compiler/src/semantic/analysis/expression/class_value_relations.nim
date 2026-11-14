@@ -1,5 +1,13 @@
 ## Resolves explicit class identity relations used at persistent relationship boundaries.
 
+## Identifies a Storage<Class> read, which yields the existing address of
+## an inline class payload. Binding that identity still requires copy or ref.
+proc isStorageIdentityRead*(source: astExpressions.Expr): bool =
+  source.kind == astExpressions.ekMethodCall and
+    source.receiver.kind == astExpressions.ekIdentifier and
+    isConcreteStorageTypeName(source.receiver.name) and
+    source.methodName == "read"
+
 ## Reports whether a class graph can reach a Storage<T> ownership capability.
 proc classContainsStorage(
   className: string,
@@ -30,10 +38,10 @@ proc analyzeClassValueRelation*(
 
   if expr.relatedValue.kind in {
       astExpressions.ekCall,
-      astExpressions.ekMethodCall,
       astExpressions.ekConstruct,
       astExpressions.ekClassRelation
-  }:
+  } or (expr.relatedValue.kind == astExpressions.ekMethodCall and
+        not isStorageIdentityRead(expr.relatedValue)):
     failAt(
       expr.span,
       "copy/ref require an existing class object, not a fresh/call result"
@@ -108,7 +116,7 @@ proc analyzePersistentClassValue*(
     astExpressions.ekConstruct,
     astExpressions.ekCall,
     astExpressions.ekMethodCall
-  }:
+  } or isStorageIdentityRead(source):
     failAt(
       source.span,
       "existing class relationship replacement requires explicit copy or ref"
@@ -131,9 +139,10 @@ proc classValueProvenance*(
       cvpExisting
 
   of astExpressions.ekConstruct,
-      astExpressions.ekCall,
-      astExpressions.ekMethodCall:
+      astExpressions.ekCall:
     cvpDetached
+  of astExpressions.ekMethodCall:
+    if isStorageIdentityRead(source): cvpExisting else: cvpDetached
   of astExpressions.ekIdentifier:
     if not locals.contains(source.name):
       cvpExisting

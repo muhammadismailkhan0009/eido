@@ -140,6 +140,23 @@ proc renderConstructorProc(classDecl: hirDeclarations.HirClass): string =
     result.add "  discard\n"
   result.add "\n"
 
+## Initializes one concrete class at a caller-owned address; allocation remains
+## entirely in Storage rather than the normal memory-policy constructor.
+proc renderConstructorAtProc(classDecl: hirDeclarations.HirClass): string =
+  let owner = classDecl.sourceName
+  result.add "proc " & classConstructAtName(owner) & "(destination: " &
+    className(owner)
+  for field in classDecl.fields:
+    result.add ", arg_" & fieldName(field.sourceName) & ": " &
+      renderType(field.typ)
+  result.add ") =\n"
+  for field in classDecl.fields:
+    result.add "  " & classFieldSetName(owner, field.sourceName) &
+      "(destination, arg_" & fieldName(field.sourceName) & ")\n"
+  if classDecl.fields.len == 0:
+    result.add "  discard\n"
+  result.add "\n"
+
 ## Renders all class runtime support from generic memory metadata.
 proc renderClassRuntimeSupport*(
   classes: seq[hirDeclarations.HirClass],
@@ -157,3 +174,5 @@ proc renderClassRuntimeSupport*(
     result.add renderFieldAccessors(classDecl, metadata, runtimeBindings)
     result.add renderInvariantDepthSupport(classDecl, metadata, runtimeBindings)
     result.add renderConstructorProc(classDecl)
+    if metadata.hasObjectLayout(classDecl.sourceName):
+      result.add renderConstructorAtProc(classDecl)

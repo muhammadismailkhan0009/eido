@@ -4,6 +4,7 @@ sources:
   - memory_value_registry.eido
   - memory_type_registry.eido
   - managed_heap_allocator.eido
+  - identity_index.eido
   - managed_gc_runtime.eido
   - memory_runtime.eido
 

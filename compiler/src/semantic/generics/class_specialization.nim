@@ -95,10 +95,25 @@ proc specializeTypeRef(
     if source.arguments.len != 1:
       failAt(source.span, "Storage expects exactly one type argument")
     let elementType = specializeTypeRef(context, source.arguments[0], bindings)
-    if not isBuiltInType(elementType.name):
+    # Concrete generic class applications are queued earlier during recursive
+    # type specialization; interface applications and Storage descriptors are
+    # not identity-bearing class element representations.
+    var nominalClass = elementType.name in context.templates
+    if not nominalClass:
+      for request in context.queue:
+        if request.concreteName == elementType.name and
+            request.templateName in context.templates:
+          nominalClass = true
+          break
+    if isConcreteStorageTypeName(elementType.name):
+      failAt(source.arguments[0].span, "nested Storage capabilities are not supported as elements")
+    if elementType.isOptional and not isBuiltInType(elementType.name) and nominalClass:
+      failAt(source.arguments[0].span,
+        "optional inline class Storage needs an explicit element-presence model; use Storage<Class>")
+    if not isBuiltInType(elementType.name) and not nominalClass:
       failAt(
         source.arguments[0].span,
-        "Storage currently supports primitive and String element types; got '" &
+        "Storage element must be a primitive, String, or nominal class; got '" &
           elementType.name & "'"
       )
 

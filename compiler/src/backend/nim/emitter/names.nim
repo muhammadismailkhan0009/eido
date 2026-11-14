@@ -147,6 +147,14 @@ proc classAllocateName*(sourceName: string): string =
 proc classConstructorName*(sourceName: string): string =
   "eido_construct_" & nominalName(sourceName)
 
+## Initializes a class payload at an existing Storage-owned address.
+proc classConstructAtName*(sourceName: string): string =
+  "eido_construct_at_" & nominalName(sourceName)
+
+## Deep-copies a class graph into an existing Storage-owned root payload.
+proc classCopyIntoName*(sourceName: string): string =
+  "eido_copy_into_" & nominalName(sourceName)
+
 ## Builds the generated generic memory-metadata type id constant for one class.
 proc classMemoryTypeIdName*(sourceName: string): string =
   className(sourceName) & "_memory_type_id"
