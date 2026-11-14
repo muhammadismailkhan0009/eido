@@ -54,7 +54,7 @@ suite "Eido LSP integration":
       currentSourcePath().parentDir.parentDir.parentDir
     let phaseSource =
       projectRoot / "compiler" / "compile_time" / "phases" /
-        "memory_metadata" / "StorageInfo.eido"
+        "memory_metadata" / "MemoryMetadataBuilder.eido"
 
     var documents = initDocumentStore(projectRoot)
     check documents.findProjectManifest(phaseSource) ==
@@ -67,7 +67,7 @@ suite "Eido LSP integration":
       currentSourcePath().parentDir.parentDir.parentDir
     let phaseSource =
       projectRoot / "compiler" / "compile_time" / "phases" /
-        "memory_metadata" / "StorageInfo.eido"
+        "memory_metadata" / "MemoryMetadataBuilder.eido"
     let source = readFile(phaseSource)
     let uri = pathToFileUri(phaseSource)
 
