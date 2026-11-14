@@ -35,7 +35,36 @@ class Store implements Readable, Writable {
 }
 ```
 
-An interface may extend one interface in v0:
+An interface may declare **any number of type parameters** and classes may
+implement matching applications:
+
+```eido
+interface Pair<Left, Right> {
+    function first() returns Left;
+    function second() returns Right;
+}
+
+class PairBox<A, B> implements Pair<A, B> {
+    A firstValue;
+    B secondValue;
+
+    function first() returns A { return self.firstValue; }
+    function second() returns B { return self.secondValue; }
+}
+```
+
+Used applications such as `Pair<Int, Bool>` are statically specialized into
+ordinary concrete interface declarations before semantic analysis and runtime
+dispatch. Every type argument is explicit; raw generic uses and wrong-arity
+applications are rejected. Different applications are distinct nominal
+interface types, and each application is materialized only once.
+
+Method `require`/`ensure` clauses are specialized alongside parameter and
+result types, preserving their normal runtime enforcement. A class may
+implement a specialized interface through its ordinary instance methods;
+there is no special requirement for static classes.
+
+An interface may extend one non-generic interface in the current slice:
 
 ```eido
 interface Child extends Parent {
@@ -43,7 +72,7 @@ interface Child extends Parent {
 }
 ```
 
-Multiple interface extension and generic interfaces are deferred.
+Generic interface inheritance and multiple-interface extension are deferred.
 
 
 ## Behavioral contracts

@@ -225,7 +225,8 @@ proc inheritedInterfaceContracts*(
   symbols: NominalSymbols
 ): seq[InterfaceMethodSymbol] =
   var seen = initHashSet[string]()
-  for interfaceName in sourceClass.implements:
+  for interfaceRef in sourceClass.implements:
+    let interfaceName = interfaceRef.name
     if not symbols.containsInterfaceMethod(interfaceName, methodName):
       continue
     for contract in symbols.interfaceMethodContractChain(interfaceName, methodName):
@@ -242,7 +243,8 @@ proc validateClassInterfaces*(
   var seenInterfaces = initHashSet[string]()
   var effectiveDeclarations = initTable[string, InterfaceMethodSymbol]()
 
-  for interfaceName in sourceClass.implements:
+  for interfaceRef in sourceClass.implements:
+    let interfaceName = interfaceRef.name
     if interfaceName in seenInterfaces:
       failAt(
         sourceClass.span,

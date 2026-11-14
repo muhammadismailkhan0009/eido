@@ -52,8 +52,68 @@ suite "Interface parsing":
     """))
 
     check program.classes.len == 1
-    check program.classes[0].implements == @["Readable", "Writable"]
+    check program.classes[0].implements.len == 2
+    check program.classes[0].implements[0].name == "Readable"
+    check program.classes[0].implements[0].arguments.len == 0
+    check program.classes[0].implements[1].name == "Writable"
 
+  test "parses generic interfaces and generic implementations":
+    let program = parseProgram(lexAll("""
+      interface Value<T> {
+        function get() returns T;
+      }
+
+      class IntValue implements Value<Int> {
+        Int stored;
+        function get() returns Int { return self.stored; }
+      }
+
+      function main() {}
+    """))
+
+    check program.interfaces[0].typeParameters.len == 1
+    check program.interfaces[0].typeParameters[0].name == "T"
+    check program.interfaces[0].methods[0].result.typeRef.name == "T"
+    check program.classes[0].implements[0].name == "Value"
+    check program.classes[0].implements[0].arguments.len == 1
+    check program.classes[0].implements[0].arguments[0].name == "Int"
+
+
+  test "parses interfaces with three type parameters and multi-argument implementations":
+    let program = parseProgram(lexAll("""
+      interface Convert<Input, Context, Output> {
+        function convert(Input value, Context context) returns Output;
+      }
+      class Converter implements Convert<Int, Bool, String> {
+        Int marker;
+        function convert(Int value, Bool context) returns String {
+          return "converted";
+        }
+      }
+      function main() {}
+    """))
+
+    let contract = program.interfaces[0]
+    check contract.typeParameters.len == 3
+    check contract.typeParameters[0].name == "Input"
+    check contract.typeParameters[1].name == "Context"
+    check contract.typeParameters[2].name == "Output"
+    check contract.methods[0].parameters[0].typeRef.name == "Input"
+    check contract.methods[0].parameters[1].typeRef.name == "Context"
+    check contract.methods[0].result.typeRef.name == "Output"
+    let implemented = program.classes[0].implements[0]
+    check implemented.name == "Convert"
+    check implemented.arguments.len == 3
+    check implemented.arguments[0].name == "Int"
+    check implemented.arguments[1].name == "Bool"
+    check implemented.arguments[2].name == "String"
+
+  test "rejects empty generic interface parameter list":
+    expect ValueError:
+      discard parseProgram(lexAll("""
+        interface Empty<> { function get() returns Int; }
+        function main() {}
+      """))
 
   test "parses module-qualified declared types":
     let program = parseProgram(lexAll("""

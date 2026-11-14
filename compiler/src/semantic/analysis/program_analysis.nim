@@ -131,11 +131,15 @@ proc analyzeProgram*(
         "duplicate nominal type '" & sourceClass.name & "'"
       )
 
+    var implementedInterfaces: seq[string]
+    for implemented in sourceClass.implements:
+      implementedInterfaces.add implemented.name
+
     symbols.addClass ClassSymbol(
       name: sourceClass.name,
       moduleName: sourceClass.moduleName,
       typ: classType(sourceClass.name),
-      implements: sourceClass.implements,
+      implements: implementedInterfaces,
       hasInvariant: sourceClass.invariants.len > 0,
       fields: @[],
       classFields: @[],

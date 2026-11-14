@@ -15,7 +15,7 @@ type
 
   SpecializationContext = object
     templates: Table[string, ClassDecl]
-    interfaceNames: HashSet[string]
+    interfaceTemplates: Table[string, InterfaceDecl]
     queuedNames: HashSet[string]
     queue: seq[SpecializationRequest]
 
@@ -143,10 +143,26 @@ proc specializeTypeRef(
       )
     return flatTypeRef(source, name, source.isOptional)
 
-  if source.name in context.interfaceNames:
-    if source.arguments.len != 0:
-      failAt(source.span, "interfaces are non-generic in v0")
-    return flatTypeRef(source, source.name, source.isOptional)
+  if source.name in context.interfaceTemplates:
+    let interfaceTemplate = context.interfaceTemplates[source.name]
+    if source.arguments.len != interfaceTemplate.typeParameters.len:
+      failAt(
+        source.span,
+        "interface '" & source.name & "' expects " &
+          $interfaceTemplate.typeParameters.len & " type arguments but got " &
+          $source.arguments.len
+      )
+
+    if interfaceTemplate.typeParameters.len == 0:
+      return flatTypeRef(source, source.name, source.isOptional)
+
+    var arguments: seq[TypeRef]
+    for argument in source.arguments:
+      arguments.add specializeTypeRef(context, argument, bindings)
+
+    let name = concreteName(source.name, arguments)
+    context.queueInstantiation(source.name, name, arguments)
+    return flatTypeRef(source, name, source.isOptional)
 
   if source.name notin context.templates:
     if source.arguments.len != 0:
@@ -469,14 +485,44 @@ proc specializeClass(
       )
     methods.add specializeFunction(context, methodDecl, bindings)
 
+  var implementedInterfaces: seq[TypeRef]
+  for implemented in source.implements:
+    implementedInterfaces.add specializeTypeRef(
+      context, implemented, bindings
+    )
+
   ClassDecl(
     span: source.span,
     name: name,
     moduleName: source.moduleName,
     typeParameters: @[],
-    implements: source.implements,
+    implements: implementedInterfaces,
     fields: fields,
     invariants: invariants,
+    methods: methods
+  )
+
+## Materializes one concrete interface AST from a generic interface template.
+proc specializeInterface(
+  context: var SpecializationContext,
+  source: InterfaceDecl,
+  arguments: seq[TypeRef],
+  name: string
+): InterfaceDecl =
+  var bindings = initTable[string, TypeRef]()
+  for index, parameter in source.typeParameters:
+    bindings[parameter.name] = arguments[index]
+
+  var methods: seq[FunctionDecl]
+  for methodDecl in source.methods:
+    methods.add specializeFunction(context, methodDecl, bindings)
+
+  InterfaceDecl(
+    span: source.span,
+    name: name,
+    moduleName: source.moduleName,
+    typeParameters: @[],
+    extends: source.extends,
     methods: methods
   )
 
@@ -505,9 +551,17 @@ proc validateTypeRef(
     validateTypeRef(context, source.arguments[0], typeParameters)
     return
 
-  if source.name in context.interfaceNames:
-    if source.arguments.len != 0:
-      failAt(source.span, "interfaces are non-generic in v0")
+  if source.name in context.interfaceTemplates:
+    let interfaceTemplate = context.interfaceTemplates[source.name]
+    if source.arguments.len != interfaceTemplate.typeParameters.len:
+      failAt(
+        source.span,
+        "interface '" & source.name & "' expects " &
+          $interfaceTemplate.typeParameters.len & " type arguments but got " &
+          $source.arguments.len
+      )
+    for argument in source.arguments:
+      validateTypeRef(context, argument, typeParameters)
     return
 
   if source.name notin context.templates:
@@ -653,6 +707,9 @@ proc validateTemplateShape(
       )
     parameterNames.incl parameter.name
 
+  for implemented in source.implements:
+    validateTypeRef(context, implemented, parameterNames)
+
   var fieldNames = initHashSet[string]()
   for field in source.fields:
     if field.name in fieldNames:
@@ -687,20 +744,56 @@ proc validateTemplateShape(
 
     validateFunctionTypes(context, methodDecl, parameterNames)
 
-## Lowers generic source templates/applications into a program containing concrete classes only.
-## Example: one Box<Int> use emits one specialized Box<Int> AST class before normal semantics.
+## Validates one generic interface template independently of instantiation.
+proc validateInterfaceTemplateShape(
+  context: SpecializationContext,
+  source: InterfaceDecl
+) =
+  # Parent interface names currently carry no type arguments. Do not let a
+  # raw generic parent escape validation simply because the child is unused.
+  for parent in source.extends:
+    if parent in context.interfaceTemplates and
+        context.interfaceTemplates[parent].typeParameters.len > 0:
+      failAt(
+        source.span,
+        "extending a generic interface requires generic interface inheritance, " &
+        "which is not supported yet: '" & parent & "'"
+      )
+
+  var parameterNames = initHashSet[string]()
+  for parameter in source.typeParameters:
+    if parameter.name in parameterNames:
+      failAt(
+        parameter.span,
+        "duplicate generic type parameter '" & parameter.name & "'"
+      )
+    parameterNames.incl parameter.name
+
+  var methodNames = initHashSet[string]()
+  for methodDecl in source.methods:
+    if methodDecl.name in methodNames:
+      failAt(
+        methodDecl.span,
+        "duplicate method '" & methodDecl.name &
+          "' in interface '" & source.name & "'"
+      )
+    methodNames.incl methodDecl.name
+    validateFunctionTypes(context, methodDecl, parameterNames)
+
+## Lowers generic source templates/applications into concrete nominal declarations.
+## Example: Box<Int> and Readable<Int> become ordinary specialized nominals before normal semantics.
 proc specializeGenericClasses*(source: Program): Program =
   var context = SpecializationContext(
     templates: initTable[string, ClassDecl](),
-    interfaceNames: initHashSet[string](),
+    interfaceTemplates: initTable[string, InterfaceDecl](),
     queuedNames: initHashSet[string](),
     queue: @[]
   )
 
   for interfaceDecl in source.interfaces:
-    if interfaceDecl.name in context.interfaceNames:
+    if interfaceDecl.name in context.interfaceTemplates:
       failAt(interfaceDecl.span, "duplicate interface '" & interfaceDecl.name & "'")
-    context.interfaceNames.incl interfaceDecl.name
+    context.interfaceTemplates[interfaceDecl.name] = interfaceDecl
 
   for classDecl in source.classes:
     if isStorageTypeConstructor(classDecl.name) and
@@ -711,34 +804,27 @@ proc specializeGenericClasses*(source: Program): Program =
       )
     if classDecl.name in context.templates:
       failAt(classDecl.span, "duplicate class '" & classDecl.name & "'")
-    if classDecl.name in context.interfaceNames:
+    if classDecl.name in context.interfaceTemplates:
       failAt(classDecl.span, "type name '" & classDecl.name & "' is already used by an interface")
     context.templates[classDecl.name] = classDecl
+
+  for interfaceDecl in source.interfaces:
+    validateInterfaceTemplateShape(context, interfaceDecl)
 
   for classDecl in source.classes:
     validateTemplateShape(context, classDecl)
 
   var noTypeParameters = initHashSet[string]()
-  for interfaceDecl in source.interfaces:
-    for methodDecl in interfaceDecl.methods:
-      validateFunctionTypes(context, methodDecl, noTypeParameters)
-
   for fn in source.functions:
     validateFunctionTypes(context, fn, noTypeParameters)
 
   var emptyBindings = initTable[string, TypeRef]()
 
   for interfaceDecl in source.interfaces:
-    var methods: seq[FunctionDecl]
-    for methodDecl in interfaceDecl.methods:
-      methods.add specializeFunction(context, methodDecl, emptyBindings)
-    result.interfaces.add InterfaceDecl(
-      span: interfaceDecl.span,
-      name: interfaceDecl.name,
-      moduleName: interfaceDecl.moduleName,
-      extends: interfaceDecl.extends,
-      methods: methods
-    )
+    if interfaceDecl.typeParameters.len == 0:
+      result.interfaces.add specializeInterface(
+        context, interfaceDecl, @[], interfaceDecl.name
+      )
 
   for classDecl in source.classes:
     if classDecl.typeParameters.len == 0:
@@ -767,6 +853,13 @@ proc specializeGenericClasses*(source: Program): Program =
         request.arguments[0],
         moduleName
       )
+    elif request.templateName in context.interfaceTemplates:
+      result.interfaces.add specializeInterface(
+        context,
+        context.interfaceTemplates[request.templateName],
+        request.arguments,
+        request.concreteName
+      )
     elif request.templateName in context.templates:
       let classTemplate = context.templates[request.templateName]
       var concrete = specializeClass(
@@ -790,6 +883,6 @@ proc specializeGenericClasses*(source: Program): Program =
     else:
       failAt(
         request.arguments[0].span,
-        "unknown generic class template '" & request.templateName & "'"
+        "unknown generic nominal template '" & request.templateName & "'"
       )
     inc index

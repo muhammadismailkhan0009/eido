@@ -70,6 +70,10 @@ proc qualifyModuleProgram(
   var noTypeParameters = initHashSet[string]()
 
   for sourceInterface in mitems(source.interfaces):
+    var typeParameters = initHashSet[string]()
+    for parameter in sourceInterface.typeParameters:
+      typeParameters.incl parameter.name
+
     for index in 0 ..< sourceInterface.extends.len:
       sourceInterface.extends[index] = resolveVisibleNominal(
         sourceInterface.extends[index],
@@ -81,7 +85,7 @@ proc qualifyModuleProgram(
       )
     for methodDecl in mitems(sourceInterface.methods):
       qualifyCallable(
-        methodDecl, sourceInterface.moduleName, noTypeParameters, true,
+        methodDecl, sourceInterface.moduleName, typeParameters, true,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
         rootModule
@@ -96,14 +100,12 @@ proc qualifyModuleProgram(
     for parameter in sourceClass.typeParameters:
       typeParameters.incl parameter.name
 
-    for index in 0 ..< sourceClass.implements.len:
-      sourceClass.implements[index] = resolveVisibleNominal(
-        sourceClass.implements[index],
-        sourceClass.moduleName,
+    for implemented in mitems(sourceClass.implements):
+      qualifyTypeRef(
+        implemented, sourceClass.moduleName, typeParameters,
         modules, classes, interfaces,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
-        rootModule,
-        sourceClass.span
+        rootModule
       )
 
     var classFieldLocals = initHashSet[string]()

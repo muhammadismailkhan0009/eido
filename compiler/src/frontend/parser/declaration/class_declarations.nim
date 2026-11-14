@@ -73,15 +73,14 @@ proc parseClass*(parser: var Parser): ClassDecl =
       )
       break
 
-  var implementedInterfaces: seq[string]
+  var implementedInterfaces: seq[TypeRef]
   if parser.check(tkImplements):
     discard parser.advance()
     while true:
-      let interfaceName = parser.consume(
-        tkIdentifier,
-        "expected interface name after 'implements'"
-      )
-      implementedInterfaces.add interfaceName.lexeme
+      let interfaceType = parser.parseDeclaredTypeRef()
+      if interfaceType.isOptional:
+        failAt(interfaceType.span, "implemented interface type cannot be optional")
+      implementedInterfaces.add interfaceType
 
       if not parser.check(tkComma):
         break

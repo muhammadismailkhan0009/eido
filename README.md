@@ -154,7 +154,7 @@ eido --version
 - Explicit `self` receiver semantics.
 - Static/type-associated methods inferred when `self` is not required; no `static` keyword.
 - Class-owned mutable state through qualified declarations such as `Int Counter.count = 0`; the process-lifetime slot itself is inline backend representation and performs no dynamic allocation. If the value refers to dynamic backing (Storage, String, class/interface identity), that backing remains owned by the corresponding Eido runtime/policy. Identity-bearing class/interface slots report their value through the same generic lifecycle boundary used by ordinary bindings.
-- Generic classes with compiler specialization.
+- Generic classes and generic interfaces with compiler specialization; generic implementations such as `class Box<T> implements Value<T>` specialize to ordinary concrete runtime contracts.
 - Unified `Storage<T>` memory substrate with an Eido-defined typed layer: the compiler/backend provides raw `Storage<Byte>` plus target representation facts and private typed load/store bridges, while `stdlib/storage/storage.eido` implements public typed allocation, views, slicing, capacity/address access, read/write, and release orchestration over that raw capability. `Storage<Byte>.allocateRaw` remains the single physical owned-allocation path and `size`/`alignment` expose target layout through Storage itself. Target memory-management policy and mutable bookkeeping live above this substrate in Eido. `Storage<Class>` stores inline class payloads at their existing layout/stride, not pointers to separately allocated class objects; explicit `copy` can initialize a detached inline payload and `ref` aliases an existing object without allocating. GC/RC lifetimes remain policy-owned, not Storage callbacks.
 - Built-in immutable `String` now follows the same ownership boundary: target values are opaque machine-word handles, while UTF-8 bytes are allocated and reclaimed by hidden Eido language-runtime code over `Storage<Byte>`. Literals, concatenation, and equality do not use Nim-managed String backing; native/platform text is copied across the ABI boundary. Pure String computation is covered under Nim `--mm:none`.
 - Explicit class graph `copy` / `ref` semantics and detached class-valued returns. Generated copy traversal preserves sharing/cycles while hidden Eido `CopyRuntime` owns the source→target memo in a growable raw Storage block and releases that scratch backing after each successful copy.
@@ -165,6 +165,7 @@ eido --version
 - Nominal interfaces and explicit `implements`.
 - Single-interface `extends` in v0.
 - Runtime interface dispatch and class-to-interface conversion.
+- Generic interface applications such as `Array<Int>` and `Value<String>`; generic interface inheritance remains deferred.
 - Multiple implemented interfaces when their required method identities are non-conflicting.
 - Behavioral interface contracts that propagate into implementations.
 - Child-interface method redeclarations may add contracts while preserving the inherited signature and parent obligations.

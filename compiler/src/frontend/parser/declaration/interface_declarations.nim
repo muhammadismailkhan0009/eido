@@ -62,10 +62,36 @@ proc parseInterfaceMethod(parser: var Parser): FunctionDecl =
     body: @[]
   )
 
-## Parses one non-generic interface with optional single-interface extension.
+## Parses one interface with optional type parameters and single-interface extension.
 proc parseInterface*(parser: var Parser): InterfaceDecl =
   let start = parser.consume(tkInterface, "expected 'interface'")
   let name = parser.consume(tkIdentifier, "expected interface name")
+
+  var typeParameters: seq[astTypeRefs.TypeParameterDecl]
+  if parser.check(tkLess):
+    discard parser.advance()
+    if parser.check(tkGreater):
+      failAt(parser.peek.span, "generic interface type parameters cannot be empty")
+
+    while true:
+      let parameter = parser.consume(
+        tkIdentifier,
+        "expected generic type parameter name"
+      )
+      typeParameters.add astTypeRefs.TypeParameterDecl(
+        span: parameter.span,
+        name: parameter.lexeme
+      )
+
+      if parser.check(tkComma):
+        discard parser.advance()
+        continue
+
+      discard parser.consume(
+        tkGreater,
+        "expected '>' after generic type parameters"
+      )
+      break
 
   var parents: seq[string]
   if parser.check(tkExtends):
@@ -98,6 +124,7 @@ proc parseInterface*(parser: var Parser): InterfaceDecl =
   InterfaceDecl(
     span: coverSpan(start.span, closeBrace.span),
     name: name.lexeme,
+    typeParameters: typeParameters,
     extends: parents,
     methods: methods
   )

@@ -47,6 +47,7 @@ type
     span*: SourceSpan
     name*: string
     moduleName*: string
+    typeParameters*: seq[TypeParameterDecl]
     extends*: seq[string]
     methods*: seq[FunctionDecl]
 
@@ -55,7 +56,7 @@ type
     name*: string
     moduleName*: string
     typeParameters*: seq[TypeParameterDecl]
-    implements*: seq[string]
+    implements*: seq[TypeRef]
     fields*: seq[FieldDecl]
     invariants*: seq[Expr]
     methods*: seq[FunctionDecl]

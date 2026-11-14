@@ -193,11 +193,15 @@ proc resolveModuleArchitectureWithInfo*(
 
   var noTypeParameters = initHashSet[string]()
   for sourceInterface in source.interfaces:
+    var typeParameters = initHashSet[string]()
+    for typeParameter in sourceInterface.typeParameters:
+      typeParameters.incl typeParameter.name
+
     for methodDecl in sourceInterface.methods:
       validateCallable(
         methodDecl,
         sourceInterface.moduleName,
-        noTypeParameters,
+        typeParameters,
         classes,
         interfaces,
         functions,
@@ -212,6 +216,19 @@ proc resolveModuleArchitectureWithInfo*(
     var typeParameters = initHashSet[string]()
     for typeParameter in sourceClass.typeParameters:
       typeParameters.incl typeParameter.name
+
+    for implemented in sourceClass.implements:
+      validateTypeRef(
+        implemented,
+        sourceClass.moduleName,
+        typeParameters,
+        classes,
+        interfaces,
+        modules,
+        publicSurfaces,
+        adoptedSurfaces,
+        providedSurfaces
+      )
 
     for field in sourceClass.fields:
       validateTypeRef(

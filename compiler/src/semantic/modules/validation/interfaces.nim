@@ -139,7 +139,8 @@ proc validateInterfaceOwnership(
         )
 
   for _, sourceClass in classes:
-    for implemented in sourceClass.implements:
+    for implementedRef in sourceClass.implements:
+      let implemented = implementedRef.name
       if implemented notin interfaces:
         continue
 
@@ -193,10 +194,10 @@ proc validateProviders(
         ):
           continue
 
-        for implemented in sourceClass.implements:
+        for implementedRef in sourceClass.implements:
           if interfaceExtends(
             interfaces,
-            implemented,
+            implementedRef.name,
             contractKey
           ):
             found = true

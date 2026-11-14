@@ -140,12 +140,9 @@ proc addDeclarationClosure(
     let sourceClass = classes[key]
 
     for implemented in sourceClass.implements:
-      let resolved = resolveSurfaceReference(
-        modules, classes, interfaces, publicSurfaces,
-        rootModule, sourceClass.moduleName, implemented, sourceClass.span
-      )
-      addDeclarationClosure(
-        resolved, modules, classes, interfaces, publicSurfaces, rootModule, seen
+      addTypeRefClosure(
+        implemented, sourceClass.moduleName,
+        modules, classes, interfaces, publicSurfaces, rootModule, seen
       )
 
     for field in sourceClass.fields:

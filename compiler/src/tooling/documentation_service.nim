@@ -66,14 +66,21 @@ proc classSignature(source: ClassDecl): string =
 
   if source.implements.len > 0:
     result.add " implements "
-    for index, interfaceName in source.implements:
+    for index, interfaceRef in source.implements:
       if index > 0:
         result.add ", "
-      result.add localName(interfaceName)
+      result.add typeRefText(interfaceRef)
 
 ## Renders the declaration header of one documented interface.
 proc interfaceSignature(source: InterfaceDecl): string =
   result = "interface " & localName(source.name)
+  if source.typeParameters.len > 0:
+    result.add "<"
+    for index, parameter in source.typeParameters:
+      if index > 0:
+        result.add ", "
+      result.add parameter.name
+    result.add ">"
   if source.extends.len > 0:
     result.add " extends "
     for index, parentName in source.extends:

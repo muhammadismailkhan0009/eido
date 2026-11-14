@@ -41,11 +41,15 @@ proc analyzeClass*(
         typ: resolvedType
       )
 
+  var implementedInterfaces: seq[string]
+  for implemented in source.implements:
+    implementedInterfaces.add implemented.name
+
   hirDeclarations.HirClass(
     span: source.span,
     sourceName: source.name,
     typ: classes.getClass(source.name).typ,
-    implements: source.implements,
+    implements: implementedInterfaces,
     fields: fields,
     classFields: classFields,
     invariants: @[],

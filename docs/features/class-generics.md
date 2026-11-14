@@ -49,10 +49,34 @@ class Box<T> {
 var box = Box<Int>.create(42);
 ```
 
+## Generic interfaces
+
+Interfaces use the same explicit **N-parameter** application model:
+
+```eido
+interface Pair<Left, Right> {
+    function first() returns Left;
+    function second() returns Right;
+}
+
+class Box<A, B> implements Pair<A, B> {
+    A left;
+    B right;
+    function first() returns A { return self.left; }
+    function second() returns B { return self.right; }
+}
+```
+
+A used `Pair<Int, Bool>` application is materialized as one concrete interface
+contract, and `Box<Int, Bool>` is checked against that exact specialized
+signature. Every argument must be supplied; generic type inference, raw uses,
+and variance remain deferred. Runtime dispatch does not require an erased
+generic calling convention.
+
 ## Static specialization
 
-Generic classes are compile-time templates. Before ordinary semantic analysis,
-each used application becomes an ordinary concrete nominal class.
+Generic classes and interfaces are compile-time templates. Before ordinary semantic analysis,
+each used application becomes an ordinary concrete nominal declaration.
 
 Conceptually:
 
@@ -93,7 +117,7 @@ Not included yet:
 
 - generic top-level functions;
 - method-local generic parameter lists such as `function map<U>(...)`;
-- generic interfaces;
+- generic interface inheritance;
 - bounds/constraints;
 - variance or wildcards;
 - generic type inference or raw generic types;
