@@ -3,10 +3,6 @@
 // This phase describes program structure only. It does not select roots,
 // collectors, allocation policy, reference-count behavior, or safepoints.
 class MemoryMetadataBuilder {
-    function align(Int offset, Int alignment) returns Int {
-        return ((offset + alignment - 1) / alignment) * alignment;
-    }
-
     function describeType(Int type) {
         var offset = 0;
         var requiredAlignment = 1;
@@ -17,7 +13,7 @@ class MemoryMetadataBuilder {
             var fieldType = FieldInfo.typeOf(field);
             var fieldAlignment = StorageInfo.alignmentOf(fieldType);
 
-            set offset = MemoryMetadataBuilder.align(offset, fieldAlignment);
+            set offset = Layout.alignUp(offset, fieldAlignment);
             MemoryMetadata.field(type, field, offset);
 
             if (TypeInfo.isIdentity(fieldType)) {
@@ -31,9 +27,9 @@ class MemoryMetadataBuilder {
             set fieldIndex = fieldIndex + 1;
         }
 
-        MemoryMetadata.layout(
+        MemoryMetadata.recordLayout(
             type,
-            MemoryMetadataBuilder.align(offset, requiredAlignment),
+            Layout.alignUp(offset, requiredAlignment),
             requiredAlignment
         );
     }

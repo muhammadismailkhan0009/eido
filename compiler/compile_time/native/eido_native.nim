@@ -2,7 +2,7 @@
 ## This module is materialized only beside cached phase executables and is never
 ## part of the ordinary Eido native-support path.
 
-import std/[json, os, strformat]
+import std/[json, os, strformat, tables]
 
 var
   snapshotLoaded = false
@@ -118,6 +118,67 @@ proc eido_native_method_StorageInfo_sizeOf*(typeHandle: int64): int64 =
 proc eido_native_method_StorageInfo_alignmentOf*(typeHandle: int64): int64 =
   typeNode(typeHandle)["alignment"].getBiggestInt().int64
 
+# Build-machine-only layout builder context. The placement algorithm lives in
+# Layout.eido; this bridge provides semantic lookup and emits validated facts.
+var activeLayout = -1'i64
+var activeType = -1'i64
+var recordedLayoutFields = initTable[(int64, int64), int64]()
+
+proc eido_native_method_LayoutRuntime_begin*(layoutId: int64, ownerName: string) =
+  activeLayout = layoutId
+  activeType = -1
+  let types = snapshot()["types"]
+  for i in 0 ..< types.len:
+    if types[i]["name"].getStr() == ownerName:
+      activeType = int64(i)
+      break
+  if activeType < 0:
+    raise newException(ValueError, "unknown layout target: " & ownerName)
+
+proc eido_native_method_LayoutRuntime_currentType*(): int64 =
+  if activeType < 0:
+    raise newException(ValueError, "Layout.create outside a layout declaration")
+  activeType
+
+proc eido_native_method_LayoutRuntime_currentLayout*(): int64 =
+  if activeLayout < 0:
+    raise newException(ValueError, "Layout.create outside a layout declaration")
+  activeLayout
+
+proc eido_native_method_LayoutRuntime_findField*(ownerType: int64, name: string): int64 =
+  let fields = typeNode(ownerType)["fields"]
+  for handle in fields:
+    let index = handle.getBiggestInt().int64
+    if fieldNode(index)["name"].getStr() == name:
+      return index
+  raise newException(ValueError, "layout field '" & name & "' does not belong to target class")
+
+proc eido_native_method_LayoutRuntime_checkAlignment*(alignment: int64) =
+  if alignment <= 0 or (alignment and (alignment - 1)) != 0:
+    raise newException(ValueError, "layout alignment must be a positive power of two")
+
+proc eido_native_method_LayoutRuntime_recordField*(layoutId, field, offset: int64) =
+  if layoutId != activeLayout or fieldNode(field)["owner"].getBiggestInt() != activeType:
+    raise newException(ValueError, "layout field belongs to a different declaration")
+  let key = (layoutId, field)
+  if key in recordedLayoutFields:
+    raise newException(ValueError, "layout field placed twice: " & fieldNode(field)["name"].getStr())
+  recordedLayoutFields[key] = offset
+  echo &"EIDO_CT|5|{layoutId}|{field}|{offset}"
+
+proc eido_native_method_LayoutRuntime_offsetOf*(layoutId, field: int64): int64 =
+  let key = (layoutId, field)
+  if key notin recordedLayoutFields:
+    raise newException(ValueError, "layout field has not been placed")
+  recordedLayoutFields[key]
+
+proc eido_native_method_LayoutRuntime_complete*(layoutId, size, alignment: int64) =
+  if layoutId != activeLayout:
+    raise newException(ValueError, "layout context mismatch")
+  echo &"EIDO_CT|6|{layoutId}|{size}|{alignment}"
+  activeLayout = -1
+  activeType = -1
+
 proc emitRecord(kind, first, second, third: int64) =
   echo &"EIDO_CT|{kind}|{first}|{second}|{third}"
 
@@ -134,7 +195,7 @@ proc eido_native_method_MemoryMetadata_identityField*(
 ) =
   emitRecord(2, ownerType, fieldHandle, 0)
 
-proc eido_native_method_MemoryMetadata_layout*(
+proc eido_native_method_MemoryMetadata_recordLayout*(
   typeHandle,
   size,
   alignment: int64

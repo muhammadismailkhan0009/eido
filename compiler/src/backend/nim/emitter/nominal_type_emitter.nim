@@ -93,18 +93,28 @@ proc renderNominalTypes*(
           result.add "    " & fieldName(field.sourceName) &
             ": " & renderType(field.typ) & "\n"
 
-  # Runtime-backed class payloads hold fields separately from their identity handles.
+  # Eido owns class placement. Nim only carries opaque, sized/aligned bytes
+  # for Storage<Class> slot stride and bulk copying; no Nim field can influence
+  # offsets of actual class data.
   for classDecl in classes:
     if not plan.hasObjectLayout(classDecl.sourceName):
       continue
 
+    var found = false
+    var size = int64(0)
+    var alignment = int64(1)
+    for layout in plan.types:
+      if layout.className == classDecl.sourceName:
+        found = true
+        size = layout.size
+        alignment = layout.alignment
+        break
+    if not found:
+      raise newException(ValueError, "missing physical layout for " & classDecl.sourceName)
+
     result.add "  " & classPayloadName(classDecl.sourceName) & " = object\n"
-    if classDecl.fields.len == 0:
-      result.add "    discard\n"
-    else:
-      for field in classDecl.fields:
-        result.add "    " & fieldName(field.sourceName) &
-          ": " & renderType(field.typ) & "\n"
+    result.add "    bytes {.align: " & $alignment & ".}: array[" &
+      $max(1'i64, size) & ", byte]\n"
 
   # Runtime-backed interface boxes carry one receiver identity plus method pointers.
   # The receiver occupies the first payload field and is described through generic metadata.

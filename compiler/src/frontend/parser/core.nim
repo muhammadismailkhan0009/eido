@@ -35,6 +35,14 @@ proc advance*(parser: var Parser): Token =
     inc parser.current
   parser.previous
 
+## Renders source-equivalent tokens for a compile-time declaration body.
+proc position*(parser: Parser): int =
+  parser.current
+
+proc tokenSource*(parser: Parser, first, pastLast: int): string =
+  for i in first ..< pastLast:
+    result.add parser.tokens[i].lexeme & " "
+
 ## Requires a specific next token and consumes it, otherwise reports a syntax error. Example: function declarations require `(` after the function name.
 proc consume*(
   parser: var Parser,

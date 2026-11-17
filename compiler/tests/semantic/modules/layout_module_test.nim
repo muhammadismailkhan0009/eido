@@ -39,3 +39,8 @@ suite "Layout declarations in modules":
       check checked.program.layouts.len == 1
       check checked.program.layouts[0].sourceName == "app.Compact"
       check checked.program.layouts[0].targetClass == "app.Family"
+      # Module-qualified names also evaluate inside the actual compile-time phase.
+      let generated = compileProject(
+        loadModuleProject(root / "module.yaml", ptExecutable)
+      )
+      check generated.len > 0

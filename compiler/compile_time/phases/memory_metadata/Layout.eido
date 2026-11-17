@@ -1,0 +1,70 @@
+// Eido-defined compile-time class layout builder.
+// The compiler host supplies semantic type/field handles; Eido calculates offsets.
+class Layout {
+    Int ownerType;
+    Int layoutId;
+    Int cursor;
+    Int requiredAlignment;
+
+    function alignUp(Int value, Int alignment) returns Int {
+        return ((value + alignment - 1) / alignment) * alignment;
+    }
+
+    function create() returns Layout {
+        return Layout {
+            ownerType = LayoutRuntime.currentType();
+            layoutId = LayoutRuntime.currentLayout();
+            cursor = 0;
+            requiredAlignment = 1;
+        };
+    }
+
+    function field(String name) {
+        var field = LayoutRuntime.findField(self.ownerType, name);
+        var fieldType = FieldInfo.typeOf(field);
+        var alignment = StorageInfo.alignmentOf(fieldType);
+        LayoutRuntime.checkAlignment(alignment);
+
+        set self.cursor = Layout.alignUp(self.cursor, alignment);
+        LayoutRuntime.recordField(self.layoutId, field, self.cursor);
+        set self.cursor = self.cursor + StorageInfo.sizeOf(fieldType);
+        if (alignment > self.requiredAlignment) {
+            set self.requiredAlignment = alignment;
+        }
+    }
+
+    function fieldAt(String name, Int offset) {
+        var field = LayoutRuntime.findField(self.ownerType, name);
+        var fieldType = FieldInfo.typeOf(field);
+        var alignment = StorageInfo.alignmentOf(fieldType);
+        LayoutRuntime.checkAlignment(alignment);
+        LayoutRuntime.recordField(self.layoutId, field, offset);
+        var endOffset = offset + StorageInfo.sizeOf(fieldType);
+        if (endOffset > self.cursor) {
+            set self.cursor = endOffset;
+        }
+        if (alignment > self.requiredAlignment) {
+            set self.requiredAlignment = alignment;
+        }
+    }
+
+    function align(Int bytes) {
+        LayoutRuntime.checkAlignment(bytes);
+        if (bytes > self.requiredAlignment) {
+            set self.requiredAlignment = bytes;
+        }
+    }
+
+    function size() returns Int {
+        return Layout.alignUp(self.cursor, self.requiredAlignment);
+    }
+
+    function offsetOf(String name) returns Int {
+        var field = LayoutRuntime.findField(self.ownerType, name);
+        return LayoutRuntime.offsetOf(self.layoutId, field);
+    }
+
+    function submit() {
+        LayoutRuntime.complete(self.layoutId, self.size(), self.requiredAlignment);
+    }
+}

@@ -207,4 +207,10 @@ proc runStandardCompileTimePhases*(
   validateMemoryPolicyAvailability(program, policy)
   if policy.isSelected and (program.hasIdentityClasses or program.hasObjectConstruction):
     return runMemoryMetadataPhase(program)
+
+  # Layout definitions are build-time declarations, even if this program
+  # doesn't need an object-memory runtime. Validate them without causing
+  # backend object acquisition or selecting a physical layout.
+  if program.layouts.len > 0:
+    discard runMemoryMetadataPhase(program)
   CompileTimeMemoryMetadata()

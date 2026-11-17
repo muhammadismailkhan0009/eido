@@ -77,6 +77,7 @@ type
     sourceName*: string
     targetClass*: string
     body*: seq[astStatements.Stmt]
+    bodySource*: string
 
   HirClass* = object
     span*: SourceSpan

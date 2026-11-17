@@ -56,6 +56,18 @@ proc renderFieldAccessors(
   let runtimeBacked = metadata.hasObjectLayout(classDecl.sourceName)
 
   for field in classDecl.fields:
+    var fieldOffset = int64(-1)
+    if runtimeBacked:
+      for layout in metadata.types:
+        if layout.className == classDecl.sourceName:
+          for fieldInfo in layout.fields:
+            if fieldInfo.fieldName == field.sourceName:
+              fieldOffset = fieldInfo.offset
+              break
+    if runtimeBacked and fieldOffset < 0:
+      raise newException(ValueError,
+        "missing Eido layout offset for " & classDecl.sourceName & "." & field.sourceName)
+
     result.add "proc " & classFieldGetName(
       classDecl.sourceName,
       field.sourceName
@@ -63,8 +75,8 @@ proc renderFieldAccessors(
       renderType(field.typ) & " =\n"
 
     if runtimeBacked:
-      result.add "  eidoMemoryPayloadAt(" & classPayloadName(classDecl.sourceName) &
-        ", source)[]." & fieldName(field.sourceName) & "\n\n"
+      result.add "  cast[ptr " & renderType(field.typ) &
+        "](cast[uint](source) + uint(" & $fieldOffset & "))[]\n\n"
     else:
       result.add "  source." & fieldName(field.sourceName) & "\n\n"
 
@@ -75,8 +87,8 @@ proc renderFieldAccessors(
       ", value: " & renderType(field.typ) & ") =\n"
 
     if runtimeBacked:
-      result.add "  eidoMemoryPayloadAt(" & classPayloadName(classDecl.sourceName) &
-        ", source)[]." & fieldName(field.sourceName) & " = value\n\n"
+      result.add "  cast[ptr " & renderType(field.typ) &
+        "](cast[uint](source) + uint(" & $fieldOffset & "))[] = value\n\n"
     else:
       result.add "  source." & fieldName(field.sourceName) & " = value\n\n"
 

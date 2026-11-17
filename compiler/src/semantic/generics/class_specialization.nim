@@ -830,7 +830,8 @@ proc specializeLayout(
     name: name,
     moduleName: source.moduleName,
     targetType: flatTypeRef(source.targetType, concreteTarget),
-    body: body
+    body: body,
+    bodySource: source.bodySource
   )
 
 ## Lowers generic source templates/applications into concrete nominal declarations.

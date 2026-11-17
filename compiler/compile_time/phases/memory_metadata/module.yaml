@@ -8,6 +8,9 @@ sources:
   - ../../api/memory_policy/FieldInfo.eido
   - ../../api/memory_policy/StorageInfo.eido
   - MemoryMetadata.eido
+  - LayoutRuntime.eido
+  - Layout.eido
+  - UserLayoutRunners.eido
   - MemoryMetadataBuilder.eido
   - runner.eido
 

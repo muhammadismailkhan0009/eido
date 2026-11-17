@@ -13,6 +13,10 @@ type
     alignment*: int64
     fields*: seq[CompileTimeFieldMetadata]
 
+  CompileTimeNamedLayoutMetadata* = object
+    name*: string
+    layout*: CompileTimeTypeMetadata
+
   CompileTimeCallableKind* = enum
     ctkFunction,
     ctkMethod
@@ -31,6 +35,7 @@ type
   CompileTimeMemoryMetadata* = object
     types*: seq[CompileTimeTypeMetadata]
     callables*: seq[CompileTimeCallableMetadata]
+    namedLayouts*: seq[CompileTimeNamedLayoutMetadata]
 
 
 ## Reports whether one canonical class has compiler-described object layout metadata.

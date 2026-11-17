@@ -29,5 +29,6 @@ proc analyzeLayouts*(
       span: layout.span,
       sourceName: layout.name,
       targetClass: layout.targetType.name,
-      body: layout.body
+      body: layout.body,
+      bodySource: layout.bodySource
     )

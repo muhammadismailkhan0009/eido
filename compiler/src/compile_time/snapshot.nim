@@ -354,6 +354,7 @@ proc toJson(snapshot: CompileTimeSnapshot): JsonNode =
 
     types.add %*{
       "identity": entry.identity,
+      "name": entry.declarationName,
       "size": layout.size,
       "alignment": layout.alignment,
       "fields": fields
@@ -363,6 +364,7 @@ proc toJson(snapshot: CompileTimeSnapshot): JsonNode =
   for entry in snapshot.fields:
     fields.add %*{
       "owner": entry.ownerType,
+      "name": entry.sourceName,
       "type": entry.typ
     }
 

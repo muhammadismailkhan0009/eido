@@ -3,11 +3,12 @@
 
 import std/[os, strutils]
 import ../hir/program as hirProgram
-import ../types/storage
-import ../source/span
+import ../types/[model, storage]
 import host
 import model
 import snapshot
+import layout_runner
+import layout_validation
 
 type
   RawFieldMetadata = object
@@ -25,8 +26,15 @@ type
     callableHandle: int64
     valueHandles: seq[int64]
 
+  RawNamedLayoutMetadata = object
+    layoutId: int64
+    size: int64
+    alignment: int64
+    fields: seq[RawFieldMetadata]
+
   RawMemoryMetadata = object
     types: seq[RawTypeMetadata]
+    namedLayouts: seq[RawNamedLayoutMetadata]
     callables: seq[RawCallableMetadata]
 
 const
@@ -51,14 +59,17 @@ const
   StorageInfoPhaseSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/api/memory_policy/StorageInfo.eido"
   )
+  LayoutRuntimePhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/LayoutRuntime.eido"
+  )
+  LayoutPhaseSource = staticRead(
+    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/Layout.eido"
+  )
   MemoryMetadataPhaseSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/MemoryMetadata.eido"
   )
   MemoryMetadataBuilderSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/MemoryMetadataBuilder.eido"
-  )
-  RunnerSource = staticRead(
-    currentSourcePath().parentDir / "../../compile_time/phases/memory_metadata/runner.eido"
   )
   CompileTimeNativeSupportSource = staticRead(
     currentSourcePath().parentDir / "../../compile_time/native/eido_native.nim"
@@ -123,6 +134,18 @@ proc addLayoutRecord(
   metadata.types[typeIndex].size = size
   metadata.types[typeIndex].alignment = alignment
 
+## Adds an explicit named-layout field to an invocation-local layout definition.
+proc ensureNamedLayout(
+  metadata: var RawMemoryMetadata, layoutId: int64
+): int =
+  for i, layout in metadata.namedLayouts:
+    if layout.layoutId == layoutId:
+      return i
+  result = metadata.namedLayouts.len
+  metadata.namedLayouts.add RawNamedLayoutMetadata(
+    layoutId: layoutId, size: -1, alignment: -1, fields: @[]
+  )
+
 ## Returns the mutable raw callable metadata slot for one private callable handle.
 proc ensureCallableMetadata(
   metadata: var RawMemoryMetadata,
@@ -177,6 +200,15 @@ proc parsePhaseOutput(lines: seq[string]): RawMemoryMetadata =
       result.addLayoutRecord(first, second, third)
     of 4:
       result.addIdentityValueRecord(first, second)
+    of 5:
+      let i = result.ensureNamedLayout(first)
+      result.namedLayouts[i].fields.add RawFieldMetadata(
+        fieldHandle: second, offset: third
+      )
+    of 6:
+      let i = result.ensureNamedLayout(first)
+      result.namedLayouts[i].size = second
+      result.namedLayouts[i].alignment = third
     else:
       raise newException(
         ValueError,
@@ -186,7 +218,8 @@ proc parsePhaseOutput(lines: seq[string]): RawMemoryMetadata =
 ## Resolves ephemeral phase handles back to canonical backend-facing metadata.
 proc resolveMetadata(
   semanticSnapshot: CompileTimeSnapshot,
-  rawMetadata: RawMemoryMetadata
+  rawMetadata: RawMemoryMetadata,
+  program: hirProgram.HirProgram
 ): CompileTimeMemoryMetadata =
   for rawType in rawMetadata.types:
     var typeMetadata = CompileTimeTypeMetadata(
@@ -204,6 +237,36 @@ proc resolveMetadata(
       )
 
     result.types.add typeMetadata
+
+  for rawLayout in rawMetadata.namedLayouts:
+    if rawLayout.layoutId < 0 or rawLayout.layoutId >= int64(program.layouts.len):
+      raise newException(ValueError, "invalid compile-time named-layout handle")
+    let declaration = program.layouts[int(rawLayout.layoutId)]
+    var resolved = CompileTimeTypeMetadata(
+      className: declaration.targetClass,
+      size: rawLayout.size,
+      alignment: rawLayout.alignment,
+      fields: @[]
+    )
+    for rawField in rawLayout.fields:
+      resolved.fields.add CompileTimeFieldMetadata(
+        fieldName: semanticSnapshot.fieldName(rawField.fieldHandle),
+        offset: rawField.offset,
+        containsIdentity: block:
+          var identity = false
+          for classDecl in program.classes:
+            if classDecl.sourceName != declaration.targetClass:
+              continue
+            for field in classDecl.fields:
+              if field.sourceName == semanticSnapshot.fieldName(rawField.fieldHandle):
+                identity = field.typ.kind in {etkClass, etkInterface} and
+                  (field.typ.kind != etkClass or
+                    not isConcreteStorageTypeName(field.typ.className))
+          identity
+      )
+    result.namedLayouts.add CompileTimeNamedLayoutMetadata(
+      name: declaration.sourceName, layout: resolved
+    )
 
   for rawCallable in rawMetadata.callables:
     let rawKind = semanticSnapshot.callableKind(rawCallable.callableHandle)
@@ -234,59 +297,47 @@ proc resolveMetadata(
 
     result.callables.add callableMetadata
 
-## Counts ordinary class declarations that receive generic object-layout metadata.
-proc expectedClassLayouts(program: hirProgram.HirProgram): int =
-  for classDecl in program.classes:
-    if not isConcreteStorageTypeName(classDecl.sourceName) and
-        not classDecl.span.isHiddenRuntime:
-      inc result
-
-## Verifies one complete stable layout for every ordinary class declaration.
-proc validateMetadata(
-  program: hirProgram.HirProgram,
-  metadata: CompileTimeMemoryMetadata
-) =
-  if metadata.types.len != expectedClassLayouts(program):
-    raise newException(
-      ValueError,
-      "memory metadata did not return one layout per ordinary class"
-    )
-
-  for typeMetadata in metadata.types:
-    if typeMetadata.className.len == 0 or
-        typeMetadata.size < 0 or
-        typeMetadata.alignment <= 0:
-      raise newException(
-        ValueError,
-        "memory metadata returned an incomplete type layout"
-      )
-
 ## Executes the bundled generic Eido memory-metadata phase against one analyzed program.
 proc runMemoryMetadataPhase*(
   program: hirProgram.HirProgram
 ): CompileTimeMemoryMetadata =
   let semanticSnapshot = buildCompileTimeSnapshot(program)
-  let lines = runCompileTimeEidoPhase(
-    "memory_metadata",
-    MemoryMetadataManifestSource,
-    CompileTimeNativeSupportSource,
-    semanticSnapshot.compileTimeSnapshotJson(),
-    @[
-      CompileTimePhaseSource(entry: "../../api/memory_policy/Compiler.eido", text: CompilerPhaseSource),
-      CompileTimePhaseSource(entry: "../../api/memory_policy/TypeInfo.eido", text: TypeInfoPhaseSource),
-      CompileTimePhaseSource(entry: "../../api/memory_policy/CallableInfo.eido", text: CallableInfoPhaseSource),
-      CompileTimePhaseSource(entry: "../../api/memory_policy/ValueInfo.eido", text: ValueInfoPhaseSource),
-      CompileTimePhaseSource(entry: "../../api/memory_policy/FieldInfo.eido", text: FieldInfoPhaseSource),
-      CompileTimePhaseSource(entry: "../../api/memory_policy/StorageInfo.eido", text: StorageInfoPhaseSource),
-      CompileTimePhaseSource(entry: "MemoryMetadata.eido", text: MemoryMetadataPhaseSource),
-      CompileTimePhaseSource(
-        entry: "MemoryMetadataBuilder.eido",
-        text: MemoryMetadataBuilderSource
-      ),
-      CompileTimePhaseSource(entry: "runner.eido", text: RunnerSource)
-    ]
-  )
+  let userLayouts = layoutRunnerSource(program)
+  var lines: seq[string]
+  try:
+    lines = runCompileTimeEidoPhase(
+      "memory_metadata",
+      MemoryMetadataManifestSource,
+      CompileTimeNativeSupportSource,
+      semanticSnapshot.compileTimeSnapshotJson(),
+      @[
+        CompileTimePhaseSource(entry: "../../api/memory_policy/Compiler.eido", text: CompilerPhaseSource),
+        CompileTimePhaseSource(entry: "../../api/memory_policy/TypeInfo.eido", text: TypeInfoPhaseSource),
+        CompileTimePhaseSource(entry: "../../api/memory_policy/CallableInfo.eido", text: CallableInfoPhaseSource),
+        CompileTimePhaseSource(entry: "../../api/memory_policy/ValueInfo.eido", text: ValueInfoPhaseSource),
+        CompileTimePhaseSource(entry: "../../api/memory_policy/FieldInfo.eido", text: FieldInfoPhaseSource),
+        CompileTimePhaseSource(entry: "../../api/memory_policy/StorageInfo.eido", text: StorageInfoPhaseSource),
+        CompileTimePhaseSource(entry: "MemoryMetadata.eido", text: MemoryMetadataPhaseSource),
+        CompileTimePhaseSource(
+          entry: "LayoutRuntime.eido", text: LayoutRuntimePhaseSource
+        ),
+        CompileTimePhaseSource(entry: "Layout.eido", text: LayoutPhaseSource),
+        CompileTimePhaseSource(
+          entry: "UserLayoutRunners.eido", text: userLayouts.layoutSource
+        ),
+        CompileTimePhaseSource(
+          entry: "MemoryMetadataBuilder.eido",
+          text: MemoryMetadataBuilderSource
+        ),
+        CompileTimePhaseSource(
+          entry: "runner.eido", text: userLayouts.runnerSource
+        )
+      ]
+    )
+  except OSError as error:
+    raise newException(ValueError,
+      "Eido compile-time memory layout evaluation failed: " & error.msg)
 
   let rawMetadata = parsePhaseOutput(lines)
-  result = resolveMetadata(semanticSnapshot, rawMetadata)
+  result = resolveMetadata(semanticSnapshot, rawMetadata, program)
   validateMetadata(program, result)

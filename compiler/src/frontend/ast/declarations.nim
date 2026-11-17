@@ -60,6 +60,7 @@ type
     typeParameters*: seq[TypeParameterDecl]
     targetType*: TypeRef
     body*: seq[Stmt]
+    bodySource*: string
 
   ClassDecl* = object
     span*: SourceSpan

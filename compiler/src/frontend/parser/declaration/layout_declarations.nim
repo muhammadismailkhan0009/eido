@@ -29,6 +29,7 @@ proc parseLayout*(parser: var Parser): LayoutDecl =
     failAt(target.span, "layout target cannot be optional")
   discard parser.consume(tkLBrace, "expected '{' before layout body")
 
+  let bodyStart = parser.position()
   var body: seq[Stmt]
   while not parser.check(tkRBrace):
     if parser.check(tkEof):
@@ -46,5 +47,6 @@ proc parseLayout*(parser: var Parser): LayoutDecl =
     name: name.lexeme,
     typeParameters: typeParameters,
     targetType: target,
-    body: body
+    body: body,
+    bodySource: parser.tokenSource(bodyStart, parser.position() - 1)
   )

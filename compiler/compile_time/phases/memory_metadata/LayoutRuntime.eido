@@ -1,0 +1,12 @@
+// Private compile-time host boundary for named layout construction.
+// Individual field offsets and size computations remain in Eido's Layout class.
+class LayoutRuntime {
+    native function begin(Int layoutId, String ownerName);
+    native function currentType() returns Int;
+    native function currentLayout() returns Int;
+    native function findField(Int ownerType, String fieldName) returns Int;
+    native function recordField(Int layoutId, Int field, Int offset);
+    native function offsetOf(Int layoutId, Int field) returns Int;
+    native function checkAlignment(Int alignment);
+    native function complete(Int layoutId, Int size, Int alignment);
+}
