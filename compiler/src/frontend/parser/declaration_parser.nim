@@ -91,3 +91,4 @@ proc parseFunction*(parser: var Parser): FunctionDecl =
 include declaration/native_function_declarations
 include declaration/interface_declarations
 include declaration/class_declarations
+include declaration/layout_declarations

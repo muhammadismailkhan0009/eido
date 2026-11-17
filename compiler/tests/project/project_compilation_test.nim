@@ -30,6 +30,22 @@ suite "Project compilation":
     check reverseProgram.classes.len == 1
     check reverseProgram.functions.len == 2
 
+  test "retains layouts declared in a separate source unit":
+    let project = initProject(ptExecutable, @[
+      initSourceUnit(0, "src/layouts.eido", """
+        layout Compact for Family {
+          var shape = Layout.create();
+          shape.field("father");
+          return shape;
+        }
+      """),
+      initSourceUnit(1, "src/family.eido", "class Family { Int father; }"),
+      initSourceUnit(2, "src/main.eido", "function main() {}")
+    ])
+    let compiled = requireCheckedProject(project)
+    check compiled.layouts.len == 1
+    check compiled.layouts[0].targetClass == "Family"
+
   test "accepts a library project without main":
     # Given
     let project = initProject(ptLibrary, @[

@@ -147,6 +147,21 @@ proc qualifyModuleProgram(
       sourceClass.name
     )
 
+  for sourceLayout in mitems(source.layouts):
+    var typeParameters = initHashSet[string]()
+    for parameter in sourceLayout.typeParameters:
+      typeParameters.incl parameter.name
+
+    qualifyTypeRef(
+      sourceLayout.targetType, sourceLayout.moduleName, typeParameters,
+      modules, classes, interfaces,
+      publicSurfaces, adoptedSurfaces, providedSurfaces,
+      rootModule
+    )
+    sourceLayout.name = declarationKey(
+      sourceLayout.moduleName, sourceLayout.name
+    )
+
   for sourceFunction in mitems(source.functions):
     let localName = sourceFunction.name
     qualifyCallable(

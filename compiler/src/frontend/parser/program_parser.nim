@@ -15,6 +15,8 @@ proc parseProgram*(tokens: seq[Token]): Program =
       result.interfaces.add parser.parseInterface()
     elif parser.check(tkClass):
       result.classes.add parser.parseClass()
+    elif parser.check(tkLayout):
+      result.layouts.add parser.parseLayout()
     elif parser.check(tkNative):
       result.functions.add parser.parseNativeFunction()
     elif parser.check(tkFunction):
@@ -22,8 +24,8 @@ proc parseProgram*(tokens: seq[Token]): Program =
     else:
       failAt(
         parser.peek.span,
-        "expected top-level interface, class, function, or native function declaration"
+        "expected top-level interface, class, layout, function, or native function declaration"
       )
 
-  if result.interfaces.len == 0 and result.classes.len == 0 and result.functions.len == 0:
+  if result.interfaces.len == 0 and result.classes.len == 0 and result.layouts.len == 0 and result.functions.len == 0:
     failAt(parser.peek.span, "expected at least one declaration")

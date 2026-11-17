@@ -21,6 +21,7 @@ import ../symbols/model
 import ../symbols/nominals
 import ../symbols/functions
 import class_analysis
+import layout_analysis
 import interface_analysis
 import method_classification
 import method_analysis
@@ -330,6 +331,7 @@ proc analyzeProgram*(
   let analyzedProgram = hirProgram.HirProgram(
     interfaces: analyzedInterfaces,
     classes: analyzedClasses,
+    layouts: analyzeLayouts(specializedProgram.layouts, analyzedClasses),
     functions: analyzedFunctions,
     hasMain: mainFound,
     mainFunctionId: mainId

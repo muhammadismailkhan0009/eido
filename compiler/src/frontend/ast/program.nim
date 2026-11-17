@@ -6,4 +6,5 @@ type
   Program* = object
     interfaces*: seq[InterfaceDecl]
     classes*: seq[ClassDecl]
+    layouts*: seq[LayoutDecl]
     functions*: seq[FunctionDecl]

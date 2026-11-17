@@ -780,6 +780,59 @@ proc validateInterfaceTemplateShape(
     methodNames.incl methodDecl.name
     validateFunctionTypes(context, methodDecl, parameterNames)
 
+## Verifies layout targets and template parameters before specialization.
+## Layouts do not cause class instantiations until layout selection exists.
+proc validateLayoutTemplates(context: SpecializationContext, layouts: seq[LayoutDecl]) =
+  var seen = initHashSet[string]()
+  for layout in layouts:
+    if layout.name in seen:
+      failAt(layout.span, "duplicate layout declaration '" & layout.name & "'")
+    seen.incl layout.name
+
+    if layout.targetType.name notin context.templates:
+      failAt(
+        layout.targetType.span,
+        "layout '" & layout.name & "' must target a class, got '" &
+          layout.targetType.name & "'"
+      )
+
+    let target = context.templates[layout.targetType.name]
+    if layout.typeParameters.len != target.typeParameters.len or
+        layout.targetType.arguments.len != target.typeParameters.len:
+      failAt(layout.targetType.span,
+        "layout '" & layout.name & "' must declare the same number of generic parameters as class '" &
+          target.name & "'")
+
+    var parameters = initHashSet[string]()
+    for index, parameter in layout.typeParameters:
+      if parameter.name in parameters:
+        failAt(parameter.span, "duplicate layout type parameter '" & parameter.name & "'")
+      parameters.incl parameter.name
+      let argument = layout.targetType.arguments[index]
+      if argument.isOptional or argument.arguments.len != 0 or
+          argument.name != parameter.name:
+        failAt(argument.span,
+          "layout target generic arguments must match its declared type parameters in order")
+
+## Specializes one compile-time layout body and class association without
+## selecting or evaluating that layout.
+proc specializeLayout(
+  context: var SpecializationContext,
+  source: LayoutDecl,
+  name, concreteTarget: string,
+  bindings: Table[string, TypeRef]
+): LayoutDecl =
+  var body: seq[Stmt]
+  for statement in source.body:
+    body.add specializeStmt(context, statement, bindings)
+  LayoutDecl(
+    span: source.span,
+    name: name,
+    moduleName: source.moduleName,
+    targetType: flatTypeRef(source.targetType, concreteTarget),
+    body: body
+  )
+
 ## Lowers generic source templates/applications into concrete nominal declarations.
 ## Example: Box<Int> and Readable<Int> become ordinary specialized nominals before normal semantics.
 proc specializeGenericClasses*(source: Program): Program =
@@ -814,6 +867,8 @@ proc specializeGenericClasses*(source: Program): Program =
   for classDecl in source.classes:
     validateTemplateShape(context, classDecl)
 
+  validateLayoutTemplates(context, source.layouts)
+
   var noTypeParameters = initHashSet[string]()
   for fn in source.functions:
     validateFunctionTypes(context, fn, noTypeParameters)
@@ -836,6 +891,12 @@ proc specializeGenericClasses*(source: Program): Program =
     result.functions.add specializeFunction(
       context, fn, emptyBindings
     )
+
+  for layout in source.layouts:
+    if layout.typeParameters.len == 0:
+      result.layouts.add specializeLayout(
+        context, layout, layout.name, layout.targetType.name, emptyBindings
+      )
 
   var index = 0
   while index < context.queue.len:
@@ -886,3 +947,22 @@ proc specializeGenericClasses*(source: Program): Program =
         "unknown generic nominal template '" & request.templateName & "'"
       )
     inc index
+
+  # Reuse only already-instantiated concrete class applications. Declaring a
+  # layout has no effect on the set of classes compiled into the program.
+  for layout in source.layouts:
+    if layout.typeParameters.len == 0:
+      continue
+    for request in context.queue:
+      if request.templateName != layout.targetType.name:
+        continue
+      var bindings = initTable[string, TypeRef]()
+      for paramIndex, parameter in layout.typeParameters:
+        bindings[parameter.name] = request.arguments[paramIndex]
+      result.layouts.add specializeLayout(
+        context,
+        layout,
+        layout.name & request.concreteName[request.templateName.len .. ^1],
+        request.concreteName,
+        bindings
+      )

@@ -7,6 +7,7 @@ import ../types/method_kind
 import ../semantic/symbols/ids
 import statements
 import expressions
+import ../frontend/ast/statements as astStatements
 
 type
   HirField* = object
@@ -68,6 +69,14 @@ type
     typ*: EidoType
     extends*: seq[string]
     methods*: seq[HirInterfaceMethod]
+
+  ## Declarative compile-time source retained for the later layout evaluator.
+  ## Not part of target-program executable code.
+  HirLayout* = object
+    span*: SourceSpan
+    sourceName*: string
+    targetClass*: string
+    body*: seq[astStatements.Stmt]
 
   HirClass* = object
     span*: SourceSpan

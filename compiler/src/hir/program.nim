@@ -8,6 +8,7 @@ type
   HirProgram* = object
     interfaces*: seq[HirInterface]
     classes*: seq[HirClass]
+    layouts*: seq[HirLayout]
     functions*: seq[HirFunction]
     hasMain*: bool
     mainFunctionId*: FunctionId

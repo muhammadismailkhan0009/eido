@@ -20,6 +20,7 @@ type
     tkEnsure,
     tkInvariant,
     tkClass,
+    tkLayout,
     tkInterface,
     tkImplements,
     tkExtends,

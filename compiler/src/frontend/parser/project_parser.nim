@@ -38,5 +38,9 @@ proc parseProject*(project: EidoProject): Program =
       sourceProgram.functions[index].moduleName = sourceUnit.moduleName
 
     result.interfaces.add sourceProgram.interfaces
+    for index in 0 ..< sourceProgram.layouts.len:
+      sourceProgram.layouts[index].moduleName = sourceUnit.moduleName
+
     result.classes.add sourceProgram.classes
+    result.layouts.add sourceProgram.layouts
     result.functions.add sourceProgram.functions

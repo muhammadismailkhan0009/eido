@@ -51,6 +51,16 @@ type
     extends*: seq[string]
     methods*: seq[FunctionDecl]
 
+  ## A compile-time layout declaration. Its body remains syntax until the
+  ## layout evaluator is introduced; it has no runtime effect by itself.
+  LayoutDecl* = object
+    span*: SourceSpan
+    name*: string
+    moduleName*: string
+    typeParameters*: seq[TypeParameterDecl]
+    targetType*: TypeRef
+    body*: seq[Stmt]
+
   ClassDecl* = object
     span*: SourceSpan
     name*: string
