@@ -1,6 +1,7 @@
 ## Parses named compile-time layout declarations. Layout execution/selection is
 ## deliberately deferred, so bodies are retained as ordinary Eido statement AST.
 
+## Parses a named layout declaration and retains its Eido body.
 proc parseLayout*(parser: var Parser): LayoutDecl =
   let start = parser.consume(tkLayout, "expected 'layout'")
   let name = parser.consume(tkIdentifier, "expected layout name")

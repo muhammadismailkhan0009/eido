@@ -1,10 +1,12 @@
 import std/unittest
-import support/[compiler_test_support, feature_test_support]
+import support/[compiler_test_support, feature_test_support, feature_batch_support]
 
 suite "Supported primitive type values":
-  test "Bool parameter + Bool result":
-    # Given
-    let source = """
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "Bool parameter + Bool result",
+        source: """
       function identity(Bool value) returns Bool {
         return value;
       }
@@ -12,16 +14,12 @@ suite "Supported primitive type values":
       function main() returns Bool {
         return identity(true);
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "primitive_bool")
-
-    # Then
-    check output == "true"
-  test "Byte parameter + Byte result":
-    # Given
-    let source = """
+    """,
+        expected: "true"
+      ),
+      FeatureBatchCase(
+        name: "Byte parameter + Byte result",
+        source: """
       function identity(Byte value) returns Byte {
         return value;
       }
@@ -29,16 +27,12 @@ suite "Supported primitive type values":
       function main() returns Byte {
         return identity(127);
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "primitive_byte")
-
-    # Then
-    check output == "127"
-  test "Short parameter + Short result":
-    # Given
-    let source = """
+    """,
+        expected: "127"
+      ),
+      FeatureBatchCase(
+        name: "Short parameter + Short result",
+        source: """
       function identity(Short value) returns Short {
         return value;
       }
@@ -46,16 +40,12 @@ suite "Supported primitive type values":
       function main() returns Short {
         return identity(300);
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "primitive_short")
-
-    # Then
-    check output == "300"
-  test "Int parameter + Int result supports values beyond 32 bit":
-    # Given
-    let source = """
+    """,
+        expected: "300"
+      ),
+      FeatureBatchCase(
+        name: "Int parameter + Int result supports values beyond 32 bit",
+        source: """
       function identity(Int value) returns Int {
         return value;
       }
@@ -63,16 +53,12 @@ suite "Supported primitive type values":
       function main() returns Int {
         return identity(2147483648);
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "primitive_int")
-
-    # Then
-    check output == "2147483648"
-  test "Float parameter + Float result uses ordinary decimal syntax":
-    # Given
-    let source = """
+    """,
+        expected: "2147483648"
+      ),
+      FeatureBatchCase(
+        name: "Float parameter + Float result uses ordinary decimal syntax",
+        source: """
       function identity(Float value) returns Float {
         return value;
       }
@@ -80,16 +66,12 @@ suite "Supported primitive type values":
       function main() returns Float {
         return identity(2.5);
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "primitive_float")
-
-    # Then
-    check output == "2.5"
-  test "Char parameter + Char result preserves the code unit":
-    # Given
-    let source = """
+    """,
+        expected: "2.5"
+      ),
+      FeatureBatchCase(
+        name: "Char parameter + Char result preserves the code unit",
+        source: """
       function identity(Char value) returns Char {
         return value;
       }
@@ -97,13 +79,13 @@ suite "Supported primitive type values":
       function main() returns Char {
         return identity('A');
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "primitive_char")
-
-    # Then
-    check output == "65"
+    """,
+        expected: "65"
+      )
+    ], "primitive_variants_test_1")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Byte literal bounds":
   test "Byte zero value is accepted":

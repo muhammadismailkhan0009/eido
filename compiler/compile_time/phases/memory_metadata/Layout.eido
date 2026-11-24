@@ -56,7 +56,9 @@ class Layout {
     }
 
     function size() returns Int {
-        return Layout.alignUp(self.cursor, self.requiredAlignment);
+        var physicalBytes = self.cursor;
+        if (physicalBytes == 0) { set physicalBytes = 1; }
+        return Layout.alignUp(physicalBytes, self.requiredAlignment);
     }
 
     function offsetOf(String name) returns Int {

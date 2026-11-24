@@ -66,6 +66,8 @@ const
   BuiltinProcessSourcePath* = "eido://stdlib/process/process.eido"
   BuiltinConsoleSourcePath* = "eido://stdlib/io/console.eido"
   BuiltinStorageSourcePath* = "eido://stdlib/storage/storage.eido"
+  BuiltinAlignmentSourcePath* = "eido://stdlib/storage/alignment.eido"
+  BuiltinAlignedHeapBackingSourcePath* = "eido://stdlib/storage/aligned_heap_backing.eido"
   BuiltinArraySourcePath* = "eido://stdlib/collections/array.eido"
   BuiltinStorageArraySourcePath* = "eido://stdlib/collections/storage_array.eido"
   BuiltinArraysSourcePath* = "eido://stdlib/collections/arrays.eido"
@@ -104,6 +106,12 @@ const
   )
   BuiltinStorageSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/storage/storage.eido"
+  )
+  BuiltinAlignmentSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/storage/alignment.eido"
+  )
+  BuiltinAlignedHeapBackingSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/storage/aligned_heap_backing.eido"
   )
   BuiltinArraySource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/collections/array.eido"
@@ -218,6 +226,10 @@ proc embeddedStdlibSource(
     (BuiltinConsoleSourcePath, BuiltinConsoleSource)
   of BuiltinStorageManifestPath & "|storage.eido":
     (BuiltinStorageSourcePath, BuiltinStorageSource)
+  of BuiltinStorageManifestPath & "|alignment.eido":
+    (BuiltinAlignmentSourcePath, BuiltinAlignmentSource)
+  of BuiltinStorageManifestPath & "|aligned_heap_backing.eido":
+    (BuiltinAlignedHeapBackingSourcePath, BuiltinAlignedHeapBackingSource)
   of BuiltinCollectionsManifestPath & "|array.eido":
     (BuiltinArraySourcePath, BuiltinArraySource)
   of BuiltinCollectionsManifestPath & "|storage_array.eido":
@@ -352,7 +364,8 @@ proc loadEmbeddedStdlibModule(
       embedded.text,
       canonical,
       origin,
-      runtimeCapability
+      runtimeCapability,
+      embeddedSdk = true
     )
 
   for child in manifest.children:

@@ -1,6 +1,7 @@
 import std/[os, unittest]
 import std/strutils
 import project/model
+import source/source_unit
 import project/modules/loader
 import tooling/compiler_service
 
@@ -69,3 +70,20 @@ suite "Storage project integration":
     check not checked.success
     check checked.diagnostics.len == 1
     check "is not public API" in checked.diagnostics[0].message
+
+
+  test "a source path cannot impersonate an embedded SDK caller":
+    for path in ["/tmp/user/stdlib/storage/storage.eido",
+                 "eido://stdlib/runtime/copy_runtime.eido",
+                 "eido://stdlib/memory/fake.eido"]:
+      let project = initProject(ptExecutable, @[
+        initSourceUnit(0, path, """
+          function main() {
+            Storage<Byte>.compilerReleaseNativeAddress(4096);
+          }
+        """)
+      ])
+      let checked = checkProject(project)
+      check not checked.success
+      check checked.diagnostics.len > 0
+      check "is not public API" in checked.diagnostics[0].message

@@ -3,10 +3,14 @@
 ## specializations are ordinary SDK Eido wrappers over that raw capability.
 
 import std/strutils
+import ../source/span
 
 const
   StorageTypeConstructorName* = "Storage"
   StorageSdkModuleName* = "eido.stdlib.storage"
+  StorageInternalReleaseNativeAddress* = "compilerReleaseNativeAddress"
+  StorageInternalReserveAt* = "compilerReserveAt"
+  StorageInternalRebaseOwned* = "compilerRebaseOwned"
   StorageInternalFromRaw* = "compilerFromRaw"
   StorageInternalRaw* = "compilerRaw"
   StorageInternalRead* = "compilerRead"
@@ -56,13 +60,36 @@ proc rawStorageTypeName*(name: string): string =
 ## Reports whether one method is a compiler-private typed/raw representation bridge.
 proc isStorageInternalMethodName*(name: string): bool =
   name in [
+    StorageInternalReleaseNativeAddress,
+    StorageInternalReserveAt,
+    StorageInternalRebaseOwned,
     StorageInternalFromRaw,
     StorageInternalRaw,
     StorageInternalRead,
     StorageInternalWrite
   ]
 
-## Reports whether one source path belongs to the SDK Storage implementation itself.
-proc isStorageSdkSourcePath*(path: string): bool =
-  path == "eido://stdlib/storage/storage.eido" or
-    path.endsWith("/stdlib/storage/storage.eido")
+## SDK utility classes carry no managed object representation.
+proc isSdkStorageUtilityClass*(name: string, span: SourceSpan): bool =
+  span.embeddedSdk and name in [
+    "Alignment", "eido.stdlib.storage.Alignment",
+    "AlignedHeapBacking", "eido.stdlib.storage.AlignedHeapBacking"
+  ]
+
+## Only compiler-injected embedded sources can use private representation bridges.
+proc isStorageSdkSource*(span: SourceSpan): bool =
+  span.embeddedSdk and span.sourcePath in [
+    "eido://stdlib/storage/storage.eido",
+    "eido://stdlib/storage/alignment.eido",
+    "eido://stdlib/storage/aligned_heap_backing.eido"
+  ]
+
+## Raw ownership recovery is restricted to actual embedded runtime sources.
+proc isStorageTrustedRuntimeSource*(span: SourceSpan): bool =
+  if not span.embeddedSdk:
+    return false
+  isStorageSdkSource(span) or span.sourcePath in [
+    "eido://stdlib/text/string_runtime.eido",
+    "eido://stdlib/runtime/copy_runtime.eido",
+    "<eido-compile-time>/runtime/string_runtime.eido"
+  ] or span.sourcePath.startsWith("eido://stdlib/memory/")

@@ -15,9 +15,10 @@ proc generatedMethodName(generated, sourceName: string): string =
 
 suite "Managed GC runtime":
   test "generic memory metadata and GC policy are Storage-backed Eido code":
-    check "Storage<Byte>.allocateRaw(" in BuiltinManagedHeapAllocatorSource
-    check "Storage<Byte>.fromAddress(" in BuiltinManagedHeapAllocatorSource
-    check "Storage<Byte>.release(" in BuiltinManagedHeapAllocatorSource
+    check "AlignedHeapBacking.allocate(" in BuiltinManagedHeapAllocatorSource
+    check "AlignedHeapBacking.releaseAddress(" in BuiltinManagedHeapAllocatorSource
+    check "Storage<Byte>.allocateRaw(" in BuiltinAlignedHeapBackingSource
+    check "Storage<Byte>.compilerReleaseNativeAddress(" in BuiltinAlignedHeapBackingSource
 
     check "Storage<Int>.allocate(" in BuiltinMemoryValueRegistrySource
     check "Storage<Bool>.allocate(" in BuiltinMemoryValueRegistrySource

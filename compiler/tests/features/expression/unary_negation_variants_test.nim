@@ -1,28 +1,22 @@
 import std/unittest
-import support/[compiler_test_support, feature_test_support]
+import support/[compiler_test_support, feature_batch_support]
 
 suite "Unary numeric negation":
-  test "negative Int literal":
-    # Given
-    let source = "function main() returns Int { return -5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_negative_int")
-
-    # Then
-    check output == "-5"
-  test "negative Float literal":
-    # Given
-    let source = "function main() returns Float { return -2.5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_negative_float")
-
-    # Then
-    check output == "-2.5"
-  test "negates an Int variable":
-    # Given
-    let source = """
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "negative Int literal",
+        source: "function main() returns Int { return -5; }",
+        expected: "-5"
+      ),
+      FeatureBatchCase(
+        name: "negative Float literal",
+        source: "function main() returns Float { return -2.5; }",
+        expected: "-2.5"
+      ),
+      FeatureBatchCase(
+        name: "negates an Int variable",
+        source: """
       function negate(Int value) returns Int {
         return -value;
       }
@@ -30,46 +24,31 @@ suite "Unary numeric negation":
       function main() returns Int {
         return negate(7);
       }
-    """
-
-    # When
-    let output = runFeatureSource(source, "expression_negate_variable")
-
-    # Then
-    check output == "-7"
-
-  test "negates a function call result":
-    # Given
-    let source = """
+    """,
+        expected: "-7"
+      ),
+      FeatureBatchCase(
+        name: "negates a function call result",
+        source: """
       function value() returns Int { return 7; }
       function main() returns Int { return -value(); }
-    """
-
-    # When
-    let output = runFeatureSource(source, "expression_negate_call")
-
-    # Then
-    check output == "-7"
-
-  test "negates a grouped expression":
-    # Given
-    let source = "function main() returns Int { return -(10 + 5); }"
-
-    # When
-    let output = runFeatureSource(source, "expression_negate_group")
-
-    # Then
-    check output == "-15"
-
-  test "double negation returns the original numeric value":
-    # Given
-    let source = "function main() returns Int { return --5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_double_negation")
-
-    # Then
-    check output == "5"
+    """,
+        expected: "-7"
+      ),
+      FeatureBatchCase(
+        name: "negates a grouped expression",
+        source: "function main() returns Int { return -(10 + 5); }",
+        expected: "-15"
+      ),
+      FeatureBatchCase(
+        name: "double negation returns the original numeric value",
+        source: "function main() returns Int { return --5; }",
+        expected: "5"
+      )
+    ], "unary_negation_variants_test_1")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Unary negation type restrictions":
   test "Byte operand is rejected":
@@ -111,22 +90,19 @@ suite "Unary negation type restrictions":
       discard analyzeSource(source)
 
 suite "Unary negation binding":
-  test "unary minus binds before multiplication":
-    # Given
-    let source = "function main() returns Int { return -2 * 3; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_negation_binding")
-
-    # Then
-    check output == "-6"
-
-  test "subtraction can be followed by unary minus":
-    # Given
-    let source = "function main() returns Int { return 10 - -5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_subtract_negative")
-
-    # Then
-    check output == "15"
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "unary minus binds before multiplication",
+        source: "function main() returns Int { return -2 * 3; }",
+        expected: "-6"
+      ),
+      FeatureBatchCase(
+        name: "subtraction can be followed by unary minus",
+        source: "function main() returns Int { return 10 - -5; }",
+        expected: "15"
+      )
+    ], "unary_negation_variants_test_2")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected

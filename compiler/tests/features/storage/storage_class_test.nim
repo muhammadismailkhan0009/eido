@@ -2,11 +2,15 @@ import std/[os, osproc, strutils, unittest]
 import support/project_fixture_support
 import pipeline/[options, project_compiler]
 import backend/nim/toolchain/compiler as nimCompiler
-import support/feature_test_support
+
+import support/feature_batch_support
 
 suite "Storage<Class> inline payloads":
-  test "inline class payloads survive GC pressure independently of managed objects":
-    let source = """
+  test "successful native Storage scenarios (batched)":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(
+        name: "inline class payloads survive GC pressure independently of managed objects",
+        source: """
       class Account {
         Int balance;
       }
@@ -30,12 +34,12 @@ suite "Storage<Class> inline payloads":
         Storage<Account>.release(slots);
         return value;
       }
-    """
-
-    check runNativeFeatureSource(source, "storage_class_gc_root") == "53"
-
-  test "class Storage slices borrow the owner but retain access to elements":
-    let source = """
+    """,
+        expected: "53"
+      ),
+      NativeFeatureCase(
+        name: "class Storage slices borrow the owner but retain access to elements",
+        source: """
       class Account { Int balance; }
 
       function main() returns Int {
@@ -47,12 +51,12 @@ suite "Storage<Class> inline payloads":
         Storage<Account>.release(slots);
         return resultValue;
       }
-    """
-
-    check runNativeFeatureSource(source, "storage_class_slice") == "39"
-
-  test "inline Storage frees its entire owned backing":
-    let source = """
+    """,
+        expected: "39"
+      ),
+      NativeFeatureCase(
+        name: "inline Storage frees its entire owned backing",
+        source: """
       class Account { Int balance; }
 
       function main() returns Int {
@@ -62,12 +66,12 @@ suite "Storage<Class> inline payloads":
         var temporary = Account { balance = 7; };
         return temporary.balance;
       }
-    """
-
-    check runNativeFeatureSource(source, "storage_class_release") == "7"
-
-  test "generic class payloads are stored directly":
-    let source = """
+    """,
+        expected: "7"
+      ),
+      NativeFeatureCase(
+        name: "generic class payloads are stored directly",
+        source: """
       class Box<T> {
         T value;
       }
@@ -80,9 +84,135 @@ suite "Storage<Class> inline payloads":
         Storage<Box<Int>>.release(slots);
         return resultValue;
       }
-    """
+    """,
+        expected: "29"
+      ),
+      NativeFeatureCase(
+        name: "inline class slots use payload size rather than reference size",
+        source: """
+      class Account {
+        Int balance;
+        Int number;
+      }
+      function main() returns Int {
+        var slots = Storage<Account>.allocate(2);
+        var correctSize = Storage<Account>.size() == Storage<Int>.size() * 2;
+        var endView = Storage<Account>.slice(slots, 1, 1);
+        var contiguous = (
+          Storage<Account>.address(endView) -
+          Storage<Account>.address(slots)
+        ) == Storage<Account>.size();
+        Storage<Account>.release(slots);
+        if (correctSize and contiguous) { return 1; }
+        return 0;
+      }
+    """,
+        expected: "1"
+      ),
+      NativeFeatureCase(
+        name: "ref to inline class mutates the underlying slot",
+        source: """
+      class Account {
+        Int balance;
+        function update(Int value) { set self.balance = value; }
+      }
+      function main() returns Int {
+        var slots = Storage<Account>.allocate(1);
+        Storage<Account>.write(slots, 0, Account { balance = 12; });
+        var alias = ref Storage<Account>.read(slots, 0);
+        alias.update(34);
+        var value = Storage<Account>.read(slots, 0).balance;
+        Storage<Account>.release(slots);
+        return value;
+      }
+    """,
+        expected: "34"
+      ),
+      NativeFeatureCase(
+        name: "explicit copy writes independent inline payload",
+        source: """
+      class Account {
+        Int balance;
+        function update(Int value) { set self.balance = value; }
+      }
+      function main() returns Int {
+        var original = Account { balance = 21; };
+        var slots = Storage<Account>.allocate(1);
+        Storage<Account>.write(slots, 0, copy original);
+        original.update(88);
+        var saved = Storage<Account>.read(slots, 0).balance;
+        Storage<Account>.release(slots);
+        return saved + original.balance;
+      }
+    """,
+        expected: "109"
+      ),
+      NativeFeatureCase(
+        name: "class-owned inline Storage is initialized before application class state",
+        source: """
+      class Account { Int balance; }
+      class Cache {
+        Storage<Account> Cache.items = Storage<Account>.allocate(1);
+        function store() {
+          Storage<Account>.write(Cache.items, 0, Account { balance = 61; });
+        }
+        function read() returns Int {
+          return Storage<Account>.read(Cache.items, 0).balance;
+        }
+        function close() { Storage<Account>.release(Cache.items); }
+      }
+      function main() returns Int {
+        Cache.store();
+        var n = 0;
+        while (n < 120) {
+          var unused = Account { balance = n; };
+          set n = n + 1;
+        }
+        var value = Cache.read();
+        Cache.close();
+        return value;
+      }
+    """,
+        expected: "61"
+      ),
+      NativeFeatureCase(
+        name: "copying a class read from Storage creates a detached identity",
+        source: """
+      class Account {
+        Int balance;
+        function change(Int value) { set self.balance = value; }
+      }
 
-    check runNativeFeatureSource(source, "storage_generic_class") == "29"
+      function main() returns Int {
+        var accounts = Storage<Account>.allocate(1);
+        Storage<Account>.write(accounts, 0, Account { balance = 23; });
+        var detached = copy Storage<Account>.read(accounts, 0);
+        detached.change(42);
+        var originalBalance = Storage<Account>.read(accounts, 0).balance;
+        Storage<Account>.release(accounts);
+        return originalBalance + detached.balance;
+      }
+    """,
+        expected: "65"
+      ),
+      NativeFeatureCase(
+        name: "class Storage construction uses its own physical backing",
+        source: """
+      class Account { Int balance; }
+      function main() returns Int {
+        var accounts = Storage<Account>.allocate(1);
+        Storage<Account>.write(accounts, 0, Account { balance = 42; });
+        var value = Storage<Account>.read(accounts, 0).balance;
+        Storage<Account>.release(accounts);
+        return value;
+      }
+    """,
+        expected: "42"
+      )
+    ], "storage_class_test")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
   test "reference-counting policy does not own manual inline Storage":
     let source = """
@@ -119,119 +249,3 @@ suite "Storage<Class> inline payloads":
     )
     nimCompiler.compileWithNim(generated, outputPath)
     check execProcess(outputPath).strip() == "77"
-
-  test "inline class slots use payload size rather than reference size":
-    let source = """
-      class Account {
-        Int balance;
-        Int number;
-      }
-      function main() returns Int {
-        var slots = Storage<Account>.allocate(2);
-        var correctSize = Storage<Account>.size() == Storage<Int>.size() * 2;
-        var endView = Storage<Account>.slice(slots, 1, 1);
-        var contiguous = (
-          Storage<Account>.address(endView) -
-          Storage<Account>.address(slots)
-        ) == Storage<Account>.size();
-        Storage<Account>.release(slots);
-        if (correctSize and contiguous) { return 1; }
-        return 0;
-      }
-    """
-    check runNativeFeatureSource(source, "storage_class_payload_layout") == "1"
-
-  test "ref to inline class mutates the underlying slot":
-    let source = """
-      class Account {
-        Int balance;
-        function update(Int value) { set self.balance = value; }
-      }
-      function main() returns Int {
-        var slots = Storage<Account>.allocate(1);
-        Storage<Account>.write(slots, 0, Account { balance = 12; });
-        var alias = ref Storage<Account>.read(slots, 0);
-        alias.update(34);
-        var value = Storage<Account>.read(slots, 0).balance;
-        Storage<Account>.release(slots);
-        return value;
-      }
-    """
-    check runNativeFeatureSource(source, "storage_class_inline_ref") == "34"
-
-  test "explicit copy writes independent inline payload":
-    let source = """
-      class Account {
-        Int balance;
-        function update(Int value) { set self.balance = value; }
-      }
-      function main() returns Int {
-        var original = Account { balance = 21; };
-        var slots = Storage<Account>.allocate(1);
-        Storage<Account>.write(slots, 0, copy original);
-        original.update(88);
-        var saved = Storage<Account>.read(slots, 0).balance;
-        Storage<Account>.release(slots);
-        return saved + original.balance;
-      }
-    """
-    check runNativeFeatureSource(source, "storage_class_copy_into") == "109"
-
-  test "class-owned inline Storage is initialized before application class state":
-    let source = """
-      class Account { Int balance; }
-      class Cache {
-        Storage<Account> Cache.items = Storage<Account>.allocate(1);
-        function store() {
-          Storage<Account>.write(Cache.items, 0, Account { balance = 61; });
-        }
-        function read() returns Int {
-          return Storage<Account>.read(Cache.items, 0).balance;
-        }
-        function close() { Storage<Account>.release(Cache.items); }
-      }
-      function main() returns Int {
-        Cache.store();
-        var n = 0;
-        while (n < 120) {
-          var unused = Account { balance = n; };
-          set n = n + 1;
-        }
-        var value = Cache.read();
-        Cache.close();
-        return value;
-      }
-    """
-    check runNativeFeatureSource(source, "storage_class_owned_roots") == "61"
-
-  test "copying a class read from Storage creates a detached identity":
-    let source = """
-      class Account {
-        Int balance;
-        function change(Int value) { set self.balance = value; }
-      }
-
-      function main() returns Int {
-        var accounts = Storage<Account>.allocate(1);
-        Storage<Account>.write(accounts, 0, Account { balance = 23; });
-        var detached = copy Storage<Account>.read(accounts, 0);
-        detached.change(42);
-        var originalBalance = Storage<Account>.read(accounts, 0).balance;
-        Storage<Account>.release(accounts);
-        return originalBalance + detached.balance;
-      }
-    """
-    check runNativeFeatureSource(source, "storage_class_copy_read") == "65"
-
-  test "class Storage construction uses its own physical backing":
-    let source = """
-      class Account { Int balance; }
-      function main() returns Int {
-        var accounts = Storage<Account>.allocate(1);
-        Storage<Account>.write(accounts, 0, Account { balance = 42; });
-        var value = Storage<Account>.read(accounts, 0).balance;
-        Storage<Account>.release(accounts);
-        return value;
-      }
-    """
-    check runNativeFeatureSource(source, "storage_class_raw_backing") == "42"

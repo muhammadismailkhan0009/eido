@@ -182,14 +182,15 @@ proc requireClassVisibility(
   classes: ClassRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
   currentModule, className: string,
-  spanPath: string,
-  line, column: int
+  span: SourceSpan
 ) =
   if className notin classes:
     return
 
   let target = classes[className]
-  if target.moduleName == currentModule:
+  if target.moduleName == currentModule or
+      (span.embeddedSdk and target.span.embeddedSdk and
+        className == "eido.stdlib.storage.AlignedHeapBacking"):
     return
 
   if not isSymbolVisible(
@@ -201,7 +202,7 @@ proc requireClassVisibility(
     className
   ):
     failAt(
-      spanPath, line, column,
+      span,
       "module '" & currentModule & "' cannot access class '" & className &
         "' from module '" & target.moduleName &
         "'; it is not reachable from an allowed module API surface"

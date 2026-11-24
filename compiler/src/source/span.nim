@@ -8,6 +8,7 @@ type
     sourceId*: SourceId
     sourcePath*: string
     sourceOrigin*: SourceOrigin
+    embeddedSdk*: bool
     startOffset*: int
     endOffset*: int
     line*: int
@@ -19,12 +20,14 @@ proc initSourceSpan*(
   sourceId: SourceId,
   sourcePath: string,
   startOffset, endOffset, line, column: int,
-  sourceOrigin: SourceOrigin = soOrdinary
+  sourceOrigin: SourceOrigin = soOrdinary,
+  embeddedSdk: bool = false
 ): SourceSpan =
   SourceSpan(
     sourceId: sourceId,
     sourcePath: sourcePath,
     sourceOrigin: sourceOrigin,
+    embeddedSdk: embeddedSdk,
     startOffset: startOffset,
     endOffset: endOffset,
     line: line,
@@ -53,5 +56,6 @@ proc coverSpan*(first, last: SourceSpan): SourceSpan =
     last.endOffset,
     first.line,
     first.column,
-    first.sourceOrigin
+    first.sourceOrigin,
+    first.embeddedSdk
   )

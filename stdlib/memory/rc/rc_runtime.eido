@@ -8,10 +8,6 @@ class RcRuntime {
     Int RcRuntime.boundaryReclaimed = 0;
     Int RcRuntime.shutdownForced = 0;
 
-    function alignUp(Int value, Int alignment) returns Int {
-        return ((value + alignment - 1) / alignment) * alignment;
-    }
-
     function nextOffset() returns Int { return 0; }
     function referenceCountOffset() returns Int { return Storage<Int>.size(); }
     function invariantDepthOffset() returns Int { return Storage<Int>.size() * 2; }
@@ -86,13 +82,13 @@ class RcRuntime {
         if (effectiveAlignment < Storage<Int>.alignment()) {
             set effectiveAlignment = Storage<Int>.alignment();
         }
-        var payloadOffset = RcRuntime.alignUp(
+        var payloadOffset = Alignment.alignUp(
             RcRuntime.headerSize() + Storage<Int>.size(),
             effectiveAlignment
         );
         var totalSize = payloadOffset + payloadSize;
         if (totalSize < 1) { set totalSize = 1; }
-        var backing = Storage<Byte>.allocateRaw(1, totalSize);
+        var backing = AlignedHeapBacking.allocate(1, totalSize, effectiveAlignment);
         var allocation = RcRuntime.initializeHeader(
             backing,
             payloadOffset,
@@ -205,9 +201,8 @@ class RcRuntime {
     function releaseObject(Int identity) {
         var allocation = RcRuntime.headerAddress(identity);
         var bytes = RcRuntime.totalSize(identity);
-        var backing = Storage<Byte>.fromAddress(allocation, 1, bytes);
         RcIdentityIndex.remove(identity);
-        Storage<Byte>.release(backing);
+        AlignedHeapBacking.releaseAddress(allocation);
         set RcRuntime.liveObjects = RcRuntime.liveObjects - 1;
     }
 

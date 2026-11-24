@@ -52,10 +52,28 @@ proc renderStorageClassSupport(
       "(allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
     result.add "  eidoStorageAllocateRaw(allocations, bytesPerAllocation)\n\n"
 
-  if classDecl.hasNativeMethod("fromAddress"):
-    result.add "proc " & methodNameFor("fromAddress") &
-      "(startingAddress: int64, allocations: int64, bytesPerAllocation: int64): " & storageType & " =\n"
-    result.add "  eidoStorageFromAddress(startingAddress, allocations, bytesPerAllocation)\n\n"
+  if classDecl.hasNativeMethod("reserveAt"):
+    result.add "proc " & methodNameFor("reserveAt") &
+      "(region: " & rawType & ", address: int64, count: int64): " &
+      rawType & " =\n"
+    result.add "  eidoStorageReserveAt(region, address, count, 1)\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalReserveAt):
+    result.add "proc " & methodNameFor(StorageInternalReserveAt) &
+      "(region: " & rawType & ", address: int64, count: int64, " &
+      "stride: int64): " & rawType & " =\n"
+    result.add "  eidoStorageReserveAt(region, address, count, stride)\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalRebaseOwned):
+    result.add "proc " & methodNameFor(StorageInternalRebaseOwned) &
+      "(raw: " & rawType & ", alignedAddress: int64, count: int64, stride: int64): " &
+      rawType & " =\n"
+    result.add "  eidoStorageRebaseOwnedRaw(raw, alignedAddress, count, stride)\n\n"
+
+  if classDecl.hasNativeMethod(StorageInternalReleaseNativeAddress):
+    result.add "proc " & methodNameFor(StorageInternalReleaseNativeAddress) &
+      "(startingAddress: int64) =\n"
+    result.add "  eidoStorageReleaseNativeAddress(startingAddress)\n\n"
 
   if classDecl.hasNativeMethod("borrowAddress"):
     result.add "proc " & methodNameFor("borrowAddress") &

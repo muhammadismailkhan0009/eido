@@ -27,6 +27,7 @@ class MemoryMetadataBuilder {
             set fieldIndex = fieldIndex + 1;
         }
 
+        if (offset == 0) { set offset = 1; }
         MemoryMetadata.recordLayout(
             type,
             Layout.alignUp(offset, requiredAlignment),

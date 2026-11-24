@@ -21,6 +21,7 @@ type
     moduleName*: string
     origin*: SourceOrigin
     runtimeCapability*: LanguageRuntimeCapability
+    embeddedSdk*: bool
 
 ## Creates one source unit with stable project-local identity.
 ## Module-aware projects also attach the owning canonical module name.
@@ -29,7 +30,8 @@ proc initSourceUnit*(
   path, text: string,
   moduleName: string = "",
   origin: SourceOrigin = soOrdinary,
-  runtimeCapability: LanguageRuntimeCapability = lrcNone
+  runtimeCapability: LanguageRuntimeCapability = lrcNone,
+  embeddedSdk: bool = false
 ): SourceUnit =
   SourceUnit(
     id: SourceId(id),
@@ -37,7 +39,8 @@ proc initSourceUnit*(
     text: text,
     moduleName: moduleName,
     origin: origin,
-    runtimeCapability: runtimeCapability
+    runtimeCapability: runtimeCapability,
+    embeddedSdk: embeddedSdk
   )
 
 ## Extracts the integer value of a source identity.

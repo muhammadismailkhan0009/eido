@@ -65,13 +65,38 @@ proc specializeRawStorageClass*(
       FunctionResultRef(kind: frrSingle, typeRef: rawType)
     ),
     makeMethod(
-      "fromAddress",
+      "reserveAt",
       @[
-        Parameter(span: span, name: "startingAddress", typeRef: intRef),
-        Parameter(span: span, name: "allocations", typeRef: intRef),
-        Parameter(span: span, name: "bytesPerAllocation", typeRef: intRef)
+        Parameter(span: span, name: "region", typeRef: rawType),
+        Parameter(span: span, name: "address", typeRef: intRef),
+        Parameter(span: span, name: "count", typeRef: intRef)
       ],
       FunctionResultRef(kind: frrSingle, typeRef: rawType)
+    ),
+    makeMethod(
+      StorageInternalReserveAt,
+      @[
+        Parameter(span: span, name: "region", typeRef: rawType),
+        Parameter(span: span, name: "address", typeRef: intRef),
+        Parameter(span: span, name: "count", typeRef: intRef),
+        Parameter(span: span, name: "stride", typeRef: intRef)
+      ],
+      FunctionResultRef(kind: frrSingle, typeRef: rawType)
+    ),
+    makeMethod(
+      StorageInternalRebaseOwned,
+      @[
+        Parameter(span: span, name: "raw", typeRef: rawType),
+        Parameter(span: span, name: "alignedAddress", typeRef: intRef),
+        Parameter(span: span, name: "count", typeRef: intRef),
+        Parameter(span: span, name: "stride", typeRef: intRef)
+      ],
+      FunctionResultRef(kind: frrSingle, typeRef: rawType)
+    ),
+    makeMethod(
+      StorageInternalReleaseNativeAddress,
+      @[Parameter(span: span, name: "startingAddress", typeRef: intRef)],
+      FunctionResultRef(kind: frrNone)
     ),
     makeMethod(
       "borrowAddress",

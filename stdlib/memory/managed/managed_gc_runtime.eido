@@ -4,10 +4,6 @@ class ManagedGcRuntime {
     Int ManagedGcRuntime.collectionThreshold = 64;
     Int ManagedGcRuntime.temporaryDepth = 0;
 
-    function alignUp(Int value, Int alignment) returns Int {
-        return ((value + alignment - 1) / alignment) * alignment;
-    }
-
     function headerAlignment() returns Int {
         var alignment = Storage<Int>.alignment();
         if (Storage<Bool>.alignment() > alignment) {
@@ -18,10 +14,10 @@ class ManagedGcRuntime {
 
     function nextOffset() returns Int { return 0; }
     function markedOffset() returns Int {
-        return ManagedGcRuntime.alignUp(Storage<Int>.size(), Storage<Bool>.alignment());
+        return Alignment.alignUp(Storage<Int>.size(), Storage<Bool>.alignment());
     }
     function invariantDepthOffset() returns Int {
-        return ManagedGcRuntime.alignUp(
+        return Alignment.alignUp(
             ManagedGcRuntime.markedOffset() + Storage<Bool>.size(),
             Storage<Int>.alignment()
         );
@@ -39,7 +35,7 @@ class ManagedGcRuntime {
         return ManagedGcRuntime.totalSizeOffset() + Storage<Int>.size();
     }
     function headerSize() returns Int {
-        return ManagedGcRuntime.alignUp(
+        return Alignment.alignUp(
             ManagedGcRuntime.typeIdOffset() + Storage<Int>.size(),
             ManagedGcRuntime.headerAlignment()
         );
@@ -116,13 +112,15 @@ class ManagedGcRuntime {
         var effectiveAlignment = payloadAlignment + 0;
         var headerAlignment = ManagedGcRuntime.headerAlignment();
         if (effectiveAlignment < headerAlignment) { set effectiveAlignment = headerAlignment; }
-        var payloadOffset = ManagedGcRuntime.alignUp(
+        // The aligned Storage base guarantees that an offset aligned to the
+        // same requirement also yields an aligned managed-object payload.
+        var payloadOffset = Alignment.alignUp(
             ManagedGcRuntime.headerSize() + Storage<Int>.size(),
             effectiveAlignment
         );
         var totalSize = payloadOffset + payloadSize;
         if (totalSize < 1) { set totalSize = 1; }
-        var backing = ManagedHeapAllocator.allocate(totalSize);
+        var backing = ManagedHeapAllocator.allocate(totalSize, effectiveAlignment);
         var allocation = ManagedGcRuntime.initializeHeader(
             backing, payloadOffset, payloadSize, totalSize, typeId
         );

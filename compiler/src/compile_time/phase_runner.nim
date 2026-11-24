@@ -211,6 +211,6 @@ proc runStandardCompileTimePhases*(
   # Layout definitions are build-time declarations, even if this program
   # doesn't need an object-memory runtime. Validate them without causing
   # backend object acquisition or selecting a physical layout.
-  if program.layouts.len > 0:
+  if program.layouts.len > 0 or program.layoutSelections.len > 0:
     discard runMemoryMetadataPhase(program)
   CompileTimeMemoryMetadata()

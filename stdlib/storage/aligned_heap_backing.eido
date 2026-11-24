@@ -1,0 +1,69 @@
+// SDK-internal aligned native heap backing for GC/RC; not a general Storage API.
+//
+// Layout and pointer alignment are calculated here, not by the Nim backend or
+// individual memory policies. One Int immediately before the aligned
+// start records the true raw base for eventual release
+// by GC/RC, whose headers retain only the logical aligned object address.
+class AlignedHeapBacking {
+    function prefixBytes() returns Int {
+        return Storage<Int>.size();
+    }
+
+    function allocationBytes(Int count, Int stride, Int alignment) returns Int {
+        require {
+            count >= 0;
+            stride > 0;
+            Alignment.isPowerOfTwo(alignment);
+            // Keep multiplication, padding and signed-address math in range.
+            alignment <= 4611686018427387904;
+            count <= (9223372036854775807 - alignment -
+                AlignedHeapBacking.prefixBytes()) / stride;
+        }
+        return count * stride + alignment - 1 + AlignedHeapBacking.prefixBytes();
+    }
+
+    function allocate(Int count, Int stride, Int alignment) returns Storage<Byte> {
+        require {
+            Alignment.isPowerOfTwo(alignment);
+            stride > 0;
+            count <= 1 or stride - (stride / alignment) * alignment == 0;
+        }
+        var effectiveAlignment = alignment + 0;
+        if (effectiveAlignment < Storage<Int>.alignment()) {
+            set effectiveAlignment = Storage<Int>.alignment();
+        }
+        var bytes = AlignedHeapBacking.allocationBytes(count, stride, effectiveAlignment);
+        if (count == 0) {
+            return Storage<Byte>.allocateRaw(0, stride);
+        }
+
+        var raw = Storage<Byte>.allocateRaw(1, bytes);
+        var base = Storage<Byte>.address(raw);
+        var aligned = Alignment.alignUp(
+            base + AlignedHeapBacking.prefixBytes(), effectiveAlignment
+        );
+        var preheader = Storage<Byte>.borrowAddress(
+            aligned - AlignedHeapBacking.prefixBytes(),
+            1,
+            AlignedHeapBacking.prefixBytes()
+        );
+        var originSlot = Storage<Int>.viewAt(preheader, 0);
+        Storage<Int>.write(originSlot, 0, base);
+
+        // The only native boundary: preserve allocator ownership while
+        // exposing the Eido-calculated aligned address and logical stride.
+        return Storage<Byte>.compilerRebaseOwned(raw, aligned, count, stride);
+    }
+
+    function releaseAddress(Int alignedAddress) {
+        require { alignedAddress > AlignedHeapBacking.prefixBytes(); }
+        var preheader = Storage<Byte>.borrowAddress(
+            alignedAddress - AlignedHeapBacking.prefixBytes(),
+            1,
+            AlignedHeapBacking.prefixBytes()
+        );
+        var originSlot = Storage<Int>.viewAt(preheader, 0);
+        var rawBase = Storage<Int>.read(originSlot, 0);
+        Storage<Byte>.compilerReleaseNativeAddress(rawBase);
+    }
+}

@@ -1,4 +1,4 @@
-import std/unittest
+import std/[unittest, sequtils]
 import types/model
 import support/compiler_test_support
 
@@ -17,11 +17,12 @@ suite "Generic class semantics":
 
     # When
     let program = analyzeSource(source)
+    let userClasses = program.classes.filterIt(not it.span.embeddedSdk)
 
     # Then
-    check program.classes.len == 1
-    check program.classes[0].typ == classType("Box<Int>")
-    check program.classes[0].fields[0].typ == etInt
+    check userClasses.len == 1
+    check userClasses[0].typ == classType("Box<Int>")
+    check userClasses[0].fields[0].typ == etInt
 
   test "specializes nested and multiple type arguments":
     # Given
@@ -47,13 +48,14 @@ suite "Generic class semantics":
 
     # When
     let program = analyzeSource(source)
+    let userClasses = program.classes.filterIt(not it.span.embeddedSdk)
 
     # Then
-    check program.classes.len == 2
-    check program.classes[0].typ == classType("Pair<String,Int>") or
-      program.classes[1].typ == classType("Pair<String,Int>")
-    check program.classes[0].typ == classType("Box<Pair<String,Int>>") or
-      program.classes[1].typ == classType("Box<Pair<String,Int>>")
+    check userClasses.len == 2
+    check userClasses[0].typ == classType("Pair<String,Int>") or
+      userClasses[1].typ == classType("Pair<String,Int>")
+    check userClasses[0].typ == classType("Box<Pair<String,Int>>") or
+      userClasses[1].typ == classType("Box<Pair<String,Int>>")
 
   test "rejects raw and wrong-arity generic class usage":
     # Given

@@ -16,8 +16,10 @@ proc generatedMethodName(generated, sourceName: string): string =
 suite "SDK reference-counting runtime":
   test "RC policy is ordinary embedded Eido over Storage":
     check "MemoryPolicy.objectAcquire" in BuiltinRcPolicySource
-    check "Storage<Byte>.allocateRaw(" in BuiltinRcRuntimeSource
-    check "Storage<Byte>.fromAddress(" in BuiltinRcRuntimeSource
+    check "AlignedHeapBacking.allocate(" in BuiltinRcRuntimeSource
+    check "AlignedHeapBacking.releaseAddress(" in BuiltinRcRuntimeSource
+    check "Storage<Byte>.allocateRaw(" in BuiltinAlignedHeapBackingSource
+    check "Storage<Byte>.compilerReleaseNativeAddress(" in BuiltinAlignedHeapBackingSource
     check "function recount()" in BuiltinRcRuntimeSource
     check "function reclaimAcyclic(" in BuiltinRcRuntimeSource
     check "native function" notin BuiltinRcRuntimeSource

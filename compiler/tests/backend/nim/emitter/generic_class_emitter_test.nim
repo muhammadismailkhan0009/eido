@@ -1,4 +1,4 @@
-import std/[strutils, unittest]
+import std/[strutils, unittest, sequtils]
 import support/compiler_test_support
 
 suite "Generic class emission":
@@ -25,7 +25,7 @@ suite "Generic class emission":
     # Then
     check "eido_class_generic_" in generated
     check "eido_field_value: int64" in generated
-    check "proc eido_method_0_generic_" in generated
+    check generated.splitLines().anyIt(it.startsWith("proc eido_method_") and "_generic_" in it and "_add(" in it)
 
   test "emits different concrete layouts for different specializations":
     # Given
@@ -42,6 +42,6 @@ suite "Generic class emission":
     let generated = emitSource(source)
 
     # Then
-    check generated.count(" = ref object") == 2
+    check generated.splitLines().countIt("eido_class_generic_" in it and " = ref object" in it) == 2
     check "eido_field_value: int64" in generated
     check "eido_field_value: string" notin generated

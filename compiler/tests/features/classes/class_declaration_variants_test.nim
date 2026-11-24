@@ -1,4 +1,4 @@
-import std/unittest
+import std/[unittest, sequtils]
 import types/model
 import support/compiler_test_support
 
@@ -20,7 +20,7 @@ suite "Class declaration acceptance":
     let program = analyzeSource(source)
 
     # Then
-    check program.classes.len == 1
+    check program.classes.filterIt(not it.span.embeddedSdk).len == 1
     check program.classes[0].typ == classType("Point")
     check program.classes[0].fields[0].typ == etInt
     check program.classes[0].fields[1].typ == etInt

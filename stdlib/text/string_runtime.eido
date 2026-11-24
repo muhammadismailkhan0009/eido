@@ -120,13 +120,7 @@ class StringRuntime {
         var current = StringRuntime.head;
         while (current != 0) {
             var nextValue = StringRuntime.next(current);
-            var length = StringRuntime.stringLength(current);
-            var backing = Storage<Byte>.fromAddress(
-                current,
-                1,
-                StringRuntime.totalSize(length)
-            );
-            Storage<Byte>.release(backing);
+            Storage<Byte>.compilerReleaseNativeAddress(current);
             set current = nextValue;
         }
         set StringRuntime.head = 0;

@@ -83,6 +83,7 @@ proc addClass(
   classDecl: HirClass
 ) =
   if isConcreteStorageTypeName(classDecl.sourceName) or
+      isSdkStorageUtilityClass(classDecl.sourceName, classDecl.span) or
       classDecl.span.isHiddenRuntime:
     return
 
@@ -273,6 +274,7 @@ proc buildCompileTimeSnapshot*(program: HirProgram): CompileTimeSnapshot =
 
   for classDecl in program.classes:
     if isConcreteStorageTypeName(classDecl.sourceName) or
+        isSdkStorageUtilityClass(classDecl.sourceName, classDecl.span) or
         classDecl.span.isHiddenRuntime:
       continue
     for methodDecl in classDecl.methods:

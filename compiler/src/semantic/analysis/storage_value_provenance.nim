@@ -24,7 +24,7 @@ proc classifyStorageValue*(
     if source.receiver.kind == astExpressions.ekIdentifier and
         isConcreteStorageTypeName(source.receiver.name):
       if source.methodName in [
-          "allocate", "allocateRaw", "fromAddress"
+          "allocate", "allocateRaw", "reserveAt"
       ]:
         return svpOwned
       if source.methodName in ["borrowAddress", "view", "viewAt", "slice"]:

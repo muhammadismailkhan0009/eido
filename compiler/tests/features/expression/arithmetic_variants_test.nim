@@ -1,107 +1,81 @@
 import std/unittest
-import support/feature_test_support
+import support/feature_batch_support
 
 suite "Binary arithmetic operations":
-  test "Int addition":
-    # Given
-    let source = "function main() returns Int { return 10 + 5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_add")
-
-    # Then
-    check output == "15"
-  test "Int subtraction":
-    # Given
-    let source = "function main() returns Int { return 10 - 3; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_subtract")
-
-    # Then
-    check output == "7"
-  test "Int multiplication":
-    # Given
-    let source = "function main() returns Int { return 6 * 7; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_multiply")
-
-    # Then
-    check output == "42"
-  test "Int division":
-    # Given
-    let source = "function main() returns Int { return 10 / 3; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_int_divide")
-
-    # Then
-    check output == "3"
-  test "Float addition":
-    # Given
-    let source = "function main() returns Float { return 1.5 + 2.5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_float_add")
-
-    # Then
-    check output == "4.0"
-  test "Float division":
-    # Given
-    let source = "function main() returns Float { return 5.0 / 2.0; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_float_divide")
-
-    # Then
-    check output == "2.5"
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "Int addition",
+        source: "function main() returns Int { return 10 + 5; }",
+        expected: "15"
+      ),
+      FeatureBatchCase(
+        name: "Int subtraction",
+        source: "function main() returns Int { return 10 - 3; }",
+        expected: "7"
+      ),
+      FeatureBatchCase(
+        name: "Int multiplication",
+        source: "function main() returns Int { return 6 * 7; }",
+        expected: "42"
+      ),
+      FeatureBatchCase(
+        name: "Int division",
+        source: "function main() returns Int { return 10 / 3; }",
+        expected: "3"
+      ),
+      FeatureBatchCase(
+        name: "Float addition",
+        source: "function main() returns Float { return 1.5 + 2.5; }",
+        expected: "4.0"
+      ),
+      FeatureBatchCase(
+        name: "Float division",
+        source: "function main() returns Float { return 5.0 / 2.0; }",
+        expected: "2.5"
+      )
+    ], "arithmetic_variants_test_1")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Binary operator precedence":
-  test "multiplication has higher precedence than addition":
-    # Given
-    let source = "function main() returns Int { return 10 + 20 * 3; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_precedence")
-
-    # Then
-    check output == "70"
-  test "division has higher precedence than addition":
-    # Given
-    let source = "function main() returns Int { return 10 + 20 / 5; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_div_before_add")
-
-    # Then
-    check output == "14"
-  test "multiplication has higher precedence than subtraction":
-    # Given
-    let source = "function main() returns Int { return 20 - 3 * 4; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_mul_before_sub")
-
-    # Then
-    check output == "8"
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "multiplication has higher precedence than addition",
+        source: "function main() returns Int { return 10 + 20 * 3; }",
+        expected: "70"
+      ),
+      FeatureBatchCase(
+        name: "division has higher precedence than addition",
+        source: "function main() returns Int { return 10 + 20 / 5; }",
+        expected: "14"
+      ),
+      FeatureBatchCase(
+        name: "multiplication has higher precedence than subtraction",
+        source: "function main() returns Int { return 20 - 3 * 4; }",
+        expected: "8"
+      )
+    ], "arithmetic_variants_test_2")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Equal-precedence binary associativity":
-  test "multiplication and division are evaluated left to right":
-    # Given
-    let source = "function main() returns Int { return 20 / 5 * 2; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_mul_div_left_to_right")
-
-    # Then
-    check output == "8"
-  test "addition and subtraction are evaluated left to right":
-    # Given
-    let source = "function main() returns Int { return 10 - 3 + 2; }"
-
-    # When
-    let output = runFeatureSource(source, "expression_add_sub_left_to_right")
-
-    # Then
-    check output == "9"
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "multiplication and division are evaluated left to right",
+        source: "function main() returns Int { return 20 / 5 * 2; }",
+        expected: "8"
+      ),
+      FeatureBatchCase(
+        name: "addition and subtraction are evaluated left to right",
+        source: "function main() returns Int { return 10 - 3 + 2; }",
+        expected: "9"
+      )
+    ], "arithmetic_variants_test_3")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected

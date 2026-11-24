@@ -127,7 +127,7 @@ Names describe visible behavior rather than implementation details.
 - Semantic-analysis tests prove name resolution, typing, contracts, and HIR meaning.
 - Backend tests prove HIR-to-Nim translation.
 - Pipeline tests exercise the complete real path through native Nim compilation.
-- Feature tests exercise complete user-facing Eido variants through generated Nim executed by `nim e`; this preserves end-to-end language behavior without paying native compilation cost per scenario.
+- Feature tests exercise complete user-facing Eido variants through generated Nim. The helper uses `nim e` when supported and native compilation when generated programs import native Storage support (which the Nim VM cannot execute). Compatible successful scenarios may be batched into one compiled executable.
 - Architecture tests prove dependency/readability/test-organization constraints.
 - Root integration tests prove cross-component flows such as CLI multi-source project builds, semantic-only `eido check`, and compilation/execution of permanent Eido-written tooling.
 - Test through public phase entry points; do not test private procedures directly.
@@ -136,7 +136,9 @@ Names describe visible behavior rather than implementation details.
 
 `compiler/tests/support/compiler_test_support.nim` exposes concise real-phase entry points such as source → AST, source → HIR, and source → Nim.
 
-`compiler/tests/support/feature_test_support.nim` runs complete Eido programs through the Eido compiler and executes the generated Nim with the Nim VM (`nim e`). Native code generation remains covered separately by `compiler/tests/pipeline/`.
+`compiler/tests/support/feature_test_support.nim` runs complete Eido programs through the Eido compiler and executes generated Nim with `nim e` where compatible. When the emitted program depends on native Storage support or managed runtime operations, it compiles and executes a native program. Native code generation also has dedicated tests under `compiler/tests/pipeline/`.
+
+`compiler/tests/support/feature_batch_support.nim` batches *successful* Eido feature scenarios: it compiles each Eido fixture independently, wraps each generated Nim entrypoint as an exported module callable, then compiles and runs one combined native executable (or one Nim VM program if every module is VM-compatible). Captured per-case stdout is compared against separate expectations with each scenario name recorded using `checkpoint`. Expected crashes/failed runtime contracts must remain independent subprocess tests; compiler rejection tests remain ordinary compiler tests. The batch runner is test infrastructure and does not change production Eido code generation.
 
 Test support must not duplicate compiler logic or become a generic utilities directory.
 
@@ -166,7 +168,7 @@ The canonical test task is parallel and CPU-adaptive:
 2. The complete `compiler/tests/compiler_test_suite.nim` aggregate is compiled once.
 3. Aggregate compilation uses `--parallelBuild:N`, where `N` is the effective worker count after reserving two logical cores by default.
 4. Compiler-internal tests run one process per suite.
-5. Language-facing feature tests run one process per individual test, because those cases are comparatively expensive and often execute generated Nim through `nim e`.
+5. Language-facing feature selectors run in isolated outer test processes. Compatible successful Eido programs within a batched selector share one generated Nim compilation and executable, reducing redundant compiler invocations. Expected crashes and compiler failures are kept as separate tests.
 6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
 7. Successful child output is suppressed; failed child output is replayed with its selector.
 8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios: bootstrap CLI behavior plus compilation/execution of the permanent Eido-written CLI dogfood target.
@@ -180,3 +182,9 @@ EIDO_TEST_JOBS=4 nimble test
 The override controls both aggregate build parallelism and test-process concurrency.
 
 The runner uses process isolation rather than threads so `std/unittest` fixtures and compiler/native-toolchain subprocesses remain independent.
+
+Native feature batches isolate their Nim object cache within their temporary batch
+directory, so simultaneously running batches cannot overwrite each other's
+objects or accidentally link another batch's runner. Embedded native support
+is content-versioned and atomically published. The parallel runner prints a
+final failed-selector summary.

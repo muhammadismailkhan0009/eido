@@ -17,6 +17,7 @@ exports:
   - process.Process
   - io.Console
   - storage.Storage
+  - storage.Alignment
   - collections.Array
   - collections.Arrays
 

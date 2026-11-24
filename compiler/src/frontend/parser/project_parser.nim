@@ -43,4 +43,7 @@ proc parseProject*(project: EidoProject): Program =
 
     result.classes.add sourceProgram.classes
     result.layouts.add sourceProgram.layouts
+    for call in sourceProgram.layoutConfigCalls.mitems:
+      call.moduleName = sourceUnit.moduleName
+    result.layoutConfigCalls.add sourceProgram.layoutConfigCalls
     result.functions.add sourceProgram.functions

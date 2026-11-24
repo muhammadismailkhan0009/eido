@@ -2,12 +2,15 @@ module: storage
 
 sources:
   - storage.eido
+  - alignment.eido
+  - aligned_heap_backing.eido
 
 children: []
 dependencies: []
 
 exports:
   - Storage
+  - Alignment
 
 provides: {}
 adopts: []

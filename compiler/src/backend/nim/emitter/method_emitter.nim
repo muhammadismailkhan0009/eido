@@ -68,7 +68,7 @@ proc renderMethod*(
   # memory policy and is therefore instrumentation-exempt as well.
   let suppressMemoryInstrumentation =
     methodDecl.span.isHiddenRuntime or
-    isStorageSdkSourcePath(methodDecl.span.sourcePath)
+    isStorageSdkSource(methodDecl.span)
   let identityValues =
     if suppressMemoryInstrumentation:
       @[]

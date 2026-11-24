@@ -1,5 +1,5 @@
 ## Converts source-backed layout declarations into build-machine Eido methods.
-## Does not change target-program code or select an active physical layout.
+## Runs each named definition before the compiler selects one active layout.
 
 import ../hir/program as hirProgram
 

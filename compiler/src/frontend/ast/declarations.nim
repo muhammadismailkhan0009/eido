@@ -51,8 +51,8 @@ type
     extends*: seq[string]
     methods*: seq[FunctionDecl]
 
-  ## A compile-time layout declaration. Its body remains syntax until the
-  ## layout evaluator is introduced; it has no runtime effect by itself.
+  ## A named, build-machine-evaluated layout declaration.
+  ## Its field placement becomes authoritative only when selected.
   LayoutDecl* = object
     span*: SourceSpan
     name*: string
@@ -71,3 +71,5 @@ type
     fields*: seq[FieldDecl]
     invariants*: seq[Expr]
     methods*: seq[FunctionDecl]
+    ## Optional user-defined compile-time layout registration methods.
+    layoutConfigMethods*: seq[FunctionDecl]

@@ -78,3 +78,16 @@ proc markStorageReleased*(scope: var LocalScope, name: string) =
   var symbol = scope.byName[name]
   symbol.storageReleased = true
   scope.byName[name] = symbol
+
+  # Known dependent capabilities stay invalid even if the owner binding is
+  # later replaced with another allocation. Propagate along placement chains.
+  var changed = true
+  while changed:
+    changed = false
+    for _, dependent in scope.byName.mpairs:
+      if not dependent.storageReleased and
+          dependent.storageBorrowOwner.len > 0 and
+          scope.byName.hasKey(dependent.storageBorrowOwner) and
+          scope.byName[dependent.storageBorrowOwner].storageReleased:
+        dependent.storageReleased = true
+        changed = true

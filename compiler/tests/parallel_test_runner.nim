@@ -113,6 +113,7 @@ proc runTests() =
   var active: seq[RunningSelector]
   var nextSelector = 0
   var exitCode = 0
+  var failedSelectors: seq[string]
 
   while nextSelector < selectors.len or active.len > 0:
     while nextSelector < selectors.len and active.len < jobs:
@@ -144,6 +145,7 @@ proc runTests() =
     echo "[", status, "] ", selectors[finished.index], " (", finished.startedAt.elapsedLabel(), ")"
 
     if childExitCode != 0:
+      failedSelectors.add selectors[finished.index]
       if exitCode == 0:
         exitCode = childExitCode
       for line in lines:
@@ -151,7 +153,12 @@ proc runTests() =
 
     active.delete(finishedIndex)
 
+  echo "Completed ", selectors.len, " selectors: ",
+    selectors.len - failedSelectors.len, " passed, ", failedSelectors.len, " failed"
   if exitCode != 0:
+    stderr.writeLine("Failed test selectors:")
+    for selector in failedSelectors:
+      stderr.writeLine("  " & selector)
     quit(exitCode)
 
 runTests()

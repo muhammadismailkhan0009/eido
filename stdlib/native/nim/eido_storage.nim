@@ -11,6 +11,9 @@ type
     releasable*: bool
     rawBlocks*: bool
     live*: bool
+    ## Original allocation address when a typed raw allocation needs alignment.
+    ## The public starting address may be an aligned address inside this block.
+    allocationBase*: pointer
 
 ## Requires a live storage capability before any operation touches its backing region.
 proc requireEidoStorageLive[T](storage: EidoStorage[T]) =
@@ -30,6 +33,21 @@ proc requireEidoStorageLayout(allocations, strideBytes: int64) =
     raise newException(ValueError, "Eido storage bytes per allocation must be positive")
   if allocations > int64(high(int)) div strideBytes:
     raise newException(ValueError, "Eido storage allocation exceeds target address space")
+
+## Eido addresses are signed Int values even on an unsigned pointer target.
+## Validate before narrowing to uint; no address may wrap or truncate.
+const maxStorageAddress = min(uint64(high(uint)), uint64(high(int64)))
+
+proc requireEidoStorageAddressRange(address, count, stride: int64) =
+  requireEidoStorageLayout(count, stride)
+  if address < 0 or uint64(address) > maxStorageAddress:
+    raise newException(ValueError, "Eido storage address exceeds target address space")
+  if count > 0:
+    if address == 0:
+      raise newException(ValueError, "nonempty native Storage cannot use a nil address")
+    let lastOffset = uint64(count * stride - 1)
+    if lastOffset > maxStorageAddress - uint64(address):
+      raise newException(ValueError, "Eido storage region exceeds target address space")
 
 ## Returns the byte address of one validated storage slot.
 proc eidoStorageSlotAddress[T](storage: EidoStorage[T], index: int64): uint =
@@ -59,6 +77,61 @@ proc eidoStorageAllocateRaw*(
   if result.data.isNil:
     raise newException(OutOfMemDefect, "Eido raw storage allocation failed")
 
+## Verifies a candidate address/extent is within a live raw backing region.
+proc checkedStorageSubrange(
+  region: EidoStorage[int8], address, count, stride: int64
+): uint =
+  requireEidoStorageLive(region)
+  requireEidoStorageAddressRange(address, count, stride)
+  requireEidoStorageLayout(region.capacity, region.strideBytes)
+  let base = cast[uint](region.data)
+  let regionBytes = uint(region.capacity * region.strideBytes)
+  let start = uint(address)
+  let claimBytes = uint(count * stride)
+  if start < base or start - base > regionBytes or
+      claimBytes > regionBytes - (start - base):
+    raise newException(IndexDefect, "explicit Storage reservation outside backing region")
+  start
+
+## Creates a releasable explicit placement inside an existing region.
+## Release of the result ends only this placement; it never deallocates the
+## caller-owned region. Overlap tracking is an optional allocator policy.
+proc eidoStorageReserveAt*(
+  region: EidoStorage[int8],
+  address, count, stride: int64
+): EidoStorage[int8] =
+  let start = checkedStorageSubrange(region, address, count, stride)
+  result.data = cast[ptr UncheckedArray[int8]](start)
+  result.capacity = count
+  result.strideBytes = stride
+  result.ownsMemory = false
+  result.releasable = true
+  result.rawBlocks = true
+  result.live = true
+
+## Rebase an owning raw allocation to an Eido-calculated aligned slot range.
+## All alignment/padding arithmetic and original-base bookkeeping is in Eido.
+## This bridge only preserves the allocator's original pointer for deallocation.
+proc eidoStorageRebaseOwnedRaw*(
+  storage: EidoStorage[int8],
+  alignedAddress, count, stride: int64
+): EidoStorage[int8] =
+  requireEidoStorageLive(storage)
+  if not storage.rawBlocks or not storage.ownsMemory or not storage.releasable or
+      not storage.allocationBase.isNil:
+    raise newException(ValueError, "rebase requires owning original raw Storage")
+  if storage.capacity != 1:
+    raise newException(ValueError, "rebase requires a single raw allocation block")
+  if count == 0:
+    raise newException(ValueError, "rebase requires nonempty Storage; allocate an empty root directly")
+  let target = checkedStorageSubrange(storage, alignedAddress, count, stride)
+  result = storage
+  result.data = cast[ptr UncheckedArray[int8]](target)
+  result.capacity = count
+  result.strideBytes = stride
+  if target != cast[uint](storage.data):
+    result.allocationBase = storage.data
+
 ## Reinterprets one raw Storage<Byte> descriptor as typed storage without
 ## changing ownership, release, capacity, or stride semantics.
 proc eidoStorageFromRaw*[T](storage: EidoStorage[int8]): EidoStorage[T] =
@@ -85,6 +158,7 @@ proc eidoStorageFromRaw*[T](storage: EidoStorage[int8]): EidoStorage[T] =
   result.releasable = storage.releasable
   result.rawBlocks = false
   result.live = storage.live
+  result.allocationBase = storage.allocationBase
 
 ## Exposes a typed descriptor as the equivalent raw Storage<Byte> capability.
 proc eidoStorageRaw*[T](storage: EidoStorage[T]): EidoStorage[int8] =
@@ -96,6 +170,7 @@ proc eidoStorageRaw*[T](storage: EidoStorage[T]): EidoStorage[int8] =
   result.releasable = storage.releasable
   result.rawBlocks = true
   result.live = storage.live
+  result.allocationBase = storage.allocationBase
 
 ## Reports the target byte width of one typed Storage slot.
 proc eidoStorageSize*[T](): int64 =
@@ -105,26 +180,16 @@ proc eidoStorageSize*[T](): int64 =
 proc eidoStorageAlignment*[T](): int64 =
   int64(alignof(T))
 
-## Creates an owning raw descriptor for an existing allocation at an explicit address.
-## The caller must provide an address whose lifetime Storage is responsible for.
-proc eidoStorageFromAddress*(
-  startingAddress: int64,
-  allocations: int64,
-  bytesPerAllocation: int64
-): EidoStorage[int8] =
-  if startingAddress < 0:
-    raise newException(ValueError, "Eido storage starting address cannot be negative")
-  requireEidoStorageLayout(allocations, bytesPerAllocation)
-  if allocations > 0 and startingAddress == 0:
-    raise newException(ValueError, "owning Storage cannot use a nil address")
+## Single physical native deallocation operation.
+proc releaseNativeBacking(base: pointer) =
+  if not base.isNil:
+    dealloc(base)
 
-  result.data = cast[ptr UncheckedArray[int8]](uint(startingAddress))
-  result.capacity = allocations
-  result.strideBytes = bytesPerAllocation
-  result.ownsMemory = true
-  result.releasable = true
-  result.rawBlocks = true
-  result.live = true
+## Trusted SDK-only release of an original native allocation base.
+## This never constructs an owning or readable descriptor from an address.
+proc eidoStorageReleaseNativeAddress*(startingAddress: int64) =
+  requireEidoStorageAddressRange(startingAddress, 1, 1)
+  releaseNativeBacking(cast[pointer](uint(startingAddress)))
 
 ## Creates a non-owning raw descriptor for existing memory at an explicit address.
 ## Borrowed address storage may be read/written but cannot release its backing memory.
@@ -133,9 +198,7 @@ proc eidoStorageBorrowAddress*(
   allocations: int64,
   bytesPerAllocation: int64
 ): EidoStorage[int8] =
-  if startingAddress < 0:
-    raise newException(ValueError, "Eido storage starting address cannot be negative")
-  requireEidoStorageLayout(allocations, bytesPerAllocation)
+  requireEidoStorageAddressRange(startingAddress, allocations, bytesPerAllocation)
 
   result.data = cast[ptr UncheckedArray[int8]](uint(startingAddress))
   result.capacity = allocations
@@ -181,8 +244,13 @@ proc eidoStorageSlice*[T](
       start > storage.capacity or count > storage.capacity - start:
     raise newException(IndexDefect, "Eido storage slice out of bounds")
 
-  let targetAddress =
-    cast[uint](storage.data) + uint(start) * uint(storage.strideBytes)
+  # A zero-length slice at the end still exposes an address. Do not let
+  # the one-past-end calculation wrap or produce an unrepresentable Int.
+  let base = uint64(cast[uint](storage.data))
+  let offset = uint64(start * storage.strideBytes)
+  if base > maxStorageAddress or offset > maxStorageAddress - base:
+    raise newException(ValueError, "Eido storage slice address exceeds target address space")
+  let targetAddress = uint(base + offset)
   result.data = cast[ptr UncheckedArray[T]](targetAddress)
   result.capacity = count
   result.strideBytes = storage.strideBytes
@@ -234,8 +302,12 @@ proc eidoStorageRelease*[T](storage: var EidoStorage[T]) =
         cast[ptr T](address)[] = default(T)
         inc index
     if not storage.data.isNil:
-      dealloc(storage.data)
+      if storage.allocationBase.isNil:
+        releaseNativeBacking(storage.data)
+      else:
+        releaseNativeBacking(storage.allocationBase)
 
+  storage.allocationBase = nil
   storage.data = nil
   storage.capacity = 0
   storage.strideBytes = 0

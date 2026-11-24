@@ -4,6 +4,8 @@ import ../../diagnostics/errors
 import ../lexer/token
 import ../ast/program
 import core
+import statement_parser
+import ../ast/statements
 import declaration_parser
 
 ## Parses all supported top-level declarations.
@@ -21,11 +23,17 @@ proc parseProgram*(tokens: seq[Token]): Program =
       result.functions.add parser.parseNativeFunction()
     elif parser.check(tkFunction):
       result.functions.add parser.parseFunction()
+    elif parser.check(tkIdentifier):
+      let statement = parser.parseCallStmt()
+      result.layoutConfigCalls.add LayoutConfigCall(
+        span: statement.span,
+        call: statement.call
+      )
     else:
       failAt(
         parser.peek.span,
         "expected top-level interface, class, layout, function, or native function declaration"
       )
 
-  if result.interfaces.len == 0 and result.classes.len == 0 and result.layouts.len == 0 and result.functions.len == 0:
+  if result.interfaces.len == 0 and result.classes.len == 0 and result.layouts.len == 0 and result.layoutConfigCalls.len == 0 and result.functions.len == 0:
     failAt(parser.peek.span, "expected at least one declaration")

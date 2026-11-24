@@ -121,9 +121,17 @@ proc analyzeStaticMethodCall(
     )
 
   let target = owner.getMethod(expr.methodName)
+  if owner.name in [
+      "AlignedHeapBacking", "eido.stdlib.storage.AlignedHeapBacking"
+  ] and not isStorageTrustedRuntimeSource(expr.span):
+    failAt(expr.span,
+      "AlignedHeapBacking is an internal SDK memory runtime helper")
   if isConcreteStorageTypeName(owner.name):
     if isStorageInternalMethodName(target.name) and
-        not isStorageSdkSourcePath(expr.span.sourcePath):
+        not (if target.name == StorageInternalReleaseNativeAddress:
+          isStorageTrustedRuntimeSource(expr.span)
+        else:
+          isStorageSdkSource(expr.span)):
       failAt(
         expr.span,
         "Storage compiler bridge '" & target.name & "' is not public API"

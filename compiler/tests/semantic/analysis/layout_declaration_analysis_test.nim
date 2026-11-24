@@ -1,4 +1,4 @@
-import std/unittest
+import std/[unittest, sequtils, strutils]
 import support/compiler_test_support
 
 suite "Layout declaration analysis":
@@ -21,7 +21,7 @@ suite "Layout declaration analysis":
     check program.layouts.len == 2
     check program.layouts[0].sourceName == "Compact"
     check program.layouts[0].targetClass == "Family"
-    check program.layouts[0].body.len == 4
+    check "father" in program.layouts[0].bodySource
     check program.layouts[1].sourceName == "Aligned"
 
   test "unselected layouts do not alter the generated class representation":
@@ -86,7 +86,7 @@ suite "Layout declaration analysis":
       function main() {}
     """)
     check program.layouts.len == 0
-    check program.classes.len == 0
+    check program.classes.filterIt(not it.span.embeddedSdk).len == 0
 
   test "rejects generic layout and target parameter mismatch":
     expect ValueError:

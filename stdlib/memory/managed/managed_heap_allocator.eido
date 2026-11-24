@@ -7,10 +7,10 @@ class ManagedHeapAllocator {
     Int ManagedHeapAllocator.liveBlocks = 0;
     Int ManagedHeapAllocator.liveBytes = 0;
 
-    function allocate(Int byteCount) returns Storage<Byte> {
+    function allocate(Int byteCount, Int alignment) returns Storage<Byte> {
         require { byteCount > 0; }
 
-        var backing = Storage<Byte>.allocateRaw(1, byteCount);
+        var backing = AlignedHeapBacking.allocate(1, byteCount, alignment);
         set ManagedHeapAllocator.liveBlocks =
             ManagedHeapAllocator.liveBlocks + 1;
         set ManagedHeapAllocator.liveBytes =
@@ -26,12 +26,7 @@ class ManagedHeapAllocator {
             ManagedHeapAllocator.liveBytes >= byteCount;
         }
 
-        var backing = Storage<Byte>.fromAddress(
-            allocationAddress,
-            1,
-            byteCount
-        );
-        Storage<Byte>.release(backing);
+        AlignedHeapBacking.releaseAddress(allocationAddress);
         set ManagedHeapAllocator.liveBlocks =
             ManagedHeapAllocator.liveBlocks - 1;
         set ManagedHeapAllocator.liveBytes =

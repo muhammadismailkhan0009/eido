@@ -11,6 +11,7 @@ type
     sourceId: SourceId
     sourcePath: string
     sourceOrigin: SourceOrigin
+    embeddedSdk: bool
     current: int
     line: int
     column: int
@@ -36,6 +37,7 @@ proc initLexer*(sourceUnit: SourceUnit): Lexer =
     sourceId: sourceUnit.id,
     sourcePath: sourceUnit.path,
     sourceOrigin: sourceUnit.origin,
+    embeddedSdk: sourceUnit.embeddedSdk,
     current: 0,
     line: 1,
     column: 1
@@ -106,7 +108,8 @@ proc makeToken(
       endOffset,
       line,
       column,
-      lexer.sourceOrigin
+      lexer.sourceOrigin,
+      lexer.embeddedSdk
     )
   )
 

@@ -6,7 +6,7 @@ suite "Class copy emission":
   test "copy memo runtime owns scratch backing through Storage":
     check "Storage<Byte>.allocateRaw(" in BuiltinCopyRuntimeSource
     check "Storage<Int>.view(" in BuiltinCopyRuntimeSource
-    check "Storage<Byte>.fromAddress(" in BuiltinCopyRuntimeSource
+    check "Storage<Byte>.compilerReleaseNativeAddress(" in BuiltinCopyRuntimeSource
     check "Storage<Byte>.release(" in BuiltinCopyRuntimeSource
     check "seq[" notin BuiltinCopyRuntimeSource
 

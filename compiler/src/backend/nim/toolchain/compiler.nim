@@ -12,7 +12,8 @@ proc compileWithNim*(
   outputPath: string,
   generatedSourcePath: string = "",
   memoryMode: string = "",
-  additionalImportPaths: seq[string] = @[]
+  additionalImportPaths: seq[string] = @[],
+  nimCachePath: string = ""
 ) =
   let outputDirectory = parentDir(outputPath)
   if outputDirectory.len > 0:
@@ -31,6 +32,8 @@ proc compileWithNim*(
   compilerArgs.add "--path:" & nativeSupportPath()
   for importPath in additionalImportPaths:
     compilerArgs.add "--path:" & importPath
+  if nimCachePath.len > 0:
+    compilerArgs.add "--nimcache:" & nimCachePath
   compilerArgs.add "-o:" & outputPath
   compilerArgs.add nimPath
 

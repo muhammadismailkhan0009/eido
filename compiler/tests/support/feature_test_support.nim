@@ -20,7 +20,11 @@ proc runFeatureSource*(source: string, caseName: string): string =
   let generated = compileProjectToNim(fixtureProject(source))
   writeFile(generatedPath, generated)
 
-  if "memoryObjectAllocate" in generated or "eido_string_allocate" in generated:
+  # Native Storage support cannot be executed by Nim VM (`alloc0`).
+  # Preserve VM execution for programs that can run there.
+  if "import eido_storage" in generated or
+      "memoryObjectAllocate" in generated or
+      "eido_string_allocate" in generated:
     let outputPath = generatedPath.changeFileExt("")
     defer:
       if fileExists(outputPath):

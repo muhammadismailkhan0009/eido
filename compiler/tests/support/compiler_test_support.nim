@@ -22,8 +22,15 @@ proc storageSdkProgram(): Program =
     1,
     BuiltinStorageSourcePath,
     BuiltinStorageSource,
-    BuiltinStorageModuleName
+    BuiltinStorageModuleName, embeddedSdk = true
   )))
+  let alignmentSdk = parseProgram(lexAll(initSourceUnit(
+    2,
+    BuiltinAlignmentSourcePath,
+    BuiltinAlignmentSource,
+    BuiltinStorageModuleName, embeddedSdk = true
+  )))
+  result.classes.add alignmentSdk.classes
   for classIndex in 0 ..< result.classes.len:
     result.classes[classIndex].moduleName = BuiltinStorageModuleName
     for methodIndex in 0 ..< result.classes[classIndex].methods.len:

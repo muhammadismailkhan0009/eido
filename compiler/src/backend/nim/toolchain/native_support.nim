@@ -1,20 +1,27 @@
 ## Resolves the backend support module path used by Eido native functions.
 ## Installed compilers carry an embedded fallback, while development SDK layouts may provide the file beside the executable.
 
-import std/os
+import std/[os, hashes]
 import ../../../stdlib/builtin_sources
 
-## Materializes the compiler-embedded native support into a temporary SDK cache.
+## Publishes one complete immutable source file even when compilers run concurrently.
+proc publishEmbeddedSource(path, source: string) =
+  if fileExists(path) and readFile(path) == source:
+    return
+  let temporary = path & "." & $getCurrentProcessId()
+  writeFile(temporary, source)
+  moveFile(temporary, path)
+
+## Materializes the compiler-embedded native support into a content-versioned SDK cache.
 proc materializeEmbeddedNativeSupport(): string =
   let sdkCache = getCacheDir("eido")
-  let directory = sdkCache / "native" / "nim"
+  let directory = sdkCache / "native" / ("nim-" & $hash(BuiltinNativeSupportSource & BuiltinStorageSupportSource))
   createDir(sdkCache)
   createDir(sdkCache / "native")
   createDir(directory)
 
   let supportFile = directory / "eido_native.nim"
-  if not fileExists(supportFile) or readFile(supportFile) != BuiltinNativeSupportSource:
-    writeFile(supportFile, BuiltinNativeSupportSource)
+  publishEmbeddedSource(supportFile, BuiltinNativeSupportSource)
 
   let storageFile = directory / "eido_storage.nim"
   if not fileExists(storageFile) or

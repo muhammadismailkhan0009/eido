@@ -22,11 +22,13 @@ import ../symbols/nominals
 import ../symbols/functions
 import class_analysis
 import layout_analysis
+import layout_selection_analysis
 import interface_analysis
 import method_classification
 import method_analysis
 import function_analysis
 import storage_result_provenance
+import storage_static_reservations
 
 ## Rejects unsupported nominal/optional values at the initial native ABI boundary.
 proc validateNativeSignature(
@@ -104,7 +106,9 @@ proc analyzeProgram*(
   program: astProgram.Program,
   target: ProjectTarget = ptExecutable
 ): hirProgram.HirProgram =
+  let layoutSelections = analyzeLayoutSelections(program)
   let specializedProgram = specializeGenericClasses(program)
+  validateStaticStorageReservations(specializedProgram)
   var symbols = initNominalSymbols()
 
   # Pass 1: establish interface identities before any signatures.
@@ -203,7 +207,7 @@ proc analyzeProgram*(
       let storageResultProvenance =
         if isConcreteStorageTypeName(sourceClass.name):
           case sourceMethod.name
-          of "allocate", "allocateRaw", "fromAddress",
+          of "allocate", "allocateRaw", "reserveAt",
               StorageInternalFromRaw, StorageInternalRaw:
             svpOwned
           of "borrowAddress", "view", "viewAt", "slice":
@@ -332,6 +336,7 @@ proc analyzeProgram*(
     interfaces: analyzedInterfaces,
     classes: analyzedClasses,
     layouts: analyzeLayouts(specializedProgram.layouts, analyzedClasses),
+    layoutSelections: layoutSelections,
     functions: analyzedFunctions,
     hasMain: mainFound,
     mainFunctionId: mainId

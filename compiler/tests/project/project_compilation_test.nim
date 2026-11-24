@@ -1,4 +1,4 @@
-import std/[strutils, unittest]
+import std/[strutils, unittest, sequtils]
 import project/model
 import source/source_unit
 import tooling/compiler_service
@@ -24,10 +24,10 @@ suite "Project compilation":
     let reverseProgram = requireCheckedProject(reverseProject)
 
     # Then
-    check forwardProgram.classes.len == 1
+    check forwardProgram.classes.filterIt(not it.span.embeddedSdk).len == 1
     check forwardProgram.functions.len == 2
     check forwardProgram.classes[0].sourceName == "Account"
-    check reverseProgram.classes.len == 1
+    check reverseProgram.classes.filterIt(not it.span.embeddedSdk).len == 1
     check reverseProgram.functions.len == 2
 
   test "retains layouts declared in a separate source unit":

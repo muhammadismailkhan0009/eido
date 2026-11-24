@@ -78,6 +78,8 @@ import semantic/analysis/expression/comparison_operator_analysis_test
 import semantic/analysis/expression/boolean_operator_analysis_test
 import backend/nim/toolchain/artifacts_test
 import backend/nim/toolchain/native_support_test
+import backend/nim/toolchain/native_storage_test
+import backend/nim/toolchain/feature_batch_support_test
 import backend/nim/toolchain/managed_gc_runtime_test
 import backend/nim/toolchain/reference_counting_runtime_test
 import backend/nim/emitter/nim_emitter_test
@@ -99,6 +101,7 @@ import backend/nim/emitter/statement/for_statement_emitter_test
 import backend/nim/emitter/statement/loop_control_statement_emitter_test
 import backend/nim/emitter/statement/set_statement_emitter_test
 import compile_time/memory_policy_test
+import compile_time/layout_selection_test
 import compile_time/memory_policy_plugin_test
 import pipeline/compiler_pipeline_test
 import project/project_compilation_test
@@ -137,6 +140,8 @@ import features/classes/class_copy_ref_variants_test
 import features/classes/gc_management_variants_test
 import features/storage/storage_variants_test
 import features/storage/storage_class_test
+import features/storage/reserve_at_variants_test
+import features/storage/aligned_heap_backing_variants_test
 import features/interfaces/interface_variants_test
 import features/interfaces/generic_interface_variants_test
 import features/control_flow/conditional_variants_test

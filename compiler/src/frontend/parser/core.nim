@@ -39,6 +39,7 @@ proc advance*(parser: var Parser): Token =
 proc position*(parser: Parser): int =
   parser.current
 
+## Reconstructs source-equivalent tokens from a parser interval.
 proc tokenSource*(parser: Parser, first, pastLast: int): string =
   for i in first ..< pastLast:
     result.add parser.tokens[i].lexeme & " "

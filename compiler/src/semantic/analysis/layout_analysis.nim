@@ -1,11 +1,12 @@
-## Registers layout declarations without applying them to physical memory.
-## Layout bodies will be analyzed/executed by a future Eido compile-time phase.
+## Resolves named layout targets; field placement is checked by the
+## build-machine Eido Layout phase before selecting the physical representation.
 
 import std/sets
 import ../../diagnostics/errors
 import ../../frontend/ast/declarations as astDeclarations
 import ../../hir/declarations as hirDeclarations
 
+## Resolves named layout targets into retained phase source.
 proc analyzeLayouts*(
   layouts: seq[astDeclarations.LayoutDecl],
   classes: seq[hirDeclarations.HirClass]
@@ -29,6 +30,5 @@ proc analyzeLayouts*(
       span: layout.span,
       sourceName: layout.name,
       targetClass: layout.targetType.name,
-      body: layout.body,
       bodySource: layout.bodySource
     )

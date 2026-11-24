@@ -106,7 +106,7 @@ proc lowerPhaseModuleToNim(
     BuiltinStringRuntimeSource,
     canonicalName,
     soLanguageRuntime,
-    lrcString
+    lrcString, embeddedSdk = true
   )
 
   # The private compile-time String runtime is ordinary Eido code over
@@ -114,7 +114,11 @@ proc lowerPhaseModuleToNim(
   # rather than relying on a previously cached phase executable.
   sourceUnits.add initSourceUnit(
     sourceUnits.len, BuiltinStorageSourcePath,
-    BuiltinStorageSource, BuiltinStorageModuleName
+    BuiltinStorageSource, BuiltinStorageModuleName, embeddedSdk = true
+  )
+  sourceUnits.add initSourceUnit(
+    sourceUnits.len, BuiltinAlignmentSourcePath,
+    BuiltinAlignmentSource, BuiltinStorageModuleName, embeddedSdk = true
   )
   let storageModule = moduleModel.ModuleSpec(
     name: "storage",
@@ -122,10 +126,10 @@ proc lowerPhaseModuleToNim(
     parentName: "",
     manifestPath: BuiltinStorageManifestPath,
     directory: "<eido-sdk>/stdlib/storage",
-    sourcePaths: @[BuiltinStorageSourcePath],
+    sourcePaths: @[BuiltinStorageSourcePath, BuiltinAlignmentSourcePath],
     children: @[],
     dependencies: @[],
-    exports: @["Storage"],
+    exports: @["Storage", "Alignment"],
     provides: @[],
     adopts: @[]
   )
@@ -163,7 +167,9 @@ proc phaseFingerprint(
   var content = manifestSource
   for phaseSource in phaseSources:
     content.add "\n" & phaseSource.entry & "\n" & phaseSource.text
-  $hash(content & "\n" & nativeSupport)
+  $hash(content & "\n" & nativeSupport & "\n" &
+    BuiltinStorageSource & BuiltinAlignmentSource & BuiltinStringRuntimeSource &
+    BuiltinStorageSupportSource & "\n" & BuiltinNativeSupportSource)
 
 ## Builds or reuses one cached build-machine executable for an Eido phase.
 proc materializePhaseExecutable(
@@ -186,7 +192,9 @@ proc materializePhaseExecutable(
 
   let supportPath = supportDirectory / "eido_native.nim"
   if not fileExists(supportPath) or readFile(supportPath) != nativeSupport:
-    writeFile(supportPath, nativeSupport)
+    let temporarySupport = supportPath & "." & $getCurrentProcessId()
+    writeFile(temporarySupport, nativeSupport)
+    moveFile(temporarySupport, supportPath)
 
   let executablePath = phaseDirectory / (phaseName & "-phase")
   if fileExists(executablePath):

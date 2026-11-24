@@ -74,6 +74,7 @@ suite "Module project loading":
       "process.Process",
       "io.Console",
       "storage.Storage",
+      "storage.Alignment",
       "collections.Array",
       "collections.Arrays"
     ]
@@ -83,8 +84,12 @@ suite "Module project loading":
     check project.modules[4].canonicalName == BuiltinIoModuleName
     check project.modules[4].sourcePaths == @[BuiltinConsoleSourcePath]
     check project.modules[5].canonicalName == BuiltinStorageModuleName
-    check project.modules[5].sourcePaths == @[BuiltinStorageSourcePath]
-    check project.modules[5].exports == @["Storage"]
+    check project.modules[5].sourcePaths == @[
+      BuiltinStorageSourcePath, BuiltinAlignmentSourcePath, BuiltinAlignedHeapBackingSourcePath
+    ]
+    check project.modules[5].exports == @["Storage", "Alignment"]
+    check project.modules[5].dependencies.len == 0
+    check BuiltinStorageModuleName in project.modules[7].dependencies
     check project.modules[6].canonicalName == BuiltinCollectionsModuleName
     check project.modules[6].sourcePaths == @[
       BuiltinArraySourcePath,
@@ -133,30 +138,31 @@ suite "Module project loading":
     check project.modules[11].exports.len == 0
 
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 21
+    check project.sources.len == 23
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
     check project.sources[3].moduleName == BuiltinIoModuleName
-    check project.sources[4].moduleName == BuiltinStorageModuleName
-    for index in 5 .. 7:
+    for index in 4 .. 6:
+      check project.sources[index].moduleName == BuiltinStorageModuleName
+    for index in 7 .. 9:
       check project.sources[index].moduleName == BuiltinCollectionsModuleName
-    for index in 8 .. 13:
+    for index in 10 .. 15:
       check project.sources[index].moduleName == BuiltinManagedGcModuleName
-    for index in 14 .. 18:
+    for index in 16 .. 20:
       check project.sources[index].moduleName == BuiltinRcModuleName
-    check project.sources[19].moduleName == BuiltinTextModuleName
-    check project.sources[20].moduleName == BuiltinRuntimeModuleName
-    for index in 0 .. 7:
+    check project.sources[21].moduleName == BuiltinTextModuleName
+    check project.sources[22].moduleName == BuiltinRuntimeModuleName
+    for index in 0 .. 9:
       check project.sources[index].origin == soOrdinary
       check project.sources[index].runtimeCapability == lrcNone
-    for index in 8 .. 18:
+    for index in 10 .. 20:
       check project.sources[index].origin == soMemoryPolicyRuntime
       check project.sources[index].runtimeCapability == lrcNone
-    check project.sources[19].origin == soLanguageRuntime
-    check project.sources[19].runtimeCapability == lrcString
-    check project.sources[20].origin == soLanguageRuntime
-    check project.sources[20].runtimeCapability == lrcClassCopy
+    check project.sources[21].origin == soLanguageRuntime
+    check project.sources[21].runtimeCapability == lrcString
+    check project.sources[22].origin == soLanguageRuntime
+    check project.sources[22].runtimeCapability == lrcClassCopy
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

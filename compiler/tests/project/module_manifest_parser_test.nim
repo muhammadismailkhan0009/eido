@@ -102,6 +102,7 @@ suite "Module manifest parsing":
       "process.Process",
       "io.Console",
       "storage.Storage",
+      "storage.Alignment",
       "collections.Array",
       "collections.Arrays"
     ]

@@ -6,7 +6,8 @@ children:
   managed: { path: managed }
   rc: { path: rc }
 
-dependencies: []
+dependencies:
+  - storage
 exports: []
 provides: {}
 adopts: []

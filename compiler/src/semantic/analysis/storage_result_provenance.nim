@@ -34,12 +34,16 @@ proc inferStorageExpr(
     if expr.receiver.kind == ekIdentifier and
         isConcreteStorageTypeName(expr.receiver.name):
       case expr.methodName
-      of "allocate", "allocateRaw", "fromAddress":
+      of "allocate", "allocateRaw", "reserveAt", StorageInternalReserveAt, StorageInternalRebaseOwned:
         sriOwned
       of "borrowAddress", "view", "viewAt", "slice":
         sriBorrowed
       else:
         sriUnknown
+    elif expr.receiver.kind == ekIdentifier and
+        expr.receiver.name in ["AlignedHeapBacking", "eido.stdlib.storage.AlignedHeapBacking"] and
+        expr.methodName == "allocate":
+      sriOwned
     else:
       sriUnknown
 

@@ -9,6 +9,7 @@ type
     interfaces*: seq[HirInterface]
     classes*: seq[HirClass]
     layouts*: seq[HirLayout]
+    layoutSelections*: seq[HirLayoutSelection]
     functions*: seq[HirFunction]
     hasMain*: bool
     mainFunctionId*: FunctionId

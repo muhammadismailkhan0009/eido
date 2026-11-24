@@ -34,7 +34,7 @@ include statement/for_statements
 include statement/loop_control_statements
 include statement/class_relationship_mutation
 
-## Returns the root owner local borrowed by a Storage view/slice initializer.
+## Returns the known backing local for a Storage view/slice/placement initializer.
 proc storageBorrowOwner(
   source: astExpressions.Expr,
   analyzed: HirExpr,
@@ -43,7 +43,7 @@ proc storageBorrowOwner(
   if analyzed.typ.kind != etkClass or
       not isConcreteStorageTypeName(analyzed.typ.className) or
       source.kind != astExpressions.ekMethodCall or
-      source.methodName notin ["view", "viewAt", "slice"] or
+      source.methodName notin ["view", "viewAt", "slice", "reserveAt"] or
       source.methodArguments.len == 0:
     return ""
 
@@ -176,8 +176,16 @@ proc analyzeStmt*(
             "owning Storage must be released before its local binding can be replaced"
           )
 
+        let isStorage = target.typ.kind == etkClass and
+          isConcreteStorageTypeName(target.typ.className)
+        if isStorage and stmt.assignedValue.kind notin {
+            astExpressions.ekCall, astExpressions.ekMethodCall
+        }:
+          failAt(stmt.assignedValue.span,
+            "Storage replacement requires an allocation or view result, not a descriptor copy")
+
         let value =
-          if target.typ.kind == etkClass:
+          if target.typ.kind == etkClass and not isStorage:
             analyzeClassRelationshipMutationValue(
               stmt.assignedValue,
               target.typ,

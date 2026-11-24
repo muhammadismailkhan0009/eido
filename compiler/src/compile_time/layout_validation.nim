@@ -1,5 +1,5 @@
 ## Validates Eido class layouts before any backend receives raw offsets.
-## Named alternative layouts are checked even though they are not yet selected.
+## All named alternatives are validated before selection can be applied.
 
 import ../hir/program as hirProgram
 import ../hir/declarations as hirDeclarations
@@ -13,6 +13,7 @@ import model
 proc expectedClassLayouts(program: hirProgram.HirProgram): int =
   for classDecl in program.classes:
     if not isConcreteStorageTypeName(classDecl.sourceName) and
+        not isSdkStorageUtilityClass(classDecl.sourceName, classDecl.span) and
         not classDecl.span.isHiddenRuntime:
       inc result
 
@@ -32,7 +33,7 @@ proc validateTypeLayout(
       break
   if not found:
     raise newException(ValueError, label & ": unknown class '" & layout.className & "'")
-  if layout.size < 0 or layout.alignment <= 0 or
+  if layout.size <= 0 or layout.alignment <= 0 or
       (layout.alignment and (layout.alignment - 1)) != 0 or
       layout.size mod layout.alignment != 0:
     raise newException(ValueError, label & ": invalid size or alignment")

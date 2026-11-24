@@ -20,6 +20,7 @@ Typed Storage exposes:
 
 ```eido
 Storage<T>.allocate(Int allocations) returns Storage<T>;
+Storage<T>.reserveAt(Storage<Byte> region, Int address, Int count) returns Storage<T>;
 Storage<T>.view(Storage<Byte> raw, Int start) returns Storage<T>;
 Storage<T>.viewAt(Storage<Byte> raw, Int byteOffset) returns Storage<T>;
 Storage<T>.slice(Storage<T> storage, Int start, Int count) returns Storage<T>;
@@ -37,10 +38,8 @@ Raw byte Storage additionally provides the physical-memory operations:
 ```eido
 Storage<Byte>.allocateRaw(Int allocations, Int bytesPerAllocation)
     returns Storage<Byte>;
-Storage<Byte>.fromAddress(
-    Int startingAddress,
-    Int allocations,
-    Int bytesPerAllocation
+Storage<Byte>.reserveAt(
+    Storage<Byte> region, Int address, Int count
 ) returns Storage<Byte>;
 Storage<Byte>.borrowAddress(
     Int startingAddress,
@@ -53,14 +52,23 @@ Storage<Byte>.borrowAddress(
 
 ## Typed Storage is Eido code
 
-Typed allocation is ordinary Eido orchestration:
+Typed allocation is ordinary Eido orchestration, including alignment:
 
 ```eido
-function allocate(Int allocations) returns Storage<T> {
-    var raw = Storage<Byte>.allocateRaw(allocations, Storage<T>.size());
-    return Storage<T>.compilerFromRaw(raw);
+function allocate(Int count) returns Storage<T> {
+    // Contracts and zero-count handling omitted for brevity.
+    var stride = Storage<T>.size();
+    var alignment = Storage<T>.alignment();
+    var raw = Storage<Byte>.allocateRaw(1, count * stride + alignment - 1);
+    var aligned = Alignment.alignUp(Storage<Byte>.address(raw), alignment);
+    var owned = Storage<Byte>.compilerRebaseOwned(raw, aligned, count, stride);
+    return Storage<T>.compilerFromRaw(owned);
 }
 ```
+
+There is exactly **one physical native allocation**. The private `compilerRebaseOwned`
+bridge carries its original allocation base for correct native release; no
+separate `compilerAllocateRawAligned` native path exists.
 
 The `compiler*` operations used inside the SDK implementation are private representation bridges, not public Eido API. Ordinary user source is rejected if it tries to call them. They exist because Eido does not currently expose pointer casts/typed loads as general source-language operations.
 
@@ -77,7 +85,7 @@ Storage<Int>.write(values, 1, 20);
 var second = Storage<Int>.read(values, 1);
 ```
 
-`allocate(100)` asks `Storage<Byte>` for 100 raw blocks, each `Storage<Int>.size()` bytes wide. No second backing allocation occurs when those bytes become typed Storage.
+`allocate(100)` obtains one native backing allocation with enough space for 100 typed slots and alignment padding. Eido computes the aligned start and exposes the required slot stride; no second native allocation occurs.
 
 Allocation and assignment are deliberately separate so each slot can receive a different value.
 
@@ -103,11 +111,72 @@ var count = Storage<Int>.capacity(middle);
 
 `slice` is allocation-free and works in logical slots. Typed `slice` converts the typed descriptor to its raw descriptor, applies raw slicing, then converts the borrowed descriptor back to `Storage<T>`.
 
-## Ownership
+## Explicit placement and borrowing
 
-`allocate` and `allocateRaw` create owning Storage roots. `fromAddress` also creates an owning descriptor, but over an existing allocation at a known address; releasing it frees that backing. `borrowAddress`, `view`, `viewAt`, and `slice` are non-owning and cannot release backing memory. `borrowAddress` is the fixed-address access primitive for memory whose lifetime is controlled elsewhere, such as MMIO or foreign/OS-owned buffers.
+`allocateRaw(count, stride)` obtains **new native backing** and returns a native-owning
+Storage. `reserveAt(region, address, count)` instead places a typed Storage
+capability in an **existing region** without any native allocation. The address
+must be correctly aligned, and all requested slots must fit inside the backing
+region. `release()` on explicit placement invalidates that Storage handle; it
+does **not** deallocate or return the backing region to a native heap. Reuse
+and overlap management belong to the caller's arena/pool or program.
 
-Storage parameters are borrowed. Ordinary Eido callable results preserve inferred owned/borrowed provenance. Current straight-line semantic analysis rejects obvious use-after-release, releasing borrowed results/views, borrowed escape into owning Storage fields, and overwriting a live owning Storage local without releasing it first.
+```eido
+var region = Storage<Byte>.allocateRaw(1, 4096); // Linux backing
+var address = Alignment.alignUp(Storage<Byte>.address(region), Storage<Int>.alignment());
+var values = Storage<Int>.reserveAt(region, address, 8);
+Storage<Int>.write(values, 0, 42);
+Storage<Int>.release(values); // End placement; region remains allocated.
+Storage<Byte>.release(region); // Free native backing separately.
+```
+
+On bare metal, `region` can be introduced with `borrowAddress(SRAM_BASE, 1,
+CAPACITY)` rather than native allocation. No heap allocator is required for
+`reserveAt()`. In either case, `borrowAddress()` merely provides non-owning
+access to existing accessible memory, without claiming or releasing it. The hosted native backend rejects a nonempty null region and address ranges that cannot fit the target pointer width and Eido's signed `Int` address representation. This is arithmetic validation, not proof that an arbitrary non-null address is mapped or accessible.
+
+The compiler detects overlapping **literal Byte reservations in straight-line
+callable bodies** when both reference the same named region and neither has
+been released. Nonliteral addresses, other layouts, control-flow branches and
+interprocedural aliases are not yet covered by static overlap analysis. No
+mandatory runtime allocation registry is installed; caller-managed heaps
+can provide stronger overlap guarantees when needed.
+
+## Ownership and release
+
+- Native `allocate()`/`allocateRaw()` results release through their native
+  allocator (not through the memory's presented aligned address).
+- `reserveAt()` results are releasable **placement handles**; release invalidates
+  that handle but does not free the region's backing. The backing must remain
+  available for every live placement or view.
+- `borrowAddress()`, `view()`, `viewAt()` and `slice()` are non-owning and cannot
+  release their backing memory.
+
+The former public `fromAddress()` operation could reconstruct a deallocatable
+owner from an arbitrary address. It has been removed. Only compiler-identified
+embedded SDK runtime sources may use the release-only
+`compilerReleaseNativeAddress(originalBase)` bridge. It does not reconstruct a
+readable or owning descriptor, nor authenticate the pointer's actual allocation
+history. The runtime must supply a live original native base exactly once. A future public `adoptAddress()` requires a provable ownership-transfer
+contract; it is **not** available yet.
+
+Storage parameters are borrowed. Straight-line semantic analysis rejects
+obvious use-after-release, releasing borrowed results/views, borrowed escape
+into owning Storage fields, and overwriting a live owned Storage local without
+releasing it first. A released local may receive a fresh allocation via `set`;
+known views and explicit placements into the released backing remain invalid
+when that local is reused. This is not yet a complete lifetime/alias checker.
+
+### Pure Alignment utility
+
+`Alignment.alignUp(address, alignment)`, `padding(address, alignment)`,
+`alignDown(address, alignment)`, and `isAligned(address, alignment)` perform
+only arithmetic/validation. `padding` and `isAligned` do not need to form an out-of-range aligned address; `alignUp` checks that the rounded result fits `Int`. `Alignment` never allocates or references Storage.
+GC/RC use a separate SDK-internal `AlignedHeapBacking` helper to retain
+the original heap base in a single Int-sized preheader immediately before
+the aligned region. Release no longer needs a saved allocation size. Typed
+reservation validates requested alignment in Eido; both private reservation
+and rebasing bridges share native backing-range validation.
 
 ## Current element support
 
@@ -146,7 +215,7 @@ copy an existing object or construct a fresh literal directly in the slot. Use `
 already initialized slot, or `copy Storage<Class>.read(...)` to create an
 independent object using the selected policy.
 
-`release` frees the entire region owned by Storage. Any references into
+`release` frees native backing only when Storage owns that native allocation; explicit placements instead invalidate their own handles. Any references into
 released slots become invalid; Storage does not track such aliases or
 control their lifetime. Read/write through borrowed `view`, `viewAt`, and
 `slice` use the same inline representation without owning the backing.
@@ -171,7 +240,7 @@ analysis is not a complete lifetime/alias checker.
 The hosted Nim implementation lives in `stdlib/native/nim/eido_storage.nim`. It owns:
 
 - the allocation-free raw descriptor representation;
-- raw physical allocation and owning/non-owning address descriptors;
+- raw physical allocation, explicit bounded placement, and non-owning address descriptors;
 - bounds/liveness checks;
 - private raw↔typed descriptor reinterpretation;
 - typed machine load/store;

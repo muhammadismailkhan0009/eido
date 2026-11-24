@@ -18,9 +18,7 @@ proc validateTypeRef(
         providedSurfaces,
         currentModule,
         source.name,
-        source.span.sourcePath,
-        source.span.line,
-        source.span.column
+        source.span
       )
     elif source.name in interfaces:
       requireInterfaceVisibility(
@@ -105,9 +103,7 @@ proc validateExpr(
         providedSurfaces,
         currentModule,
         typeRef.name,
-        source.span.sourcePath,
-        source.span.line,
-        source.span.column
+        source.span
       )
     for argument in typeRef.arguments:
       validateTypeRef(
@@ -177,9 +173,7 @@ proc validateExpr(
         modules, classes,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
         currentModule, source.receiver.name,
-        source.receiver.span.sourcePath,
-        source.receiver.span.line,
-        source.receiver.span.column
+        source.receiver.span
       )
     else:
       validateExpr(

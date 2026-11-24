@@ -36,6 +36,16 @@ proc fixtureProject*(
       startOffset: declaration.span.startOffset,
       endOffset: declaration.span.endOffset
     )
+  for declaration in parsed.layouts:
+    ranges.add (
+      startOffset: declaration.span.startOffset,
+      endOffset: declaration.span.endOffset
+    )
+  for selection in parsed.layoutConfigCalls:
+    ranges.add (
+      startOffset: selection.span.startOffset,
+      endOffset: selection.span.endOffset
+    )
 
   ranges.sort(proc (
     left,
@@ -56,7 +66,21 @@ proc fixtureProject*(
     sources.len,
     BuiltinStorageSourcePath,
     BuiltinStorageSource,
-    BuiltinStorageModuleName
+    BuiltinStorageModuleName, embeddedSdk = true
+  )
+
+  sources.add initSourceUnit(
+    sources.len,
+    BuiltinAlignmentSourcePath,
+    BuiltinAlignmentSource,
+    BuiltinStorageModuleName, embeddedSdk = true
+  )
+
+  sources.add initSourceUnit(
+    sources.len,
+    BuiltinAlignedHeapBackingSourcePath,
+    BuiltinAlignedHeapBackingSource,
+    BuiltinStorageModuleName, embeddedSdk = true
   )
 
   initProject(target, sources)

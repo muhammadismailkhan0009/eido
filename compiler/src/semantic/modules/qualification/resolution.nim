@@ -12,6 +12,13 @@ proc resolveVisibleNominal(
   span: SourceSpan,
   strict: bool = true
 ): string =
+  # The embedded memory runtime uses a non-exported Storage implementation
+  # helper. User modules cannot acquire this compiler-owned source privilege.
+  if span.embeddedSdk and reference in [
+      "AlignedHeapBacking", "eido.stdlib.storage.AlignedHeapBacking"
+  ] and classes.hasKey("eido.stdlib.storage.AlignedHeapBacking") and
+      classes["eido.stdlib.storage.AlignedHeapBacking"].span.embeddedSdk:
+    return "eido.stdlib.storage.AlignedHeapBacking"
   let separator = reference.rfind('.')
   if separator > 0:
     let moduleRef = reference[0 ..< separator]

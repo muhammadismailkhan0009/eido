@@ -58,12 +58,7 @@ class CopyRuntime {
             set index = index + 1;
         }
 
-        var oldBacking = Storage<Byte>.fromAddress(
-            CopyRuntime.memoAddress,
-            CopyRuntime.slotCount(oldCapacity),
-            Storage<Int>.size()
-        );
-        Storage<Byte>.release(oldBacking);
+        Storage<Byte>.compilerReleaseNativeAddress(CopyRuntime.memoAddress);
         set CopyRuntime.memoAddress = Storage<Byte>.address(newBacking);
         set CopyRuntime.memoCapacity = newCapacity;
     }
@@ -100,12 +95,7 @@ class CopyRuntime {
 
     function copyMemoEnd() {
         require { CopyRuntime.memoAddress != 0; }
-        var backing = Storage<Byte>.fromAddress(
-            CopyRuntime.memoAddress,
-            CopyRuntime.slotCount(CopyRuntime.memoCapacity),
-            Storage<Int>.size()
-        );
-        Storage<Byte>.release(backing);
+        Storage<Byte>.compilerReleaseNativeAddress(CopyRuntime.memoAddress);
         set CopyRuntime.memoAddress = 0;
         set CopyRuntime.memoCapacity = 0;
         set CopyRuntime.memoUsed = 0;

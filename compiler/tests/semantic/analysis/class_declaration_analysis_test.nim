@@ -1,4 +1,4 @@
-import std/unittest
+import std/[unittest, sequtils]
 import types/model
 import support/compiler_test_support
 
@@ -22,7 +22,7 @@ suite "Class declaration semantics":
     let program = analyzeSource(source)
 
     # Then
-    check program.classes.len == 2
+    check program.classes.filterIt(not it.span.embeddedSdk).len == 2
     check program.classes[0].typ == classType("Address")
     check program.classes[1].typ == classType("Employee")
     check program.classes[1].fields[0].sourceName == "address"

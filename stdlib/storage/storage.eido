@@ -1,7 +1,47 @@
 // Typed Storage is ordinary Eido orchestration over the compiler-provided raw Storage<Byte> capability.
 class Storage<T> {
     function allocate(Int allocations) returns Storage<T> {
-        var raw = Storage<Byte>.allocateRaw(allocations, Storage<T>.size());
+        // The compiler provides only raw native allocation. Typed placement,
+        // including over-alignment, is Eido library code.
+        require {
+            allocations >= 0;
+            Storage<T>.size() > 0;
+            Alignment.isPowerOfTwo(Storage<T>.alignment());
+            allocations <= (9223372036854775807 - Storage<T>.alignment() + 1) /
+                Storage<T>.size();
+        }
+        var stride = Storage<T>.size();
+        var alignment = Storage<T>.alignment();
+        if (allocations == 0) {
+            return Storage<T>.compilerFromRaw(
+                Storage<Byte>.allocateRaw(0, stride)
+            );
+        }
+        var raw = Storage<Byte>.allocateRaw(
+            1, allocations * stride + alignment - 1
+        );
+        var alignedAddress = Alignment.alignUp(
+            Storage<Byte>.address(raw), alignment
+        );
+        var aligned = Storage<Byte>.compilerRebaseOwned(
+            raw, alignedAddress, allocations, stride
+        );
+        return Storage<T>.compilerFromRaw(aligned);
+    }
+
+    // Explicit placement inside existing RAM. This claims a Storage handle,
+    // not backing ownership; release invalidates the handle without freeing RAM.
+    // Caller/region allocator coordinates overlap and lifetime.
+    function reserveAt(
+        Storage<Byte> region, Int address, Int count
+    ) returns Storage<T> {
+        require {
+            count >= 0;
+            Alignment.isAligned(address, Storage<T>.alignment());
+        }
+        var raw = Storage<Byte>.compilerReserveAt(
+            region, address, count, Storage<T>.size()
+        );
         return Storage<T>.compilerFromRaw(raw);
     }
 

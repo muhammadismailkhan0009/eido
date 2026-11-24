@@ -1,57 +1,46 @@
 import std/unittest
-import support/[compiler_test_support, feature_test_support]
+import support/[compiler_test_support, feature_test_support, feature_batch_support]
 
 suite "Boolean word operators":
-  test "not negates Bool":
-    # Given
-    let source = "function main() returns Bool { return not false; }"
-
-    # When
-    let output = runFeatureSource(source, "boolean_not")
-
-    # Then
-    check output == "true"
-
-  test "and combines Bool operands":
-    # Given
-    let source = "function main() returns Bool { return true and false; }"
-
-    # When
-    let output = runFeatureSource(source, "boolean_and")
-
-    # Then
-    check output == "false"
-
-  test "or combines Bool operands":
-    # Given
-    let source = "function main() returns Bool { return false or true; }"
-
-    # When
-    let output = runFeatureSource(source, "boolean_or")
-
-    # Then
-    check output == "true"
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "not negates Bool",
+        source: "function main() returns Bool { return not false; }",
+        expected: "true"
+      ),
+      FeatureBatchCase(
+        name: "and combines Bool operands",
+        source: "function main() returns Bool { return true and false; }",
+        expected: "false"
+      ),
+      FeatureBatchCase(
+        name: "or combines Bool operands",
+        source: "function main() returns Bool { return false or true; }",
+        expected: "true"
+      )
+    ], "boolean_operator_variants_test_1")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Boolean operator precedence":
-  test "comparison binds inside not":
-    # Given
-    let source = "function main() returns Bool { return not 1 < 2; }"
-
-    # When
-    let output = runFeatureSource(source, "boolean_not_comparison")
-
-    # Then
-    check output == "false"
-
-  test "and binds before or":
-    # Given
-    let source = "function main() returns Bool { return true or false and false; }"
-
-    # When
-    let output = runFeatureSource(source, "boolean_and_before_or")
-
-    # Then
-    check output == "true"
+  test "successful Eido programs (batched)":
+    let results = runFeatureBatch(@[
+      FeatureBatchCase(
+        name: "comparison binds inside not",
+        source: "function main() returns Bool { return not 1 < 2; }",
+        expected: "false"
+      ),
+      FeatureBatchCase(
+        name: "and binds before or",
+        source: "function main() returns Bool { return true or false and false; }",
+        expected: "true"
+      )
+    ], "boolean_operator_variants_test_2")
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Boolean short circuiting":
   test "false and skips the right operand":

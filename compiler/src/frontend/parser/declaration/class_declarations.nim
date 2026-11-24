@@ -42,6 +42,19 @@ proc parseFieldDecl(parser: var Parser, className: string): FieldDecl =
     initializer: nil
   )
 
+## User-defined configuration methods are compile-time only; detecting them
+## here prevents unresolved LayoutPolicy calls leaking into runtime lowering.
+proc containsDirectLayoutSelection(methodDecl: FunctionDecl): bool =
+  for stmt in methodDecl.body:
+    if stmt.kind != skCall or stmt.call.kind != ekMethodCall:
+      continue
+    let call = stmt.call
+    if call.methodName == "select" and
+        call.receiver.kind == ekIdentifier and
+        call.receiver.name == "LayoutPolicy":
+      return true
+  false
+
 ## Parses one class declaration. Fields and methods may appear in either order.
 proc parseClass*(parser: var Parser): ClassDecl =
   let start = parser.consume(tkClass, "expected 'class'")
@@ -92,6 +105,7 @@ proc parseClass*(parser: var Parser): ClassDecl =
   var invariants: seq[Expr]
   var invariantSeen = false
   var methods: seq[FunctionDecl]
+  var layoutConfigMethods: seq[FunctionDecl]
   while not parser.check(tkRBrace):
     if parser.check(tkEof):
       failAt(parser.peek.span, "expected '}' after class body")
@@ -104,7 +118,11 @@ proc parseClass*(parser: var Parser): ClassDecl =
     elif parser.check(tkNative):
       methods.add parser.parseNativeFunction()
     elif parser.check(tkFunction):
-      methods.add parser.parseFunction()
+      let methodDecl = parser.parseFunction()
+      if methodDecl.containsDirectLayoutSelection:
+        layoutConfigMethods.add methodDecl
+      else:
+        methods.add methodDecl
     else:
       fields.add parser.parseFieldDecl(name.lexeme)
 
@@ -117,5 +135,6 @@ proc parseClass*(parser: var Parser): ClassDecl =
     implements: implementedInterfaces,
     fields: fields,
     invariants: invariants,
-    methods: methods
+    methods: methods,
+    layoutConfigMethods: layoutConfigMethods
   )

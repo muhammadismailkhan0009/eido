@@ -82,7 +82,8 @@ proc withSelectedRuntime(
       sdkSource.text,
       sdkSource.moduleName,
       sdkSource.origin,
-      sdkSource.runtimeCapability
+      sdkSource.runtimeCapability,
+      embeddedSdk = sdkSource.embeddedSdk
     )
     inc nextSourceId
     existingPaths.add sdkSource.path
@@ -132,26 +133,43 @@ proc resolveMemoryPolicyModule(
       "module '" & result.canonicalName & "' is not a memory policy module"
     )
 
-## Adds the SDK Storage<T> source to raw source-set projects that do not come
-## through the module loader. Module-aware projects already receive it through
-## the standard-library manifest dependency tree.
+## Adds SDK Storage sources to raw projects without a module manifest.
 proc withSdkStorageSource(project: EidoProject): EidoProject =
   result = project
   if project.sources.len == 0 or project.modules.len > 0:
     return
 
   var nextSourceId = 0
+  var existingPaths: seq[string]
   for source in result.sources:
-    if source.path == BuiltinStorageSourcePath:
-      return
     nextSourceId = max(nextSourceId, source.id.value + 1)
+    existingPaths.add source.path
 
-  result.sources.add initSourceUnit(
-    nextSourceId,
-    BuiltinStorageSourcePath,
-    BuiltinStorageSource,
-    BuiltinStorageModuleName
-  )
+  if BuiltinStorageSourcePath notin existingPaths:
+    result.sources.add initSourceUnit(
+      nextSourceId,
+      BuiltinStorageSourcePath,
+      BuiltinStorageSource,
+      BuiltinStorageModuleName, embeddedSdk = true
+    )
+    inc nextSourceId
+
+  if BuiltinAlignmentSourcePath notin existingPaths:
+    result.sources.add initSourceUnit(
+      nextSourceId,
+      BuiltinAlignmentSourcePath,
+      BuiltinAlignmentSource,
+      BuiltinStorageModuleName, embeddedSdk = true
+    )
+    inc nextSourceId
+
+  if BuiltinAlignedHeapBackingSourcePath notin existingPaths:
+    result.sources.add initSourceUnit(
+      nextSourceId,
+      BuiltinAlignedHeapBackingSourcePath,
+      BuiltinAlignedHeapBackingSource,
+      BuiltinStorageModuleName, embeddedSdk = true
+    )
 
 ## Analyzes every source in one Eido project into resolved typed HIR.
 ## Example: a function in service.eido can resolve a class declared in account.eido.

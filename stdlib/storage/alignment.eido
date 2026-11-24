@@ -1,0 +1,38 @@
+// Pure alignment arithmetic. Does not allocate or own memory.
+class Alignment {
+    function isPowerOfTwo(Int value) returns Bool {
+        if (value <= 0) { return false; }
+        var remaining = value + 0;
+        while (remaining > 1) {
+            if ((remaining / 2) * 2 != remaining) { return false; }
+            set remaining = remaining / 2;
+        }
+        return true;
+    }
+
+    function alignUp(Int address, Int alignment) returns Int {
+        require {
+            address >= 0;
+            Alignment.isPowerOfTwo(alignment);
+            address <= 9223372036854775807 - Alignment.padding(address, alignment);
+        }
+        return address + Alignment.padding(address, alignment);
+    }
+
+    function padding(Int address, Int alignment) returns Int {
+        require { address >= 0; Alignment.isPowerOfTwo(alignment); }
+        var remainder = address - (address / alignment) * alignment;
+        if (remainder == 0) { return 0; }
+        return alignment - remainder;
+    }
+
+    function isAligned(Int address, Int alignment) returns Bool {
+        require { Alignment.isPowerOfTwo(alignment); }
+        return address >= 0 and Alignment.padding(address, alignment) == 0;
+    }
+
+    function alignDown(Int address, Int alignment) returns Int {
+        require { address >= 0; Alignment.isPowerOfTwo(alignment); }
+        return (address / alignment) * alignment;
+    }
+}

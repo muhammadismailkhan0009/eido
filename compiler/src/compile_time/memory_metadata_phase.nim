@@ -9,6 +9,7 @@ import model
 import snapshot
 import layout_runner
 import layout_validation
+import layout_selection
 
 type
   RawFieldMetadata = object
@@ -341,3 +342,4 @@ proc runMemoryMetadataPhase*(
   let rawMetadata = parsePhaseOutput(lines)
   result = resolveMetadata(semanticSnapshot, rawMetadata, program)
   validateMetadata(program, result)
+  applyLayoutSelections(program, result)

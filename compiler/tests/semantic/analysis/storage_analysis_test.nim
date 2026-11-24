@@ -22,13 +22,14 @@ suite "Storage semantics":
 
     let program = analyzeSource(source)
 
-    check program.classes.len == 2
+    check program.classes.len == 3
     var storage = program.classes[0]
-    if storage.typ != classType("Storage<Int>"):
-      storage = program.classes[1]
+    for classDecl in program.classes:
+      if classDecl.typ == classType("Storage<Int>"):
+        storage = classDecl
     check storage.typ == classType("Storage<Int>")
     check storage.fields.len == 0
-    check storage.methods.len == 15
+    check storage.methods.len == 16
 
     var eidoPublicMethods = 0
     var layoutMethods = 0
@@ -36,7 +37,7 @@ suite "Storage semantics":
     for methodDecl in storage.methods:
       check methodDecl.kind == mkStatic
       case methodDecl.sourceName
-      of "allocate", "view", "viewAt", "slice", "capacity", "address",
+      of "allocate", "reserveAt", "view", "viewAt", "slice", "capacity", "address",
           "read", "write", "release":
         inc eidoPublicMethods
         check not methodDecl.isNative
@@ -49,15 +50,16 @@ suite "Storage semantics":
         check methodDecl.isNative
       else:
         check false
-    check eidoPublicMethods == 9
+    check eidoPublicMethods == 10
     check layoutMethods == 2
     check privateBridges == 4
 
     var byteStorage = program.classes[0]
-    if byteStorage.typ != classType("Storage<Byte>"):
-      byteStorage = program.classes[1]
+    for classDecl in program.classes:
+      if classDecl.typ == classType("Storage<Byte>"):
+        byteStorage = classDecl
     check byteStorage.typ == classType("Storage<Byte>")
-    check byteStorage.methods.len == 14
+    check byteStorage.methods.len == 17
     for methodDecl in byteStorage.methods:
       check methodDecl.isNative
 
@@ -305,7 +307,7 @@ suite "Storage semantics":
     """
 
     let program = analyzeSource(source)
-    check program.classes.len == 2
+    check program.classes.len == 3
 
   test "borrowed typed views cannot release backing memory":
     let source = """
@@ -459,5 +461,106 @@ suite "Storage semantics":
       }
     """
 
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "rejects statically provable overlapping explicit Byte reservations":
+    let invalid = """
+      function main() {
+        var region = Storage<Byte>.borrowAddress(4096, 1, 64);
+        var first = Storage<Byte>.reserveAt(region, 4096, 16);
+        var overlap = Storage<Byte>.reserveAt(region, 4104, 8);
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(invalid)
+
+  test "permits reuse after an explicit reservation is released":
+    let source = """
+      function main() {
+        var region = Storage<Byte>.borrowAddress(4096, 1, 64);
+        var first = Storage<Byte>.reserveAt(region, 4096, 16);
+        Storage<Byte>.release(first);
+        var second = Storage<Byte>.reserveAt(region, 4096, 16);
+        Storage<Byte>.release(second);
+      }
+    """
+    discard analyzeSource(source)
+
+  test "arbitrary native address adoption is not public API":
+    let legacy = """
+      function main() {
+        var owned = Storage<Byte>.fromAddress(4096, 1, 8);
+      }
+    """
+    let privileged = """
+      function main() {
+        Storage<Byte>.compilerReleaseNativeAddress(4096);
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(legacy)
+    expect ValueError:
+      discard analyzeSource(privileged)
+
+  test "empty explicit reservations do not claim bytes within live reservations":
+    let source = """
+      function main() {
+        var region = Storage<Byte>.borrowAddress(4096, 1, 64);
+        var first = Storage<Byte>.reserveAt(region, 4096, 16);
+        var empty = Storage<Byte>.reserveAt(region, 4104, 0);
+        Storage<Byte>.release(empty);
+        Storage<Byte>.release(first);
+      }
+    """
+    discard analyzeSource(source)
+
+  test "permits a fresh allocation after releasing the previous local owner":
+    let source = """
+      function main() returns Int {
+        var raw = Storage<Byte>.allocateRaw(1, 8);
+        Storage<Byte>.release(raw);
+        set raw = Storage<Byte>.allocateRaw(1, 8);
+        var value = Storage<Byte>.capacity(raw);
+        Storage<Byte>.release(raw);
+        return value;
+      }
+    """
+    discard analyzeSource(source)
+
+  test "a view remains invalid after its released owner is replaced":
+    let source = """
+      function main() returns Int {
+        var raw = Storage<Byte>.allocateRaw(1, 8);
+        var view = Storage<Int>.view(raw, 0);
+        Storage<Byte>.release(raw);
+        set raw = Storage<Byte>.allocateRaw(1, 8);
+        return Storage<Int>.read(view, 0);
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "reassigning a released owner cannot copy another owning descriptor":
+    let source = """
+      function main() {
+        var first = Storage<Int>.allocate(1);
+        var second = Storage<Int>.allocate(1);
+        Storage<Int>.release(first);
+        set first = second;
+      }
+    """
+    expect ValueError:
+      discard analyzeSource(source)
+
+  test "explicit placement is invalid after its known backing local is released":
+    let source = """
+      function main() returns Int {
+        var raw = Storage<Byte>.allocateRaw(1, 16);
+        var placed = Storage<Int>.reserveAt(raw, Storage<Byte>.address(raw), 1);
+        Storage<Byte>.release(raw);
+        return Storage<Int>.read(placed, 0);
+      }
+    """
     expect ValueError:
       discard analyzeSource(source)
