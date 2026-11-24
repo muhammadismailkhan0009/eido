@@ -1,0 +1,8 @@
+module: storage_bench
+sources:
+  - Main.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

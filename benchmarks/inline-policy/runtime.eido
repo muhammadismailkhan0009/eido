@@ -1,0 +1,8 @@
+// Benchmark guard, not a memory-management algorithm.
+// Any unexpected standalone object construction aborts the process.
+class InlineOnly {
+    function acquire(Int payloadSize, Int payloadAlignment, Int typeId) returns Int {
+        Process.exit(91);
+        return 0;
+    }
+}

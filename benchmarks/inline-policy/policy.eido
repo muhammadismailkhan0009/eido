@@ -1,0 +1,3 @@
+function main() {
+    MemoryPolicy.objectAcquire("InlineOnly.acquire");
+}

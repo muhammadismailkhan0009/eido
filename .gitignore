@@ -29,3 +29,8 @@ Thumbs.db
 # Versioned examples may produce project-tool build output locally.
 /examples/**/build/
 .serena
+
+# Standalone benchmark artifacts
+/benchmarks/build/
+/benchmarks/**/build/
+/benchmarks/**/__pycache__/

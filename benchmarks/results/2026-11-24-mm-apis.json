@@ -1,0 +1,1039 @@
+{
+  "commit": "a5722c4989c073a649229b353e8e250dbf5600c5",
+  "cpu": 0,
+  "platform": "Linux-6.17.0-23-generic-x86_64-with-glibc2.40",
+  "nim_version": "Nim Compiler Version 2.2.10 [Linux: amd64]",
+  "repeats": 9,
+  "layout_bytes": {
+    "default": 32,
+    "compact": 24,
+    "wide": 64
+  },
+  "audit": {
+    "generated_nim_sha256": {
+      "storage-none": "e80ef234d8edb0ea3d173fff5b536473f4a2a0f9678b07eabc43c49d529fa6b0",
+      "layout-default": "db9254a833a1786b07efd388e4863af995109efb486faa0967a8aad7d5014711",
+      "layout-compact": "14bc78b8e5ccbed7acd322852a9f7c304118a21c8e66ecbf50277f0900a8c943",
+      "layout-wide": "b507b0648726f4ef27cf96638c66b2c42d812b3f5e4a17fec05153fe7ec7b900"
+    },
+    "binary_sha256": {
+      "storage-none": "0ab4b296d922fc81eb69a14a9313847d0e4ef9c804a9b042475122f762851299",
+      "layout-default": "df2c5c15349e7918472454e21663d86bf12847165c530fea2a8c3d0bdcafa39f",
+      "layout-compact": "bc75fbe0a84865e38f17b48f8bd1836bb78b2a0bd36c8edbef6cbf041eded210",
+      "layout-wide": "f6fb4d1e47bfe14c27531568a1e533804773172c76fa75cb1957caea6d857f92",
+      "native-storage": "a8eddf94943b3a411310fdba7fdad5d844c511bc0bede4d0b69ab65af8a2a156",
+      "native-layout": "ee7d2963cc643549758d2e57b71ae0ce6691678f95ce47f279f67cef707cda17"
+    },
+    "native_sdk_sha256": "0b71903104127fd85ea3e8b4ff4a22de1957f2aabebd095dbca365018e9d5289",
+    "storage_native_calls": {
+      "none": {
+        "scan": [
+          "eidoStorageWrite__storage95none95generated_u342",
+          "eidoStorageRead__storage95none95generated_u261"
+        ],
+        "typed": [
+          "eido_method28_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_allocate__storage95none95generated_u63.part.0",
+          "eido_method37_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_release__storage95none95generated_u90"
+        ],
+        "rawView": [
+          "eidoStorageAllocateRaw__OOZOOZOOZOOZOOZOOZOOZOcacheZeidoZnativeZnim456607364686705964575Zeido95storage_u55",
+          "eido_method30_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_view__storage95none95generated_u69",
+          "eidoStorageRelease__storage95none95generated_u622"
+        ],
+        "churn": [
+          "eido_method28_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_allocate__storage95none95generated_u63.part.0",
+          "eidoStorageWrite__storage95none95generated_u342",
+          "eidoStorageRead__storage95none95generated_u261",
+          "eido_method37_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_release__storage95none95generated_u90"
+        ],
+        "reuse": [
+          "eido_method28_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_allocate__storage95none95generated_u63.part.0",
+          "eidoStorageWrite__storage95none95generated_u342",
+          "eidoStorageRead__storage95none95generated_u261",
+          "eido_method37_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_release__storage95none95generated_u90"
+        ],
+        "placement": [
+          "eidoStorageAllocateRaw__OOZOOZOOZOOZOOZOOZOOZOcacheZeidoZnativeZnim456607364686705964575Zeido95storage_u55",
+          "eidoStorageAddress__storage95none95generated_u500",
+          "eido_method29_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_reserveAt__storage95none95generated_u65",
+          "eidoStorageWrite__storage95none95generated_u342",
+          "eidoStorageRead__storage95none95generated_u261",
+          "eido_method37_generic6569646F2E7374646C69622E73746F726167652E53746F726167653C496E743E_release__storage95none95generated_u90",
+          "eidoStorageRelease__storage95none95generated_u622"
+        ]
+      }
+    },
+    "results": {
+      "storage-none/typed": {
+        "typed_alloc": 1,
+        "typed_release": 1,
+        "typed_view": 0,
+        "typed_reserve": 0,
+        "typed_read": 24000000,
+        "typed_write": 2000000,
+        "raw_alloc": 1,
+        "native_free": 1,
+        "native_reserve": 0,
+        "native_rebase": 1,
+        "native_int_read": 24000000,
+        "native_int_write": 2000000,
+        "row_construct": 0,
+        "row_read": 0,
+        "get_value": 0,
+        "get_other": 0,
+        "policy_acquire": 0
+      },
+      "storage-none/raw": {
+        "typed_alloc": 0,
+        "typed_release": 0,
+        "typed_view": 1,
+        "typed_reserve": 0,
+        "typed_read": 24000000,
+        "typed_write": 2000000,
+        "raw_alloc": 1,
+        "native_free": 1,
+        "native_reserve": 0,
+        "native_rebase": 0,
+        "native_int_read": 24000000,
+        "native_int_write": 2000000,
+        "row_construct": 0,
+        "row_read": 0,
+        "get_value": 0,
+        "get_other": 0,
+        "policy_acquire": 0
+      },
+      "storage-none/churn": {
+        "typed_alloc": 1000000,
+        "typed_release": 1000000,
+        "typed_view": 0,
+        "typed_reserve": 0,
+        "typed_read": 1000000,
+        "typed_write": 1000000,
+        "raw_alloc": 1000000,
+        "native_free": 1000000,
+        "native_reserve": 0,
+        "native_rebase": 1000000,
+        "native_int_read": 1000000,
+        "native_int_write": 1000000,
+        "row_construct": 0,
+        "row_read": 0,
+        "get_value": 0,
+        "get_other": 0,
+        "policy_acquire": 0
+      },
+      "storage-none/reuse": {
+        "typed_alloc": 1,
+        "typed_release": 1,
+        "typed_view": 0,
+        "typed_reserve": 0,
+        "typed_read": 1000000,
+        "typed_write": 1000000,
+        "raw_alloc": 1,
+        "native_free": 1,
+        "native_reserve": 0,
+        "native_rebase": 1,
+        "native_int_read": 1000000,
+        "native_int_write": 1000000,
+        "row_construct": 0,
+        "row_read": 0,
+        "get_value": 0,
+        "get_other": 0,
+        "policy_acquire": 0
+      },
+      "storage-none/placement": {
+        "typed_alloc": 0,
+        "typed_release": 1000000,
+        "typed_view": 0,
+        "typed_reserve": 1000000,
+        "typed_read": 1000000,
+        "typed_write": 1000000,
+        "raw_alloc": 1,
+        "native_free": 1,
+        "native_reserve": 1000000,
+        "native_rebase": 0,
+        "native_int_read": 1000000,
+        "native_int_write": 1000000,
+        "row_construct": 0,
+        "row_read": 0,
+        "get_value": 0,
+        "get_other": 0,
+        "policy_acquire": 0
+      },
+      "layout-default": {
+        "oracle": {
+          "stride": 32,
+          "alignment": 8,
+          "offsets": {
+            "flag": 0,
+            "value": 8,
+            "category": 16,
+            "other": 24
+          },
+          "raw_round_trip": true,
+          "standalone_allocation_rejected": true,
+          "lifecycle_hooks": 0,
+          "native_scan_probe": [
+            "WRITE 2000000 32 0",
+            "WRITE 2000000 32 1",
+            "SCAN 2000000 32 0 0",
+            "ROW 1 1 2 2",
+            "ROW 1 2 2 3"
+          ]
+        },
+        "counts": {
+          "typed_alloc": 0,
+          "typed_release": 0,
+          "typed_view": 0,
+          "typed_reserve": 0,
+          "typed_read": 0,
+          "typed_write": 0,
+          "raw_alloc": 1,
+          "native_free": 1,
+          "native_reserve": 0,
+          "native_rebase": 1,
+          "native_int_read": 0,
+          "native_int_write": 0,
+          "row_construct": 2000000,
+          "row_read": 24000000,
+          "get_value": 24000000,
+          "get_other": 24000000,
+          "policy_acquire": 0
+        }
+      },
+      "layout-compact": {
+        "oracle": {
+          "stride": 24,
+          "alignment": 8,
+          "offsets": {
+            "flag": 16,
+            "value": 0,
+            "category": 17,
+            "other": 8
+          },
+          "raw_round_trip": true,
+          "standalone_allocation_rejected": true,
+          "lifecycle_hooks": 0,
+          "native_scan_probe": [
+            "WRITE 2000000 24 0",
+            "WRITE 2000000 24 1",
+            "SCAN 2000000 24 0 0",
+            "ROW 1 1 2 2",
+            "ROW 1 2 2 3"
+          ]
+        },
+        "counts": {
+          "typed_alloc": 0,
+          "typed_release": 0,
+          "typed_view": 0,
+          "typed_reserve": 0,
+          "typed_read": 0,
+          "typed_write": 0,
+          "raw_alloc": 1,
+          "native_free": 1,
+          "native_reserve": 0,
+          "native_rebase": 1,
+          "native_int_read": 0,
+          "native_int_write": 0,
+          "row_construct": 2000000,
+          "row_read": 24000000,
+          "get_value": 24000000,
+          "get_other": 24000000,
+          "policy_acquire": 0
+        }
+      },
+      "layout-wide": {
+        "oracle": {
+          "stride": 64,
+          "alignment": 64,
+          "offsets": {
+            "flag": 16,
+            "value": 0,
+            "category": 17,
+            "other": 8
+          },
+          "raw_round_trip": true,
+          "standalone_allocation_rejected": true,
+          "lifecycle_hooks": 0,
+          "native_scan_probe": [
+            "WRITE 2000000 64 0",
+            "WRITE 2000000 64 1",
+            "SCAN 2000000 64 0 0",
+            "ROW 1 1 2 2",
+            "ROW 1 2 2 3"
+          ]
+        },
+        "counts": {
+          "typed_alloc": 0,
+          "typed_release": 0,
+          "typed_view": 0,
+          "typed_reserve": 0,
+          "typed_read": 0,
+          "typed_write": 0,
+          "raw_alloc": 1,
+          "native_free": 1,
+          "native_reserve": 0,
+          "native_rebase": 1,
+          "native_int_read": 0,
+          "native_int_write": 0,
+          "row_construct": 2000000,
+          "row_read": 24000000,
+          "get_value": 24000000,
+          "get_other": 24000000,
+          "policy_acquire": 0
+        }
+      }
+    }
+  },
+  "summary": {
+    "eido/typed": {
+      "median_ms": 71.756214,
+      "min_ms": 69.490218,
+      "max_ms": 111.095486,
+      "median_rss_kib": 16804
+    },
+    "eido/raw": {
+      "median_ms": 71.886006,
+      "min_ms": 70.357266,
+      "max_ms": 82.456649,
+      "median_rss_kib": 16800
+    },
+    "eido/churn": {
+      "median_ms": 72.218884,
+      "min_ms": 69.607049,
+      "max_ms": 160.452182,
+      "median_rss_kib": 1236
+    },
+    "eido/reuse": {
+      "median_ms": 6.597492,
+      "min_ms": 6.418639,
+      "max_ms": 6.941736,
+      "median_rss_kib": 1296
+    },
+    "eido/placement": {
+      "median_ms": 40.323554,
+      "min_ms": 40.156777,
+      "max_ms": 84.268057,
+      "median_rss_kib": 1192
+    },
+    "nim/array": {
+      "median_ms": 41.029769,
+      "min_ms": 37.754791,
+      "max_ms": 49.192613,
+      "median_rss_kib": 16808
+    },
+    "nim/sdk": {
+      "median_ms": 78.425901,
+      "min_ms": 72.260683,
+      "max_ms": 123.541707,
+      "median_rss_kib": 16796
+    },
+    "nim/churn": {
+      "median_ms": 16.206118,
+      "min_ms": 14.59318,
+      "max_ms": 17.807006,
+      "median_rss_kib": 1192
+    },
+    "nim/sdk-churn": {
+      "median_ms": 27.899464,
+      "min_ms": 25.892401,
+      "max_ms": 48.152712,
+      "median_rss_kib": 1180
+    },
+    "nim/sdk-reuse": {
+      "median_ms": 6.866954,
+      "min_ms": 6.05819,
+      "max_ms": 11.006884,
+      "median_rss_kib": 1176
+    },
+    "nim/sdk-placement": {
+      "median_ms": 23.794303,
+      "min_ms": 21.68062,
+      "max_ms": 29.620944,
+      "median_rss_kib": 1220
+    },
+    "layout/eido/default": {
+      "median_ms": 116.865187,
+      "min_ms": 114.037859,
+      "max_ms": 158.351836,
+      "median_rss_kib": 63764
+    },
+    "layout/nim/default": {
+      "median_ms": 89.684792,
+      "min_ms": 84.301703,
+      "max_ms": 110.287952,
+      "median_rss_kib": 63648
+    },
+    "layout/eido/compact": {
+      "median_ms": 104.539077,
+      "min_ms": 100.185444,
+      "max_ms": 132.179621,
+      "median_rss_kib": 48040
+    },
+    "layout/nim/compact": {
+      "median_ms": 74.28805,
+      "min_ms": 66.898772,
+      "max_ms": 98.212987,
+      "median_rss_kib": 48064
+    },
+    "layout/eido/wide": {
+      "median_ms": 187.034753,
+      "min_ms": 182.91143,
+      "max_ms": 273.752786,
+      "median_rss_kib": 126204
+    },
+    "layout/nim/wide": {
+      "median_ms": 169.294728,
+      "min_ms": 164.095756,
+      "max_ms": 187.620749,
+      "median_rss_kib": 126112
+    }
+  },
+  "samples": {
+    "eido/typed": [
+      {
+        "ms": 82.164606,
+        "rss_kib": 16804
+      },
+      {
+        "ms": 70.906437,
+        "rss_kib": 16796
+      },
+      {
+        "ms": 73.237658,
+        "rss_kib": 16928
+      },
+      {
+        "ms": 71.756214,
+        "rss_kib": 16804
+      },
+      {
+        "ms": 111.095486,
+        "rss_kib": 16804
+      },
+      {
+        "ms": 73.486201,
+        "rss_kib": 16920
+      },
+      {
+        "ms": 70.438263,
+        "rss_kib": 16944
+      },
+      {
+        "ms": 69.490218,
+        "rss_kib": 16796
+      },
+      {
+        "ms": 69.963628,
+        "rss_kib": 16936
+      }
+    ],
+    "eido/raw": [
+      {
+        "ms": 79.732679,
+        "rss_kib": 16800
+      },
+      {
+        "ms": 71.612513,
+        "rss_kib": 16800
+      },
+      {
+        "ms": 82.456649,
+        "rss_kib": 16752
+      },
+      {
+        "ms": 71.886006,
+        "rss_kib": 16800
+      },
+      {
+        "ms": 71.320627,
+        "rss_kib": 16752
+      },
+      {
+        "ms": 72.270413,
+        "rss_kib": 16804
+      },
+      {
+        "ms": 70.699368,
+        "rss_kib": 16912
+      },
+      {
+        "ms": 70.357266,
+        "rss_kib": 16920
+      },
+      {
+        "ms": 74.161635,
+        "rss_kib": 16936
+      }
+    ],
+    "eido/churn": [
+      {
+        "ms": 71.407141,
+        "rss_kib": 1184
+      },
+      {
+        "ms": 72.218884,
+        "rss_kib": 1308
+      },
+      {
+        "ms": 160.452182,
+        "rss_kib": 1304
+      },
+      {
+        "ms": 72.510025,
+        "rss_kib": 1180
+      },
+      {
+        "ms": 76.045357,
+        "rss_kib": 1188
+      },
+      {
+        "ms": 70.231949,
+        "rss_kib": 1236
+      },
+      {
+        "ms": 131.725528,
+        "rss_kib": 1180
+      },
+      {
+        "ms": 69.805962,
+        "rss_kib": 1308
+      },
+      {
+        "ms": 69.607049,
+        "rss_kib": 1296
+      }
+    ],
+    "eido/reuse": [
+      {
+        "ms": 6.485893,
+        "rss_kib": 1188
+      },
+      {
+        "ms": 6.597492,
+        "rss_kib": 1308
+      },
+      {
+        "ms": 6.695776,
+        "rss_kib": 1296
+      },
+      {
+        "ms": 6.936288,
+        "rss_kib": 1296
+      },
+      {
+        "ms": 6.941736,
+        "rss_kib": 1320
+      },
+      {
+        "ms": 6.674533,
+        "rss_kib": 1304
+      },
+      {
+        "ms": 6.52803,
+        "rss_kib": 1180
+      },
+      {
+        "ms": 6.486633,
+        "rss_kib": 1280
+      },
+      {
+        "ms": 6.418639,
+        "rss_kib": 1184
+      }
+    ],
+    "eido/placement": [
+      {
+        "ms": 40.167234,
+        "rss_kib": 1328
+      },
+      {
+        "ms": 84.268057,
+        "rss_kib": 1296
+      },
+      {
+        "ms": 40.156777,
+        "rss_kib": 1188
+      },
+      {
+        "ms": 40.314034,
+        "rss_kib": 1188
+      },
+      {
+        "ms": 70.66601,
+        "rss_kib": 1308
+      },
+      {
+        "ms": 40.323554,
+        "rss_kib": 1288
+      },
+      {
+        "ms": 40.933023,
+        "rss_kib": 1192
+      },
+      {
+        "ms": 40.19547,
+        "rss_kib": 1188
+      },
+      {
+        "ms": 40.533044,
+        "rss_kib": 1188
+      }
+    ],
+    "nim/array": [
+      {
+        "ms": 38.848898,
+        "rss_kib": 16808
+      },
+      {
+        "ms": 43.964534,
+        "rss_kib": 16784
+      },
+      {
+        "ms": 49.192613,
+        "rss_kib": 16876
+      },
+      {
+        "ms": 43.640119,
+        "rss_kib": 16776
+      },
+      {
+        "ms": 43.542432,
+        "rss_kib": 16792
+      },
+      {
+        "ms": 41.029769,
+        "rss_kib": 16740
+      },
+      {
+        "ms": 38.697552,
+        "rss_kib": 16876
+      },
+      {
+        "ms": 37.754791,
+        "rss_kib": 16908
+      },
+      {
+        "ms": 40.822604,
+        "rss_kib": 16808
+      }
+    ],
+    "nim/sdk": [
+      {
+        "ms": 72.260683,
+        "rss_kib": 16808
+      },
+      {
+        "ms": 80.853081,
+        "rss_kib": 16792
+      },
+      {
+        "ms": 103.620006,
+        "rss_kib": 16884
+      },
+      {
+        "ms": 78.425901,
+        "rss_kib": 16884
+      },
+      {
+        "ms": 123.541707,
+        "rss_kib": 16740
+      },
+      {
+        "ms": 74.714759,
+        "rss_kib": 16740
+      },
+      {
+        "ms": 78.644762,
+        "rss_kib": 16796
+      },
+      {
+        "ms": 76.524587,
+        "rss_kib": 16776
+      },
+      {
+        "ms": 76.605855,
+        "rss_kib": 16808
+      }
+    ],
+    "nim/churn": [
+      {
+        "ms": 14.59318,
+        "rss_kib": 1260
+      },
+      {
+        "ms": 15.732966,
+        "rss_kib": 1292
+      },
+      {
+        "ms": 16.427754,
+        "rss_kib": 1192
+      },
+      {
+        "ms": 17.807006,
+        "rss_kib": 1220
+      },
+      {
+        "ms": 17.010476,
+        "rss_kib": 1292
+      },
+      {
+        "ms": 16.591142,
+        "rss_kib": 1176
+      },
+      {
+        "ms": 14.72341,
+        "rss_kib": 1192
+      },
+      {
+        "ms": 16.206118,
+        "rss_kib": 1192
+      },
+      {
+        "ms": 14.914956,
+        "rss_kib": 1180
+      }
+    ],
+    "nim/sdk-churn": [
+      {
+        "ms": 25.892401,
+        "rss_kib": 1172
+      },
+      {
+        "ms": 26.060212,
+        "rss_kib": 1220
+      },
+      {
+        "ms": 31.081186,
+        "rss_kib": 1168
+      },
+      {
+        "ms": 32.015776,
+        "rss_kib": 1160
+      },
+      {
+        "ms": 48.152712,
+        "rss_kib": 1228
+      },
+      {
+        "ms": 26.949206,
+        "rss_kib": 1180
+      },
+      {
+        "ms": 28.36165,
+        "rss_kib": 1180
+      },
+      {
+        "ms": 25.969732,
+        "rss_kib": 1220
+      },
+      {
+        "ms": 27.899464,
+        "rss_kib": 1180
+      }
+    ],
+    "nim/sdk-reuse": [
+      {
+        "ms": 6.116144,
+        "rss_kib": 1160
+      },
+      {
+        "ms": 6.866954,
+        "rss_kib": 1316
+      },
+      {
+        "ms": 7.059372,
+        "rss_kib": 1176
+      },
+      {
+        "ms": 6.894916,
+        "rss_kib": 1316
+      },
+      {
+        "ms": 11.006884,
+        "rss_kib": 1292
+      },
+      {
+        "ms": 7.168827,
+        "rss_kib": 1172
+      },
+      {
+        "ms": 6.331087,
+        "rss_kib": 1124
+      },
+      {
+        "ms": 6.05819,
+        "rss_kib": 1124
+      },
+      {
+        "ms": 6.737324,
+        "rss_kib": 1176
+      }
+    ],
+    "nim/sdk-placement": [
+      {
+        "ms": 27.365419,
+        "rss_kib": 1228
+      },
+      {
+        "ms": 27.481023,
+        "rss_kib": 1192
+      },
+      {
+        "ms": 24.882196,
+        "rss_kib": 1176
+      },
+      {
+        "ms": 23.794303,
+        "rss_kib": 1192
+      },
+      {
+        "ms": 21.979439,
+        "rss_kib": 1228
+      },
+      {
+        "ms": 29.620944,
+        "rss_kib": 1260
+      },
+      {
+        "ms": 22.046822,
+        "rss_kib": 1292
+      },
+      {
+        "ms": 21.68062,
+        "rss_kib": 1160
+      },
+      {
+        "ms": 22.185829,
+        "rss_kib": 1220
+      }
+    ],
+    "layout/eido/default": [
+      {
+        "ms": 117.408346,
+        "rss_kib": 63656
+      },
+      {
+        "ms": 158.351836,
+        "rss_kib": 63788
+      },
+      {
+        "ms": 133.717758,
+        "rss_kib": 63656
+      },
+      {
+        "ms": 117.933668,
+        "rss_kib": 63660
+      },
+      {
+        "ms": 114.479806,
+        "rss_kib": 63788
+      },
+      {
+        "ms": 116.865187,
+        "rss_kib": 63776
+      },
+      {
+        "ms": 116.558354,
+        "rss_kib": 63796
+      },
+      {
+        "ms": 114.037859,
+        "rss_kib": 63764
+      },
+      {
+        "ms": 114.254201,
+        "rss_kib": 63652
+      }
+    ],
+    "layout/nim/default": [
+      {
+        "ms": 84.301703,
+        "rss_kib": 63740
+      },
+      {
+        "ms": 108.250256,
+        "rss_kib": 63636
+      },
+      {
+        "ms": 110.287952,
+        "rss_kib": 63676
+      },
+      {
+        "ms": 91.015555,
+        "rss_kib": 63616
+      },
+      {
+        "ms": 86.687281,
+        "rss_kib": 63648
+      },
+      {
+        "ms": 89.684792,
+        "rss_kib": 63684
+      },
+      {
+        "ms": 88.142777,
+        "rss_kib": 63680
+      },
+      {
+        "ms": 89.510457,
+        "rss_kib": 63632
+      },
+      {
+        "ms": 92.541857,
+        "rss_kib": 63632
+      }
+    ],
+    "layout/eido/compact": [
+      {
+        "ms": 106.008008,
+        "rss_kib": 48040
+      },
+      {
+        "ms": 132.179621,
+        "rss_kib": 48040
+      },
+      {
+        "ms": 109.768352,
+        "rss_kib": 48036
+      },
+      {
+        "ms": 104.539077,
+        "rss_kib": 48036
+      },
+      {
+        "ms": 100.185444,
+        "rss_kib": 48124
+      },
+      {
+        "ms": 102.788969,
+        "rss_kib": 48092
+      },
+      {
+        "ms": 104.119887,
+        "rss_kib": 48040
+      },
+      {
+        "ms": 100.811774,
+        "rss_kib": 48140
+      },
+      {
+        "ms": 105.752289,
+        "rss_kib": 48092
+      }
+    ],
+    "layout/nim/compact": [
+      {
+        "ms": 77.796373,
+        "rss_kib": 47984
+      },
+      {
+        "ms": 98.212987,
+        "rss_kib": 48132
+      },
+      {
+        "ms": 81.938888,
+        "rss_kib": 48132
+      },
+      {
+        "ms": 74.28805,
+        "rss_kib": 48020
+      },
+      {
+        "ms": 73.836952,
+        "rss_kib": 48156
+      },
+      {
+        "ms": 67.129885,
+        "rss_kib": 48064
+      },
+      {
+        "ms": 83.848614,
+        "rss_kib": 48064
+      },
+      {
+        "ms": 68.659277,
+        "rss_kib": 48000
+      },
+      {
+        "ms": 66.898772,
+        "rss_kib": 47984
+      }
+    ],
+    "layout/eido/wide": [
+      {
+        "ms": 187.034753,
+        "rss_kib": 126240
+      },
+      {
+        "ms": 273.752786,
+        "rss_kib": 126204
+      },
+      {
+        "ms": 232.619605,
+        "rss_kib": 126112
+      },
+      {
+        "ms": 209.052847,
+        "rss_kib": 126124
+      },
+      {
+        "ms": 186.54867,
+        "rss_kib": 126120
+      },
+      {
+        "ms": 189.660685,
+        "rss_kib": 126116
+      },
+      {
+        "ms": 182.91143,
+        "rss_kib": 126228
+      },
+      {
+        "ms": 183.577634,
+        "rss_kib": 126236
+      },
+      {
+        "ms": 183.573973,
+        "rss_kib": 126260
+      }
+    ],
+    "layout/nim/wide": [
+      {
+        "ms": 166.500488,
+        "rss_kib": 126112
+      },
+      {
+        "ms": 187.620749,
+        "rss_kib": 126064
+      },
+      {
+        "ms": 169.294728,
+        "rss_kib": 126096
+      },
+      {
+        "ms": 183.185633,
+        "rss_kib": 126144
+      },
+      {
+        "ms": 175.057974,
+        "rss_kib": 126204
+      },
+      {
+        "ms": 166.828516,
+        "rss_kib": 126100
+      },
+      {
+        "ms": 164.143221,
+        "rss_kib": 126144
+      },
+      {
+        "ms": 164.095756,
+        "rss_kib": 126236
+      },
+      {
+        "ms": 175.060467,
+        "rss_kib": 126080
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+module: inline_policy
+sources:
+  - runtime.eido
+policySources:
+  - policy.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []
