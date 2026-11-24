@@ -3,6 +3,7 @@ sources:
   - Child.eido
   - Parent.eido
   - Main.eido
+  - BuildAndDrop.eido
 children: []
 dependencies: []
 exports: []

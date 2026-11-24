@@ -1,0 +1,6 @@
+function buildAndDrop() {
+    var parent = Parent {
+        child = Child { value = 22; };
+        value = 20;
+    };
+}

@@ -1,0 +1,7 @@
+// Interleave byte and Int fields to create padding.
+class Row {
+    Byte flag;
+    Int value;
+    Byte category;
+    Int other;
+}

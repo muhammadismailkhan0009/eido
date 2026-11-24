@@ -1,5 +1,5 @@
 ## Builds valid multi-source compiler projects from compact test fixture text.
-## Production compilation still enforces one outermost class/interface per source file.
+## Production compilation still enforces file-level declaration organization.
 
 import std/algorithm
 import frontend/ast/program

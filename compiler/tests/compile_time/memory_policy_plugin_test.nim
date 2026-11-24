@@ -18,6 +18,7 @@ proc writePolicyFixture(root: string, runtimeSource, policySource: string) =
     module: app
     sources:
       - Main.eido
+      - Box.eido
     children:
       policy: { path: policy }
     dependencies: []
@@ -25,8 +26,8 @@ proc writePolicyFixture(root: string, runtimeSource, policySource: string) =
     provides: {}
     adopts: []
   """)
+  writeFile(root / "Box.eido", "class Box { Int value; }")
   writeFile(root / "Main.eido", """
-    class Box { Int value; }
     function main() returns Int {
       var box = Box { value = 7; };
       return box.value;
@@ -113,7 +114,6 @@ suite "User-selectable Eido memory policy modules":
       """
     )
     writeFile(root / "Main.eido", """
-      class Box { Int value; }
       function main() returns Int {
         var boxes = Storage<Box>.allocate(1);
         Storage<Box>.write(boxes, 0, Box { value = 7; });

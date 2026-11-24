@@ -34,6 +34,7 @@ suite "Generated API documentation":
         - Factory.eido
         - Order.eido
         - Helper.eido
+        - Functions.eido
       children: []
       dependencies: []
       exports:
@@ -64,7 +65,8 @@ suite "Generated API documentation":
               return 1;
           }
       }
-
+    """)
+    writeFile(root / "Functions.eido", """
       function helperValue() returns Int {
           return 1;
       }

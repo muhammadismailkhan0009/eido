@@ -37,7 +37,7 @@ sequences, plain/quoted scalars, empty `[]`/`{}`, and small inline mappings
 such as `processor: { path: processor }`. YAML anchors/tags and unrelated YAML
 features are intentionally outside the manifest grammar.
 
-Every `.eido` source may contain at most one outermost nominal declaration total: one class or one interface, regardless of whether the source is compiled standalone or through `module.yaml`. Top-level functions may coexist in that file. Multiple same-level classes/interfaces must be split into separate source files; nested nominal declarations are not part of the current grammar.
+Every `.eido` source uses one of three mutually exclusive categories: a single non-function top-level declaration (class, interface, layout, or layout selection), one or more standalone functions other than `main` (including native functions), or a lone top-level `function main`. Comments and documentation do not count as declarations. Class and interface methods remain unrestricted by this file rule. No filename convention is enforced; the rule applies equally to standalone and manifest projects, including compile-time policy sources. Cross-file resolution within the module is unchanged.
 
 ## Architectural meaning
 

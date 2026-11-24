@@ -6,6 +6,7 @@ import ../../project/model
 import ../ast/program
 import ../lexer/scanner
 import program_parser
+import source_structure
 
 ## Parses all project sources independently and merges their top-level declarations.
 ## Example: source-file order does not limit later cross-file name resolution because analysis sees the complete merged Program.
@@ -16,13 +17,7 @@ proc parseProject*(project: EidoProject): Program =
   for sourceUnit in project.sources:
     var sourceProgram = parseProgram(lexAll(sourceUnit))
 
-    if sourceProgram.interfaces.len + sourceProgram.classes.len > 1:
-      failAt(
-        sourceUnit.path,
-        1,
-        1,
-        "source file may declare only one top-level class or interface"
-      )
+    validateSourceStructure(sourceProgram)
 
     for index in 0 ..< sourceProgram.interfaces.len:
       sourceProgram.interfaces[index].moduleName = sourceUnit.moduleName

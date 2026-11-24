@@ -1,6 +1,7 @@
 module: storage_bench
 sources:
   - Main.eido
+  - Operations.eido
 children: []
 dependencies: []
 exports: []

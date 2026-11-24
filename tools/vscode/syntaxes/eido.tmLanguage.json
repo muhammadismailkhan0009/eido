@@ -2,6 +2,10 @@
   "scopeName": "source.eido",
   "patterns": [
     {
+      "name": "comment.line.double-slash.eido",
+      "match": "//[^\\r\\n]*"
+    },
+    {
       "match": "\\b(class|interface)\\s+([A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
         "1": {
@@ -42,11 +46,6 @@
     {
       "name": "storage.type.primitive.eido",
       "match": "\\b(Bool|Byte|Short|Int|Float|Char|String)\\b"
-    },
-    {
-      "name": "comment.line.double-slash.eido",
-      "begin": "//",
-      "end": "$"
     },
     {
       "name": "string.quoted.double.eido",

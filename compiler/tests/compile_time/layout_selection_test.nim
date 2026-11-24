@@ -36,7 +36,7 @@ suite "Compile-time layout policy selection":
     check metadata.types[0].fields[1].fieldName == "first"
     check metadata.types[0].fields[1].offset == 8
     check metadata.types[0].fields[2].offset == 16
-    let output = compileSourceToNim(source)
+    let output = compileProjectToNim(fixtureProject(source))
     check "bytes {.align: 32.}: array[32, byte]" in output
     check "cast[ptr int64](cast[uint](source) + uint(8))[]" in output
 

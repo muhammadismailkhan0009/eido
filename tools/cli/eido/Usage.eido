@@ -1,0 +1,4 @@
+function printUsage() {
+    Console.writeLine("Usage: eido <command>");
+    Console.writeLine("Commands: help, version");
+}

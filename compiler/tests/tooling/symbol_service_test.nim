@@ -6,7 +6,7 @@ import tooling/[compiler_service, symbol_service]
 
 suite "Semantic symbol tooling":
   test "indexes declarations and resolved references with definition locations":
-    let source = """
+    let classSource = """
 class Account {
     Int balance;
 
@@ -15,7 +15,8 @@ class Account {
         return total;
     }
 }
-
+"""
+    let source = """
 function main() returns Int {
     var account = Account { balance = 41; };
     return account.read(1);
@@ -23,7 +24,7 @@ function main() returns Int {
 """
     let project = initProject(
       ptExecutable,
-      @[initSourceUnit(0, "main.eido", source)]
+      @[initSourceUnit(0, "main.eido", source), initSourceUnit(1, "class.eido", classSource)]
     )
     let program = requireCheckedProject(project)
 
@@ -31,51 +32,51 @@ function main() returns Int {
 
     let accountDecl = symbolAt(
       symbols,
-      "main.eido",
-      source.find("Account")
+      "class.eido",
+      classSource.find("Account")
     )
     check accountDecl.found
     check accountDecl.symbol.kind == tskClass
     check accountDecl.symbol.isDeclaration
 
-    let fieldUseOffset = source.find("balance +")
-    let fieldUse = symbolAt(symbols, "main.eido", fieldUseOffset)
+    let fieldUseOffset = classSource.find("balance +")
+    let fieldUse = symbolAt(symbols, "class.eido", fieldUseOffset)
     check fieldUse.found
     check fieldUse.symbol.kind == tskProperty
     check not fieldUse.symbol.isDeclaration
     check fieldUse.symbol.declarationSpan.startOffset ==
-      source.find("balance;")
+      classSource.find("balance;")
 
-    let parameterUseOffset = source.find("bonus;")
-    let parameterUse = symbolAt(symbols, "main.eido", parameterUseOffset)
+    let parameterUseOffset = classSource.find("bonus;")
+    let parameterUse = symbolAt(symbols, "class.eido", parameterUseOffset)
     check parameterUse.found
     check parameterUse.symbol.kind == tskParameter
     check parameterUse.symbol.declarationSpan.startOffset ==
-      source.find("bonus)")
+      classSource.find("bonus)")
 
-    let localUseOffset = source.find("total;")
-    let localUse = symbolAt(symbols, "main.eido", localUseOffset)
+    let localUseOffset = classSource.find("total;")
+    let localUse = symbolAt(symbols, "class.eido", localUseOffset)
     check localUse.found
     check localUse.symbol.kind == tskVariable
     check localUse.symbol.declarationSpan.startOffset ==
-      source.find("total =")
+      classSource.find("total =")
 
     let methodUseOffset = source.rfind("read")
     let methodUse = symbolAt(symbols, "main.eido", methodUseOffset)
     check methodUse.found
     check methodUse.symbol.kind == tskMethod
     check methodUse.symbol.declarationSpan.startOffset ==
-      source.find("read(")
+      classSource.find("read(")
 
     let constructorOffset = source.rfind("Account")
     let constructorUse = symbolAt(symbols, "main.eido", constructorOffset)
     check constructorUse.found
     check constructorUse.symbol.kind == tskClass
     check constructorUse.symbol.declarationSpan.startOffset ==
-      source.find("Account")
+      classSource.find("Account")
 
   test "marks static and instance method declarations distinctly":
-    let source = """
+    let classSource = """
 class Factory {
     Int stored;
 
@@ -91,25 +92,26 @@ class Factory {
         return self.stored;
     }
 }
-
+"""
+    let source = """
 function main() returns Int {
     return Factory.create();
 }
 """
     let project = initProject(
       ptExecutable,
-      @[initSourceUnit(0, "main.eido", source)]
+      @[initSourceUnit(0, "main.eido", source), initSourceUnit(1, "class.eido", classSource)]
     )
     let program = requireCheckedProject(project)
     let symbols = buildSymbolIndex(program, project)
 
-    let createDecl = symbolAt(symbols, "main.eido", source.find("create()"))
+    let createDecl = symbolAt(symbols, "class.eido", classSource.find("create()"))
     check createDecl.found
     check createDecl.symbol.kind == tskMethod
     check createDecl.symbol.isDeclaration
     check createDecl.symbol.isStatic
 
-    let readDecl = symbolAt(symbols, "main.eido", source.find("read()"))
+    let readDecl = symbolAt(symbols, "class.eido", classSource.find("read()"))
     check readDecl.found
     check readDecl.symbol.kind == tskMethod
     check readDecl.symbol.isDeclaration
@@ -216,11 +218,12 @@ class Value implements DetailedReadable {
     }
 }
 """
-    let mainSource = """
+    let consumeSource = """
 function consume(DetailedReadable value) returns Int {
     return value.read();
 }
-
+"""
+    let mainSource = """
 function main() returns Int {
     return consume(Value { stored = 41; });
 }
@@ -231,7 +234,8 @@ function main() returns Int {
         initSourceUnit(0, "Readable.eido", readableSource),
         initSourceUnit(1, "DetailedReadable.eido", detailedSource),
         initSourceUnit(2, "Value.eido", valueSource),
-        initSourceUnit(3, "main.eido", mainSource)
+        initSourceUnit(3, "main.eido", mainSource),
+        initSourceUnit(4, "Consume.eido", consumeSource)
       ]
     )
     let program = requireCheckedProject(project)
@@ -239,8 +243,8 @@ function main() returns Int {
 
     let readUse = symbolAt(
       symbols,
-      "main.eido",
-      mainSource.rfind("read")
+      "Consume.eido",
+      consumeSource.rfind("read")
     )
 
     check readUse.found

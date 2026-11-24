@@ -1,6 +1,7 @@
 import std/[os, osproc, strutils, unittest]
 import pipeline/[compiler, options, project_compiler]
 import project/model
+import support/project_fixture_support
 import source/source_unit
 import backend/nim/toolchain/compiler as nimCompiler
 
@@ -17,7 +18,7 @@ proc runNative(source: string, caseName: string): string =
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  nimCompiler.compileWithNim(compileToNim(source), outputPath)
+  nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
   execProcess(outputPath).strip()
 
 ## Compiles a multi-source Eido project through the real Nim toolchain and returns stdout.
@@ -98,6 +99,8 @@ suite "Compiler pipeline":
       """),
       initSourceUnit(1, "src/account.eido", """
         class Account { Int balance; }
+      """),
+      initSourceUnit(2, "src/functions.eido", """
         function read(Account account) returns Int { return account.balance; }
       """)
     ])
@@ -129,7 +132,7 @@ suite "Compiler pipeline":
       if fileExists(generatedPath):
         removeFile(generatedPath)
 
-    nimCompiler.compileWithNim(compileToNim(source), outputPath)
+    nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
 
     # When
     let execution = execCmdEx(outputPath)
@@ -184,7 +187,7 @@ suite "Compiler pipeline":
       if fileExists(generatedPath):
         removeFile(generatedPath)
 
-    nimCompiler.compileWithNim(compileToNim(source), outputPath)
+    nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
 
     # When
     let execution = execCmdEx(outputPath)
@@ -290,7 +293,7 @@ suite "Compiler pipeline":
       if fileExists(outputPath): removeFile(outputPath)
       if fileExists(generatedPath): removeFile(generatedPath)
 
-    let generated = compileToNim(source)
+    let generated = compileProjectToNim(fixtureProject(source))
     check "eido_string_from_native(eido_native_platformArgument" in generated
     nimCompiler.compileWithNim(generated, outputPath)
     let execution = execCmdEx(outputPath & " bridge-ok")
@@ -312,14 +315,14 @@ suite "Compiler pipeline":
     check "eido_copy_memo_begin" notin stringGenerated
     check "CopyRuntime" notin stringGenerated
 
-    let copyGenerated = compileToNim("""
+    let copyGenerated = compileProjectToNim(fixtureProject("""
       class Box { Int value; }
       function main() returns Int {
         var box = Box { value = 7; };
         var detached = copy box;
         return detached.value;
       }
-    """)
+    """))
     check "eido_copy_memo_begin" in copyGenerated
     check "eido_copy_memo_lookup" in copyGenerated
     check "eido_string_allocate" notin copyGenerated

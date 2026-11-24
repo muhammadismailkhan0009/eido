@@ -4139,54 +4139,27 @@ semantics that the existing tooling can expose.
 
 ---
 
-# 54. One outermost nominal declaration per source file
+# 54. Top-level declaration organization per source file
 
 > Status: approved and implemented for v0.
 
-Normal Eido project sources use Java-style nominal isolation at the file level.
+Each source file has exactly one of these forms:
 
-A single `.eido` source file may declare at most one outermost nominal declaration total:
+- One class, interface, layout declaration, or top-level layout selection.
+- One or more standalone functions (including native functions), none named `main`.
+- One standalone `main` function and no other top-level declaration.
 
-```text
-one class
-or
-one interface
-```
+Comments and documentation are permitted in all three forms. Class and
+interface methods are members, not top-level declarations. These rules do
+not impose side-effect freedom on standalone functions or require a file
+to have the same name as its declaration. Modules retain their existing
+cross-file name resolution and visibility semantics.
 
-Top-level functions may coexist in that source file because Eido intentionally supports file-level procedural functions.
-
-Therefore this is valid:
-
-```eido
-class Order {
-    Int id;
-}
-
-function formatId(Int id) returns Int {
-    return id;
-}
-```
-
-but this is invalid:
-
-```eido
-class Order {}
-class Customer {}
-```
-
-and this is also invalid:
-
-```eido
-interface Repository {}
-class RepositoryImpl {}
-```
-
-Those nominals must be split into separate `.eido` source files.
-
-This rule is enforced when assembling a normal Eido project from its source units. Low-level parser/compiler test helpers may still parse aggregate snippets internally; they are not the user-facing project model.
-
-Nested class/interface declarations are not part of the current v0 grammar. If nested nominals are added later, they are not counted as additional outermost declarations for this rule.
-
+The compiler validates each source unit before merging declarations and
+reports an offending declaration's own source span. CLI, documentation,
+compile-time phase hosting, and LSP project analysis share this validation.
+Low-level AST test helpers may parse compact aggregate snippets; those
+snippets must be split into valid source units to exercise project compilation.
 
 ---
 

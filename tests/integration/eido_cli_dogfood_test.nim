@@ -25,7 +25,8 @@ suite "Eido-written CLI dogfood":
     let sources = @[
       "stdlib/process/process.eido",
       "stdlib/io/console.eido",
-      "tools/cli/eido/main.eido"
+      "tools/cli/eido/main.eido",
+      "tools/cli/eido/Usage.eido"
     ]
 
     defer:

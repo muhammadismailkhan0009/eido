@@ -874,6 +874,7 @@ suite "Module architecture":
       module: app
       sources:
         - Main.eido
+        - Functions.eido
       children: []
       dependencies:
         - model
@@ -882,12 +883,13 @@ suite "Module architecture":
       adopts: []
     """)
     writeFile(root / "app" / "Main.eido", """
-      function readValue(Readable item) returns Int {
-        return item.read();
-      }
-
       function main() returns Int {
         return readValue(PublicApi.create());
+      }
+    """)
+    writeFile(root / "app" / "Functions.eido", """
+      function readValue(Readable item) returns Int {
+        return item.read();
       }
     """)
 
@@ -1519,6 +1521,7 @@ suite "Module architecture":
       module: app
       sources:
         - Main.eido
+        - Result.eido
       children: []
       dependencies:
         - payments
@@ -1527,12 +1530,13 @@ suite "Module architecture":
       adopts: []
     """)
     writeFile(root / "app" / "Main.eido", """
-      class Result { Int local; }
-
       function main() returns Int {
         var outcome = Result { local = 42; };
         return outcome.local;
       }
+    """)
+    writeFile(root / "app" / "Result.eido", """
+      class Result { Int local; }
     """)
 
     check checkModule(root).success
@@ -1620,7 +1624,7 @@ suite "Module architecture":
 
     let result = checkModule(root)
     check not result.success
-    check "only one top-level class or interface" in result.diagnostics[0].message
+    check "only one non-function top-level declaration" in result.diagnostics[0].message
 
 test "module contracts resolve same-module helper functions":
   # Given
@@ -1630,6 +1634,7 @@ test "module contracts resolve same-module helper functions":
     module: shop
     sources:
       - Main.eido
+      - Functions.eido
     children: []
     dependencies: []
     exports: []
@@ -1637,6 +1642,9 @@ test "module contracts resolve same-module helper functions":
     adopts: []
   """)
   writeFile(root / "Main.eido", """
+    function main() { checked(1); }
+  """)
+  writeFile(root / "Functions.eido", """
     function valid(Int value) returns Bool {
       return value > 0;
     }
@@ -1644,8 +1652,6 @@ test "module contracts resolve same-module helper functions":
     function checked(Int value) {
       require { valid(value); }
     }
-
-    function main() { checked(1); }
   """)
 
   # When

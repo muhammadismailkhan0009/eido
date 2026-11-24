@@ -19,6 +19,7 @@ suite "Collections project integration":
       module: arrayapp
       sources:
         - Main.eido
+        - Functions.eido
       children: []
       dependencies: []
       exports: []
@@ -26,10 +27,6 @@ suite "Collections project integration":
       adopts: []
     """)
     writeFile(root / "Main.eido", """
-      function first(Array<Int> values) returns Int {
-        return values.get(0);
-      }
-
       function main() returns Int {
         var values = Arrays<Int>.create(3);
         values.setAt(0, 40);
@@ -37,6 +34,11 @@ suite "Collections project integration":
         var resultValue = first(values) + values.get(1) + values.size();
         values.release();
         return resultValue;
+      }
+    """)
+    writeFile(root / "Functions.eido", """
+      function first(Array<Int> values) returns Int {
+        return values.get(0);
       }
     """)
 

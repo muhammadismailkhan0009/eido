@@ -37,8 +37,10 @@ def build():
         project = BUILD / "layouts" / variant
         project.mkdir(parents=True, exist_ok=True)
         shutil.copytree(BENCH / "inline-policy", project / "inline-policy", dirs_exist_ok=True)
-        (project / "Main.eido").write_text((BENCH / "layouts/Main.eido").read_text())
-        sources = "  - Main.eido\n"
+        files = ("Main.eido", "Row.eido", "Compact.eido", "Wide.eido", "VerifyLayout.eido")
+        for filename in files:
+            shutil.copyfile(BENCH / "layouts" / filename, project / filename)
+        sources = "".join(f"  - {filename}\n" for filename in files)
         if variant != "default":
             sources += "  - Selection.eido\n"
             (project / "Selection.eido").write_text(

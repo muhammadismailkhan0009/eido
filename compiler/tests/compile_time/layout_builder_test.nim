@@ -1,3 +1,5 @@
+import support/project_fixture_support
+import pipeline/project_compiler
 import std/[strutils, unittest]
 import tooling/compiler_service
 import pipeline/options
@@ -138,7 +140,7 @@ suite "Eido compile-time layout builder":
     check metadata.namedLayouts[0].layout.size == 8
 
   test "backend emits opaque class bytes and direct Eido offsets":
-    let output = compileSourceToNim("""
+    let output = compileProjectToNim(fixtureProject("""
       class Data { Byte marker; Int number; }
       layout Reversed for Data {
         var shape = Layout.create();
@@ -150,24 +152,24 @@ suite "Eido compile-time layout builder":
         var item = Data { marker = 1; number = 42; };
         return item.number;
       }
-    """)
+    """))
     check "bytes {.align: 8.}: array[16, byte]" in output
     check "cast[ptr int64](cast[uint](source) + uint(8))[]" in output
     check "cast[ptr int8](cast[uint](source) + uint(0))[]" in output
 
   test "layout validation runs without a selected automatic memory policy":
-    let plain = compileSourceToNim("""
+    let plain = compileProjectToNim(fixtureProject("""
       class Marker {}
       layout Empty for Marker {
         var shape = Layout.create();
         return shape;
       }
       function main() {}
-    """, CompilationOptions(memoryPolicy: NoMemoryPolicy))
+    """), CompilationOptions(memoryPolicy: NoMemoryPolicy))
     check plain.len > 0
 
     expect ValueError:
-      discard compileSourceToNim("""
+      discard compileProjectToNim(fixtureProject("""
         class Marker {}
         layout Wrong for Marker {
           var shape = Layout.create();
@@ -175,4 +177,4 @@ suite "Eido compile-time layout builder":
           return shape;
         }
         function main() {}
-      """, CompilationOptions(memoryPolicy: NoMemoryPolicy))
+      """), CompilationOptions(memoryPolicy: NoMemoryPolicy))

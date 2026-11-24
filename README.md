@@ -224,7 +224,7 @@ Normal Eido projects use `module.yaml` as an explicit architecture layer. The cu
 - qualified names when visible declarations are ambiguous;
 - closed interface implementation within the owning module family.
 
-A normal module source file may contain at most one outermost class or interface; top-level functions may coexist with that nominal declaration.
+A source file contains either one non-function top-level declaration (class, interface, layout, or layout selection), one or more standalone functions excluding `main`, or only the entrypoint `function main`. Comments and documentation are allowed in each category. Modules may contain any number of such files.
 
 See [`docs/features/modules.md`](docs/features/modules.md) for the detailed model.
 

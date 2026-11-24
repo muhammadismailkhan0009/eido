@@ -1,4 +1,4 @@
-import std/[json, os, unittest]
+import std/[json, os, strutils, unittest]
 import server
 import protocol/[jsonrpc, positions]
 import workspace/documents
@@ -118,9 +118,9 @@ suite "Eido LSP integration":
         continue
 
       foundCommentRule = true
-      check pattern["begin"].getStr == "//"
-      check pattern["end"].getStr == "$"
-      check not pattern.hasKey("match")
+      check pattern["match"].getStr == "//[^\\r\\n]*"
+      check not pattern.hasKey("begin")
+      check not pattern.hasKey("end")
 
     check foundCommentRule
 
@@ -190,6 +190,44 @@ suite "Eido LSP integration":
     check not published.isNil
     check published["params"]["diagnostics"].len == 1
     check published["params"]["diagnostics"][0]["code"].getStr == "EIDO1000"
+
+  test "didOpen reports file structure violations on the offending line":
+    let root = freshLspProject("source_structure")
+    defer: removeDir(root)
+    writeFile(root / "module.yaml", """
+      module: app
+      sources:
+        - Main.eido
+      children: []
+      dependencies: []
+      exports: []
+      provides: {}
+      adopts: []
+    """)
+    let path = root / "Main.eido"
+    writeFile(path, "function main() {}")
+    let uri = pathToFileUri(path)
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {"rootUri": pathToFileUri(root)}
+    })
+    let messages = server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "method": "textDocument/didOpen",
+      "params": {"textDocument": {
+        "uri": uri, "languageId": "eido", "version": 1,
+        "text": "function main() {}\nfunction helper() {}"
+      }}
+    })
+    let published = diagnosticsFor(messages, uri)
+    check not published.isNil
+    let diagnostics = published["params"]["diagnostics"]
+    check diagnostics.len == 1
+    check "containing main" in diagnostics[0]["message"].getStr
+    check diagnostics[0]["range"]["start"]["line"].getInt == 1
 
   test "didChange clears diagnostics when unsaved source becomes valid":
     let root = freshLspProject("change")
@@ -315,7 +353,8 @@ class Counter {
         return total;
     }
 }
-
+"""
+    let mainSource = """
 function main() returns Int {
     var counter = Counter { value = 41; };
     return counter.read(1);
@@ -325,13 +364,15 @@ function main() returns Int {
       module: app
       sources:
         - Main.eido
+        - Counter.eido
       children: []
       dependencies: []
       exports: []
       provides: {}
       adopts: []
     """)
-    let path = root / "Main.eido"
+    writeFile(root / "Main.eido", mainSource)
+    let path = root / "Counter.eido"
     writeFile(path, source)
     let uri = pathToFileUri(path)
 

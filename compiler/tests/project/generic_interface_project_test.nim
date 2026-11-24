@@ -24,6 +24,7 @@ suite "Generic interface module integration":
       module: contracts
       sources:
         - Main.eido
+        - Pair.eido
       children:
         implementation: { path: implementation }
       dependencies: []
@@ -36,14 +37,16 @@ suite "Generic interface module integration":
         - implementation.Factory
     """)
     writeFile(root / "Main.eido", """
-      interface Pair<First, Second> {
-        function first() returns First;
-        function second() returns Second;
-      }
       function main() returns Int {
         var pair = Factory.create(42, true);
         if (pair.second()) { return pair.first(); }
         return 0;
+      }
+    """)
+    writeFile(root / "Pair.eido", """
+      interface Pair<First, Second> {
+        function first() returns First;
+        function second() returns Second;
       }
     """)
     writeFile(root / "implementation" / "module.yaml", """

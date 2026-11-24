@@ -1,0 +1,8 @@
+layout Compact for Row {
+    var shape = Layout.create();
+    shape.field("value");
+    shape.field("other");
+    shape.field("flag");
+    shape.field("category");
+    return shape;
+}

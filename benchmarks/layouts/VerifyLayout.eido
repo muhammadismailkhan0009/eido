@@ -1,0 +1,39 @@
+// Independent raw-memory oracle: fixed offsets are chosen by the caller,
+// not obtained from the compiler's selected layout metadata.
+function verifyLayout(Int stride, Int alignment, Int flagOffset, Int valueOffset,
+                      Int categoryOffset, Int otherOffset) returns Int {
+    var rows = Storage<Row>.allocate(2);
+    Storage<Row>.write(rows, 0, Row { flag = 11; value = 1234567; category = 23; other = 7654321; });
+    Storage<Row>.write(rows, 1, Row { flag = 37; value = 2345678; category = 49; other = 8765432; });
+    var base = Storage<Row>.address(rows);
+    var second = Storage<Row>.slice(rows, 1, 1);
+    var raw = Storage<Byte>.borrowAddress(base, 2 * stride, 1);
+    var firstValue = Storage<Int>.viewAt(Storage<Byte>.borrowAddress(base, 1, stride), valueOffset);
+    var firstOther = Storage<Int>.viewAt(Storage<Byte>.borrowAddress(base, 1, stride), otherOffset);
+    var secondValue = Storage<Int>.viewAt(Storage<Byte>.borrowAddress(base + stride, 1, stride), valueOffset);
+    var secondOther = Storage<Int>.viewAt(Storage<Byte>.borrowAddress(base + stride, 1, stride), otherOffset);
+    var ok = Storage<Row>.size() == stride and Storage<Row>.alignment() == alignment
+        and Storage<Row>.address(second) - base == stride
+        and base - (base / alignment) * alignment == 0
+        and Storage<Byte>.read(raw, flagOffset) == 11
+        and Storage<Byte>.read(raw, categoryOffset) == 23
+        and Storage<Byte>.read(raw, stride + flagOffset) == 37
+        and Storage<Byte>.read(raw, stride + categoryOffset) == 49
+        and Storage<Int>.read(firstValue, 0) == 1234567
+        and Storage<Int>.read(firstOther, 0) == 7654321
+        and Storage<Int>.read(secondValue, 0) == 2345678
+        and Storage<Int>.read(secondOther, 0) == 8765432;
+    // Reverse direction: raw writes must be visible through Eido field reads.
+    Storage<Int>.write(secondValue, 0, 99123);
+    Storage<Int>.write(firstOther, 0, 88123);
+    Storage<Byte>.write(raw, flagOffset, 67);
+    Storage<Byte>.write(raw, stride + categoryOffset, 79);
+    var first = ref Storage<Row>.read(rows, 0);
+    var last = ref Storage<Row>.read(rows, 1);
+    set ok = ok and first.flag == 67 and first.other == 88123
+        and last.value == 99123 and last.category == 79
+        and first.value == 1234567 and last.other == 8765432;
+    Storage<Row>.release(rows);
+    if (ok) { return 1; }
+    return 0;
+}

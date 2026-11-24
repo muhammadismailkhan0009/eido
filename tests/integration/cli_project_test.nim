@@ -316,6 +316,7 @@ suite "CLI project integration":
       sources:
         - Main.eido
         - Account.eido
+        - Functions.eido
       children: []
       dependencies: []
       exports: []
@@ -330,6 +331,8 @@ suite "CLI project integration":
     """)
     writeFile(root / "Account.eido", """
       class Account { Int balance; }
+    """)
+    writeFile(root / "Functions.eido", """
       function read(Account account) returns Int { return account.balance; }
     """)
 
@@ -376,6 +379,7 @@ suite "CLI project integration":
       sources:
         - Main.eido
         - Account.eido
+        - Functions.eido
       children: []
       dependencies: []
       exports: []
@@ -390,6 +394,8 @@ suite "CLI project integration":
     """)
     writeFile(root / "Account.eido", """
       class Account { Int balance; }
+    """)
+    writeFile(root / "Functions.eido", """
       function read(Account account) returns Int { return account.balance; }
     """)
 
@@ -692,6 +698,7 @@ suite "CLI project integration":
       module: app
       sources:
         - Main.eido
+        - Functions.eido
       children: []
       dependencies:
         - payments
@@ -701,18 +708,19 @@ suite "CLI project integration":
       adopts: []
     """)
     writeFile(root / "app" / "Main.eido", """
+      function main() returns Int {
+        var payment = payments.Factory.create();
+        var user = users.Factory.create();
+        return readPayment(payment) + readUser(user);
+      }
+    """)
+    writeFile(root / "app" / "Functions.eido", """
       function readPayment(payments.Result value) returns Int {
         return value.code;
       }
 
       function readUser(users.Result value) returns Int {
         return value.score;
-      }
-
-      function main() returns Int {
-        var payment = payments.Factory.create();
-        var user = users.Factory.create();
-        return readPayment(payment) + readUser(user);
       }
     """)
 
@@ -730,6 +738,7 @@ suite "CLI project integration":
       module: app
       sources:
         - Main.eido
+        - Console.eido
       children: []
       dependencies: []
       exports: []
@@ -737,12 +746,13 @@ suite "CLI project integration":
       adopts: []
     """)
     writeFile(root / "Main.eido", """
-      class Console {
-        native function writeLine(String value);
-      }
-
       function main() {
         Console.writeLine("hello");
+      }
+    """)
+    writeFile(root / "Console.eido", """
+      class Console {
+        native function writeLine(String value);
       }
     """)
 

@@ -31,3 +31,13 @@ From the Eido repository:
 For local Cursor development, `cursor --install-extension <path-to-vsix> --force` installs the packaged extension. When `eido.server.path` / `eido.compiler.path` are empty, the extension walks upward from the workspace root to find workspace-local `eido-lsp` / `eido` binaries before falling back to PATH.
 
 The workspace root should contain the root `module.yaml`.
+
+## Syntax highlighting regression
+
+Run the comment/quote tokenization test against the installed editor engine:
+
+```sh
+EIDO_TEXTMATE_NODE_MODULES=/usr/share/cursor/resources/app/node_modules node tools/vscode/tests/comment-highlighting.test.js
+```
+
+Alternatively, install `vscode-textmate` and `vscode-oniguruma` as development dependencies and run the script without the environment variable.

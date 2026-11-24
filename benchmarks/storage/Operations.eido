@@ -1,0 +1,70 @@
+function scan(Storage<Int> values) returns Int {
+    var i = 0;
+    while (i < 2000000) {
+        Storage<Int>.write(values, i, i + 1);
+        set i = i + 1;
+    }
+    var sum = 0;
+    var pass = 0;
+    while (pass < 12) {
+        set i = 0;
+        while (i < 2000000) {
+            set sum = sum + Storage<Int>.read(values, i);
+            set i = i + 1;
+        }
+        set pass = pass + 1;
+    }
+    return sum;
+}
+function typed() returns Int {
+    var values = Storage<Int>.allocate(2000000);
+    var resultValue = scan(values);
+    Storage<Int>.release(values);
+    return resultValue;
+}
+function rawView() returns Int {
+    var raw = Storage<Byte>.allocateRaw(2000000, 8);
+    var values = Storage<Int>.view(raw, 0);
+    var resultValue = scan(values);
+    Storage<Byte>.release(raw);
+    return resultValue;
+}
+function churn() returns Int {
+    var i = 0;
+    var sum = 0;
+    while (i < 1000000) {
+        var values = Storage<Int>.allocate(16);
+        Storage<Int>.write(values, 0, i + 1);
+        set sum = sum + Storage<Int>.read(values, 0);
+        Storage<Int>.release(values);
+        set i = i + 1;
+    }
+    return sum;
+}
+function reuse() returns Int {
+    var values = Storage<Int>.allocate(16);
+    var i = 0;
+    var sum = 0;
+    while (i < 1000000) {
+        Storage<Int>.write(values, 0, i + 1);
+        set sum = sum + Storage<Int>.read(values, 0);
+        set i = i + 1;
+    }
+    Storage<Int>.release(values);
+    return sum;
+}
+function placement() returns Int {
+    var raw = Storage<Byte>.allocateRaw(16, 8);
+    var address = Storage<Byte>.address(raw);
+    var i = 0;
+    var sum = 0;
+    while (i < 1000000) {
+        var values = Storage<Int>.reserveAt(raw, address, 16);
+        Storage<Int>.write(values, 0, i + 1);
+        set sum = sum + Storage<Int>.read(values, 0);
+        Storage<Int>.release(values);
+        set i = i + 1;
+    }
+    Storage<Byte>.release(raw);
+    return sum;
+}
