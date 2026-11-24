@@ -98,6 +98,7 @@ suite "Eido LSP integration":
       if message.hasKey("method") and
           message["method"].getStr == "window/showMessage":
         sawProjectError = true
+        checkpoint($message)
 
     check not sawProjectError
     check not published.isNil

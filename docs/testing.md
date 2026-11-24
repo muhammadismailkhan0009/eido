@@ -164,27 +164,26 @@ nimble test
 
 The canonical test task is parallel and CPU-adaptive:
 
-1. `compiler/tests/parallel_test_runner.nim` discovers static unittest suites/tests.
-2. The complete `compiler/tests/compiler_test_suite.nim` aggregate is compiled once.
-3. Aggregate compilation uses `--parallelBuild:N`, where `N` is the effective worker count after reserving two logical cores by default.
-4. Compiler-internal tests run one process per suite.
-5. Language-facing feature selectors run in isolated outer test processes. Compatible successful Eido programs within a batched selector share one generated Nim compilation and executable, reducing redundant compiler invocations. Expected crashes and compiler failures are kept as separate tests.
-6. Independent selectors execute with `std/osproc.execProcesses` using the same worker count.
-7. Successful child output is suppressed; failed child output is replayed with its selector.
-8. After the parallel compiler/language aggregate succeeds, root `tests/integration/` suites run cross-component toolchain scenarios: bootstrap CLI behavior plus compilation/execution of the permanent Eido-written CLI dogfood target.
+1. The runner discovers compiler suites and individual feature selectors, compiles the aggregate once, and runs independent processes.
+2. The default worker count is half the logical CPUs (at least one). `EIDO_TEST_JOBS` may explicitly raise concurrency to the detected logical processor count. Aggregate compilation uses the same worker limit.
+3. Selectors are ordered by previously observed durations, longest first; timings are scheduling hints only. Unknown selectors use deterministic alphabetical order.
+4. Each child writes to a separate temporary log, preventing output-pipe backpressure. Successful logs are suppressed, failed logs are replayed, and periodic progress identifies active tests.
+5. The four cross-component integration suites run in parallel as a separate stage after the compiler/feature pool drains.
+6. Compatible successful cases share one native compilation or Nim VM invocation; expected crashes remain isolated. Case names and expected results remain individually checked.
 
-Worker count defaults to `max(1, countProcessors() - 2)` so two logical cores remain free for the OS and other work. Override it when needed:
-
-```text
+```bash
+nimble test
 EIDO_TEST_JOBS=4 nimble test
+EIDO_TEST_FILTER='While execution' nimble test
+EIDO_TEST_NO_CACHE=1 nimble test
 ```
 
-The override controls both aggregate build parallelism and test-process concurrency.
+The filter is a case-insensitive substring of selector names. Without a filter, all selectors and integration suites execute. The default worker count is intentionally conservative because native compiler subprocesses also consume CPU resources.
 
-The runner uses process isolation rather than threads so `std/unittest` fixtures and compiler/native-toolchain subprocesses remain independent.
+The executable pipeline validates the full source project, then removes unreachable declarations before code generation. Pure arithmetic, control flow and Alignment-only programs no longer pull in the native Storage SDK; compatible feature fixtures execute through the Nim VM. The compiler retains native execution for real Storage, managed objects and String support.
 
-Native feature batches isolate their Nim object cache within their temporary batch
-directory, so simultaneously running batches cannot overwrite each other's
-objects or accidentally link another batch's runner. Embedded native support
-is content-versioned and atomically published. The parallel runner prints a
-final failed-selector summary.
+Native feature tests cache compiled executables by generated Nim source, all batch modules, SDK native support, compiler invocation and ordinary toolchain/configuration identity. Every run still compiles Eido to Nim and executes the resulting program; assertions/results are never cached. Dedicated native-toolchain tests still compile directly. Custom compiler/SDK overrides bypass the feature artifact cache; `EIDO_TEST_NO_CACHE=1` requests fresh native feature compilation. This local development cache is not a hermetic build-system cache for arbitrary external toolchain configuration. The cache is under the Eido user cache directory (typically `~/.cache/eido/native-feature-tests` on Linux).
+
+Independent native application builds use Nim object caches scoped by full generated-source/output paths, not module basename. Native batches use temporary, isolated Nim object directories. Embedded native support is content-versioned and atomically published.
+
+The runner prints aggregate build time, execution time, active selectors, completion counts, and a final failure summary.

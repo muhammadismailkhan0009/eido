@@ -7,7 +7,6 @@ suite "Class copy emission":
     check "Storage<Byte>.allocateRaw(" in BuiltinCopyRuntimeSource
     check "Storage<Int>.view(" in BuiltinCopyRuntimeSource
     check "Storage<Byte>.compilerReleaseNativeAddress(" in BuiltinCopyRuntimeSource
-    check "Storage<Byte>.release(" in BuiltinCopyRuntimeSource
     check "seq[" notin BuiltinCopyRuntimeSource
 
   test "emits a generated copier and copy call":

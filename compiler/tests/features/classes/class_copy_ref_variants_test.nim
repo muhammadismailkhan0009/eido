@@ -1,9 +1,12 @@
 import std/unittest
 import support/feature_test_support
 
+import support/feature_batch_support
+
 suite "Class copy/ref execution":
-  test "ref local preserves the same object identity":
-    let source = """
+  test "native cases group 1":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(name: "ref local preserves the same object identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) {
@@ -18,12 +21,8 @@ suite "Class copy/ref execution":
         alias.withdraw(30);
         return account.value();
       }
-    """
-
-    check runFeatureSource(source, "class_ref_alias") == "70"
-
-  test "copy local creates a detached object":
-    let source = """
+    """, expected: "70"),
+      NativeFeatureCase(name: "copy local creates a detached object", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) {
@@ -38,12 +37,8 @@ suite "Class copy/ref execution":
         detached.withdraw(30);
         return account.value() * 1000 + detached.value();
       }
-    """
-
-    check runFeatureSource(source, "class_copy_detached") == "100070"
-
-  test "class parameter preserves caller identity":
-    let source = """
+    """, expected: "100070"),
+      NativeFeatureCase(name: "class parameter preserves caller identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) {
@@ -61,12 +56,16 @@ suite "Class copy/ref execution":
         charge(account, 20);
         return account.value();
       }
-    """
+    """, expected: "80"),
+    ], "class_copy_ref_execution_1")
+    check results.len == 3
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
-    check runFeatureSource(source, "class_parameter_identity") == "80"
-
-  test "construction fields choose ref or detached copy explicitly":
-    let source = """
+  test "native cases group 2":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(name: "construction fields choose ref or detached copy explicitly", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) {
@@ -92,12 +91,8 @@ suite "Class copy/ref execution":
           pair.shared.value() * 100 +
           pair.detached.value();
       }
-    """
-
-    check runFeatureSource(source, "construction_copy_ref") == "909080"
-
-  test "copy recursively detaches nested class state":
-    let source = """
+    """, expected: "909080"),
+      NativeFeatureCase(name: "copy recursively detaches nested class state", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) {
@@ -117,12 +112,8 @@ suite "Class copy/ref execution":
         detached.account.withdraw(20);
         return account.value() * 1000 + detached.account.value();
       }
-    """
-
-    check runFeatureSource(source, "nested_copy_detached") == "100080"
-
-  test "copy preserves sharing inside the detached graph":
-    let source = """
+    """, expected: "100080"),
+      NativeFeatureCase(name: "copy preserves sharing inside the detached graph", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) {
@@ -146,12 +137,16 @@ suite "Class copy/ref execution":
         detached.first.withdraw(20);
         return account.value() * 1000 + detached.second.value();
       }
-    """
+    """, expected: "100080"),
+    ], "class_copy_ref_execution_2")
+    check results.len == 3
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
-    check runFeatureSource(source, "copy_preserves_sharing") == "100080"
-
-  test "copy preserves cycles inside the detached graph":
-    let source = """
+  test "native cases group 3":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(name: "copy preserves cycles inside the detached graph", source: """
       class Node {
         Node? next;
         Int value;
@@ -172,12 +167,8 @@ suite "Class copy/ref execution":
         }
         return left.value * 100 + detached.value;
       }
-    """
-
-    check runFeatureSource(source, "copy_preserves_cycle") == "102"
-
-  test "copy memo grows and resets between operations":
-    let source = """
+    """, expected: "102"),
+      NativeFeatureCase(name: "copy memo grows and resets between operations", source: """
       class Node {
         Node? next;
         Int value;
@@ -204,9 +195,12 @@ suite "Class copy/ref execution":
         var secondCopy = copy one;
         return firstCopy.sum() * 100 + secondCopy.sum();
       }
-    """
-
-    check runFeatureSource(source, "copy_memo_growth_reset") == "2121"
+    """, expected: "2121"),
+    ], "class_copy_ref_execution_3")
+    check results.len == 2
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Class return detachment execution":
   test "mutate original then return detached snapshot":
@@ -236,8 +230,9 @@ suite "Class return detachment execution":
     check runFeatureSource(source, "mutate_then_snapshot") == "90070"
 
 suite "Class relation boundary execution":
-  test "copy and ref may bind an existing class-valued field":
-    let source = """
+  test "native cases group 1":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(name: "copy and ref may bind an existing class-valued field", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) { set self.balance = self.balance - amount; }
@@ -255,12 +250,8 @@ suite "Class relation boundary execution":
         return account.value() * 10000 +
           order.account.value() * 100 + detached.value();
       }
-    """
-
-    check runFeatureSource(source, "field_copy_ref_binding") == "909080"
-
-  test "class-valued static method parameter preserves caller identity":
-    let source = """
+    """, expected: "909080"),
+      NativeFeatureCase(name: "class-valued static method parameter preserves caller identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) { set self.balance = self.balance - amount; }
@@ -277,12 +268,8 @@ suite "Class relation boundary execution":
         Charger.charge(account, 25);
         return account.value();
       }
-    """
-
-    check runFeatureSource(source, "method_class_parameter_identity") == "75"
-
-  test "detached callable result may flow into construction and set":
-    let source = """
+    """, expected: "75"),
+      NativeFeatureCase(name: "detached callable result may flow into construction and set", source: """
       class Account {
         Int balance;
         function value() returns Int { return self.balance; }
@@ -299,13 +286,17 @@ suite "Class relation boundary execution":
         set account = create(70);
         return holder.account.value() * 100 + account.value();
       }
-    """
-
-    check runFeatureSource(source, "detached_callable_flow") == "4070"
+    """, expected: "4070"),
+    ], "class_relation_boundary_execution_1")
+    check results.len == 3
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
 suite "Class relationship mutation execution":
-  test "set ref rebinds a class local to existing identity":
-    let source = """
+  test "native cases group 1":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(name: "set ref rebinds a class local to existing identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) { set self.balance = self.balance - amount; }
@@ -318,12 +309,8 @@ suite "Class relationship mutation execution":
         current.withdraw(20);
         return first.value();
       }
-    """
-
-    check runFeatureSource(source, "class_set_ref_local") == "80"
-
-  test "set copy rebinds a class local to detached identity":
-    let source = """
+    """, expected: "80"),
+      NativeFeatureCase(name: "set copy rebinds a class local to detached identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) { set self.balance = self.balance - amount; }
@@ -336,11 +323,8 @@ suite "Class relationship mutation execution":
         current.withdraw(20);
         return first.value() * 1000 + current.value();
       }
-    """
-
-    check runFeatureSource(source, "class_set_copy_local") == "100080"
-  test "set self field ref preserves supplied identity":
-    let source = """
+    """, expected: "100080"),
+      NativeFeatureCase(name: "set self field ref preserves supplied identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) { set self.balance = self.balance - amount; }
@@ -358,12 +342,16 @@ suite "Class relationship mutation execution":
         holder.account.withdraw(20);
         return second.value();
       }
-    """
+    """, expected: "80"),
+    ], "class_relationship_mutation_execution_1")
+    check results.len == 3
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected
 
-    check runFeatureSource(source, "class_set_ref_field") == "80"
-
-  test "set self field copy detaches supplied identity":
-    let source = """
+  test "native cases group 2":
+    let results = runNativeFeatureBatch(@[
+      NativeFeatureCase(name: "set self field copy detaches supplied identity", source: """
       class Account {
         Int balance;
         function withdraw(Int amount) { set self.balance = self.balance - amount; }
@@ -381,11 +369,8 @@ suite "Class relationship mutation execution":
         holder.account.withdraw(20);
         return second.value() * 1000 + holder.account.value();
       }
-    """
-
-    check runFeatureSource(source, "class_set_copy_field") == "100080"
-  test "set self field accepts fresh and detached callable results":
-    let source = """
+    """, expected: "100080"),
+      NativeFeatureCase(name: "set self field accepts fresh and detached callable results", source: """
       class Account {
         Int balance;
         function value() returns Int { return self.balance; }
@@ -409,6 +394,9 @@ suite "Class relationship mutation execution":
         holder.replaceCall(70);
         return first * 100 + holder.account.value();
       }
-    """
-
-    check runFeatureSource(source, "class_set_fresh_field") == "4070"
+    """, expected: "4070"),
+    ], "class_relationship_mutation_execution_2")
+    check results.len == 2
+    for item in results:
+      checkpoint(item.name)
+      check item.actual == item.expected

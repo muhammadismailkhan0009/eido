@@ -1,7 +1,7 @@
 ## Invokes the external Nim compiler on generated Nim source.
 ## Build tools may choose both the native output and internal generated-source location.
 
-import std/[os, osproc, strutils]
+import std/[os, osproc, strutils, hashes]
 import artifacts
 import native_support
 
@@ -32,8 +32,14 @@ proc compileWithNim*(
   compilerArgs.add "--path:" & nativeSupportPath()
   for importPath in additionalImportPaths:
     compilerArgs.add "--path:" & importPath
-  if nimCachePath.len > 0:
-    compilerArgs.add "--nimcache:" & nimCachePath
+  # Nim's default cache is keyed by the module basename. Independent Eido
+  # projects may both generate app_generated.nim; never share their C objects.
+  let cachePath =
+    if nimCachePath.len > 0: nimCachePath
+    else: getCacheDir("eido") / "native-builds" /
+      $hash(absolutePath(nimPath) & "\n" & absolutePath(outputPath))
+  createDir(cachePath)
+  compilerArgs.add "--nimcache:" & cachePath
   compilerArgs.add "-o:" & outputPath
   compilerArgs.add nimPath
 

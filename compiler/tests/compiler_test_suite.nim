@@ -154,3 +154,5 @@ import features/string_variants_test
 import features/variable_variants_test
 import features/set_variants_test
 import features/optional_variants_test
+
+import project/reachable_emission_test

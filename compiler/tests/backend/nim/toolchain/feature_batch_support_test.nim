@@ -34,7 +34,7 @@ suite "Feature batch runner":
       checkpoint(item.name)
       check item.actual == item.expected
 
-  test "automatic batch handles fixtures requiring native Storage support":
+  test "automatic batch handles pure VM fixtures":
     let results = runFeatureBatch(@[
       FeatureBatchCase(name: "addition", source: "function main() returns Int { return 2 + 3; }", expected: "5"),
       FeatureBatchCase(name: "comparison", source: "function main() returns Bool { return 3 > 2; }", expected: "true")
@@ -43,3 +43,15 @@ suite "Feature batch runner":
     for item in results:
       checkpoint(item.name)
       check item.actual == item.expected
+
+
+  test "native batch cache keys include every generated module":
+    let first = NativeFeatureCase(name: "first", source: "function main() returns Int { return 1; }", expected: "1")
+    let second = NativeFeatureCase(name: "second", source: "function main() returns Int { return 2; }", expected: "2")
+    let changed = NativeFeatureCase(name: "second", source: "function main() returns Int { return 3; }", expected: "3")
+    let a = runNativeFeatureBatch(@[first, second], "cache_modules")
+    let b = runNativeFeatureBatch(@[first, changed], "cache_modules")
+    let c = runNativeFeatureBatch(@[first, second], "cache_modules")
+    check a[1].actual == "2"
+    check b[1].actual == "3"
+    check c[1].actual == "2"

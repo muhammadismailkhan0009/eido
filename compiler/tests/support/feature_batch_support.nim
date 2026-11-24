@@ -4,7 +4,7 @@
 
 import std/[os, osproc, strutils]
 import backend/nim/toolchain/native_support
-import backend/nim/toolchain/compiler as nimCompiler
+import support/feature_native_cache
 import pipeline/project_compiler
 import support/project_fixture_support
 
@@ -56,20 +56,22 @@ proc runBatch(
     removeDir(batchDir)
 
   var runner = ""
+  var moduleInputs = ""
   var requiresNative = engine == fbeNative
   for i, feature in cases:
     if feature.name.len == 0:
       raise newException(ValueError, "native batch case must have a name")
     let moduleName = "eido_batch_case_" & $i
     let generated = compileProjectToNim(fixtureProject(feature.source))
-    # Even simple Eido programs can import native Storage support today.
-    # The Nim VM cannot compile its allocation operations (`alloc0`).
+    # The Nim VM cannot compile native Storage allocation operations (`alloc0`).
     # Match the same fallback as the ordinary feature-test helper.
     if "import eido_storage" in generated or
         "memoryObjectAllocate" in generated or
         "eido_string_allocate" in generated:
       requiresNative = true
-    writeFile(batchDir / (moduleName & ".nim"), reusableModule(generated))
+    let moduleSource = reusableModule(generated)
+    writeFile(batchDir / (moduleName & ".nim"), moduleSource)
+    moduleInputs.add $moduleSource.len & ":" & moduleSource
     runner.add "import " & moduleName & "\n"
 
   runner.add "\nwhen isMainModule:\n"
@@ -83,11 +85,12 @@ proc runBatch(
   let runnerPath = batchDir / "batch_runner.nim"
   var execution: tuple[output: string, exitCode: int]
   if requiresNative:
-    nimCompiler.compileWithNim(
+    compileFeatureNative(
       runner,
       outputPath,
       generatedSourcePath = runnerPath,
-      nimCachePath = batchDir / "nimcache"
+      nimCachePath = batchDir / "nimcache",
+      extraInputs = moduleInputs
     )
     execution = execCmdEx(quoteShell(outputPath))
   else:

@@ -24,9 +24,7 @@ proc materializeEmbeddedNativeSupport(): string =
   publishEmbeddedSource(supportFile, BuiltinNativeSupportSource)
 
   let storageFile = directory / "eido_storage.nim"
-  if not fileExists(storageFile) or
-      readFile(storageFile) != BuiltinStorageSupportSource:
-    writeFile(storageFile, BuiltinStorageSupportSource)
+  publishEmbeddedSource(storageFile, BuiltinStorageSupportSource)
 
   directory
 

@@ -1,0 +1,3 @@
+// Editor-visible empty placeholder. The compile-time host replaces this
+// source with the current program's generated layout runners.
+class UserLayoutRunners {}

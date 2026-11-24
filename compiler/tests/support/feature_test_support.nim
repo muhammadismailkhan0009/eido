@@ -5,7 +5,7 @@ import std/[os, osproc, strutils]
 import pipeline/project_compiler
 import support/project_fixture_support
 import backend/nim/toolchain/native_support
-import backend/nim/toolchain/compiler as nimCompiler
+import support/feature_native_cache
 
 ## Runs a complete Eido program through all pure compiler phases, then executes
 ## the emitted Nim with `nim e`. Example: a main returning 30 produces "30".
@@ -30,7 +30,7 @@ proc runFeatureSource*(source: string, caseName: string): string =
       if fileExists(outputPath):
         removeFile(outputPath)
 
-    nimCompiler.compileWithNim(generated, outputPath)
+    compileFeatureNative(generated, outputPath, generatedSourcePath = generatedPath)
     let execution = execCmdEx(outputPath)
     if execution.exitCode != 0:
       raise newException(
@@ -75,7 +75,8 @@ proc runNativeFeatureSource*(source: string, caseName: string): string =
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
+  compileFeatureNative(compileProjectToNim(fixtureProject(source)), outputPath,
+    generatedSourcePath = generatedPath)
   execProcess(outputPath).strip()
 
 ## Runs an Eido native feature expected to fail and returns its process result.
@@ -93,5 +94,6 @@ proc runFailingNativeFeatureSource*(
     if fileExists(generatedPath):
       removeFile(generatedPath)
 
-  nimCompiler.compileWithNim(compileProjectToNim(fixtureProject(source)), outputPath)
+  compileFeatureNative(compileProjectToNim(fixtureProject(source)), outputPath,
+    generatedSourcePath = generatedPath)
   execCmdEx(outputPath)

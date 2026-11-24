@@ -7,7 +7,7 @@ import ../source/source_unit
 import ../stdlib/builtin_sources
 import ../frontend/parser/project_parser
 import ../hir/program as hirProgram
-import ../hir/[copy_usage, string_usage]
+import ../hir/[copy_usage, string_usage, reachability]
 import ../compile_time/[instrumentation_model, phase_runner, runtime_policy_phase]
 import options
 import ../compilation/plan
@@ -189,15 +189,18 @@ proc compileProjectToNim*(
   let selectedPolicyName =
     if options.memoryPolicy.isSelected: policyModule.canonicalName else: ""
   let baseProject = project.selectRuntimeSources({}, "")
-  let baseProgram = analyzeProject(baseProject)
+  let baseProgram = reachableProgram(analyzeProject(baseProject), preserveUser = true)
   let memoryMetadata = runStandardCompileTimePhases(
     baseProgram,
     options.memoryPolicy
   )
+  var metadataRoots: seq[string]
+  for typ in memoryMetadata.types: metadataRoots.add typ.className
+  let liveProgram = reachableProgram(baseProgram, requiredClasses = metadataRoots)
   var languageCapabilities: set[LanguageRuntimeCapability]
-  if baseProgram.usesString:
+  if liveProgram.usesString:
     languageCapabilities.incl lrcString
-  if baseProgram.usesClassCopy:
+  if liveProgram.usesClassCopy:
     languageCapabilities.incl lrcClassCopy
   let needsPolicyRuntime =
     options.memoryPolicy.isSelected and memoryMetadata.types.len > 0
@@ -207,7 +210,7 @@ proc compileProjectToNim*(
       languageCapabilities,
       if needsPolicyRuntime: selectedPolicyName else: ""
     )
-    let runtimeProgram = analyzeProject(runtimeProject)
+    let runtimeProgram = reachableProgram(analyzeProject(runtimeProject), requiredClasses = metadataRoots)
     let instrumentation =
       if needsPolicyRuntime:
         runRuntimePolicyPhase(baseProgram, policyModule)
@@ -221,4 +224,4 @@ proc compileProjectToNim*(
       )
     )
 
-  emitNim(baseProgram, CompilationPlan(memory: memoryMetadata))
+  emitNim(liveProgram, CompilationPlan(memory: memoryMetadata))
