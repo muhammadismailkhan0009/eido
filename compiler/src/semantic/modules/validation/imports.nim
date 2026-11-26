@@ -44,6 +44,7 @@ proc authorizeVisibleImports(
       imports[path][name].authorized = true
       result = true
 
+## Rejects imports not authorized by the established module API surfaces.
 proc validateImportVisibility(source: Program, imports: ImportRegistry) =
   for item in source.imports:
     if not importBinding(imports, item.span, item.path).authorized:
