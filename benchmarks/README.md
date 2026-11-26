@@ -74,3 +74,7 @@ This suite measures specific sequential microbenchmarks, not overall
 application speed, cache-miss rates, all copy/ref semantics, or C/Rust
 performance. See RESULTS.md. Generated code, debugger transcripts,
 disassembly and logs live under ignored `benchmarks/build/`.
+
+## External reference workloads
+
+See [standard/README.md](standard/README.md) for the STREAM and mimalloc-bench malloc-large derived ports, repeatable runner and verified results.

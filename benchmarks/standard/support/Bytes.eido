@@ -1,0 +1,21 @@
+// Benchmark-only byte conversion and buffer operations. Not an SDK API.
+class Bytes {
+    native function unsigned(Byte value) returns Int;
+    native function fromUnsigned(Int value) returns Byte;
+
+    function validRange(Storage<Byte> buffer, Int offset, Int count) returns Bool {
+        var capacity = Storage<Byte>.capacity(buffer);
+        if (offset < 0 or count < 0 or offset > capacity or count > capacity - offset) { return false; }
+        if (capacity == 0) { return true; }
+        var next = Storage<Byte>.slice(buffer, 1, 0);
+        return Storage<Byte>.address(next) - Storage<Byte>.address(buffer) == 1;
+    }
+
+    function at(Storage<Byte> buffer, Int index) returns Int {
+        return Bytes.unsigned(Storage<Byte>.read(buffer, index));
+    }
+
+    function put(Storage<Byte> buffer, Int index, Int value) {
+        Storage<Byte>.write(buffer, index, Bytes.fromUnsigned(value));
+    }
+}

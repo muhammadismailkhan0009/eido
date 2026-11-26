@@ -1,0 +1,413 @@
+// Derived from mimalloc-bench malloc-large; exact trace, alternating explicit owners.
+native function benchmarkNanos() returns Int;
+function allocateTrace(Storage<Int> slots, Storage<Int> sizes) returns Int {
+    var a0 = Storage<Byte>.allocate(0);
+    var b0 = Storage<Byte>.allocate(0);
+    var bank0 = false;
+    var a1 = Storage<Byte>.allocate(0);
+    var b1 = Storage<Byte>.allocate(0);
+    var bank1 = false;
+    var a2 = Storage<Byte>.allocate(0);
+    var b2 = Storage<Byte>.allocate(0);
+    var bank2 = false;
+    var a3 = Storage<Byte>.allocate(0);
+    var b3 = Storage<Byte>.allocate(0);
+    var bank3 = false;
+    var a4 = Storage<Byte>.allocate(0);
+    var b4 = Storage<Byte>.allocate(0);
+    var bank4 = false;
+    var a5 = Storage<Byte>.allocate(0);
+    var b5 = Storage<Byte>.allocate(0);
+    var bank5 = false;
+    var a6 = Storage<Byte>.allocate(0);
+    var b6 = Storage<Byte>.allocate(0);
+    var bank6 = false;
+    var a7 = Storage<Byte>.allocate(0);
+    var b7 = Storage<Byte>.allocate(0);
+    var bank7 = false;
+    var a8 = Storage<Byte>.allocate(0);
+    var b8 = Storage<Byte>.allocate(0);
+    var bank8 = false;
+    var a9 = Storage<Byte>.allocate(0);
+    var b9 = Storage<Byte>.allocate(0);
+    var bank9 = false;
+    var a10 = Storage<Byte>.allocate(0);
+    var b10 = Storage<Byte>.allocate(0);
+    var bank10 = false;
+    var a11 = Storage<Byte>.allocate(0);
+    var b11 = Storage<Byte>.allocate(0);
+    var bank11 = false;
+    var a12 = Storage<Byte>.allocate(0);
+    var b12 = Storage<Byte>.allocate(0);
+    var bank12 = false;
+    var a13 = Storage<Byte>.allocate(0);
+    var b13 = Storage<Byte>.allocate(0);
+    var bank13 = false;
+    var a14 = Storage<Byte>.allocate(0);
+    var b14 = Storage<Byte>.allocate(0);
+    var bank14 = false;
+    var a15 = Storage<Byte>.allocate(0);
+    var b15 = Storage<Byte>.allocate(0);
+    var bank15 = false;
+    var a16 = Storage<Byte>.allocate(0);
+    var b16 = Storage<Byte>.allocate(0);
+    var bank16 = false;
+    var a17 = Storage<Byte>.allocate(0);
+    var b17 = Storage<Byte>.allocate(0);
+    var bank17 = false;
+    var a18 = Storage<Byte>.allocate(0);
+    var b18 = Storage<Byte>.allocate(0);
+    var bank18 = false;
+    var a19 = Storage<Byte>.allocate(0);
+    var b19 = Storage<Byte>.allocate(0);
+    var bank19 = false;
+    var start = benchmarkNanos();
+    var i = 0;
+    while (i < 2000) {
+        var slot = Storage<Int>.read(slots, i);
+        var size = Storage<Int>.read(sizes, i);
+        if (slot == 0) {
+            if (bank0) {
+                Storage<Byte>.release(a0);
+                set a0 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b0);
+                set b0 = Storage<Byte>.allocate(0);
+                set bank0 = false;
+            } else {
+                Storage<Byte>.release(b0);
+                set b0 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a0);
+                set a0 = Storage<Byte>.allocate(0);
+                set bank0 = true;
+            }
+        }
+        else if (slot == 1) {
+            if (bank1) {
+                Storage<Byte>.release(a1);
+                set a1 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b1);
+                set b1 = Storage<Byte>.allocate(0);
+                set bank1 = false;
+            } else {
+                Storage<Byte>.release(b1);
+                set b1 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a1);
+                set a1 = Storage<Byte>.allocate(0);
+                set bank1 = true;
+            }
+        }
+        else if (slot == 2) {
+            if (bank2) {
+                Storage<Byte>.release(a2);
+                set a2 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b2);
+                set b2 = Storage<Byte>.allocate(0);
+                set bank2 = false;
+            } else {
+                Storage<Byte>.release(b2);
+                set b2 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a2);
+                set a2 = Storage<Byte>.allocate(0);
+                set bank2 = true;
+            }
+        }
+        else if (slot == 3) {
+            if (bank3) {
+                Storage<Byte>.release(a3);
+                set a3 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b3);
+                set b3 = Storage<Byte>.allocate(0);
+                set bank3 = false;
+            } else {
+                Storage<Byte>.release(b3);
+                set b3 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a3);
+                set a3 = Storage<Byte>.allocate(0);
+                set bank3 = true;
+            }
+        }
+        else if (slot == 4) {
+            if (bank4) {
+                Storage<Byte>.release(a4);
+                set a4 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b4);
+                set b4 = Storage<Byte>.allocate(0);
+                set bank4 = false;
+            } else {
+                Storage<Byte>.release(b4);
+                set b4 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a4);
+                set a4 = Storage<Byte>.allocate(0);
+                set bank4 = true;
+            }
+        }
+        else if (slot == 5) {
+            if (bank5) {
+                Storage<Byte>.release(a5);
+                set a5 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b5);
+                set b5 = Storage<Byte>.allocate(0);
+                set bank5 = false;
+            } else {
+                Storage<Byte>.release(b5);
+                set b5 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a5);
+                set a5 = Storage<Byte>.allocate(0);
+                set bank5 = true;
+            }
+        }
+        else if (slot == 6) {
+            if (bank6) {
+                Storage<Byte>.release(a6);
+                set a6 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b6);
+                set b6 = Storage<Byte>.allocate(0);
+                set bank6 = false;
+            } else {
+                Storage<Byte>.release(b6);
+                set b6 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a6);
+                set a6 = Storage<Byte>.allocate(0);
+                set bank6 = true;
+            }
+        }
+        else if (slot == 7) {
+            if (bank7) {
+                Storage<Byte>.release(a7);
+                set a7 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b7);
+                set b7 = Storage<Byte>.allocate(0);
+                set bank7 = false;
+            } else {
+                Storage<Byte>.release(b7);
+                set b7 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a7);
+                set a7 = Storage<Byte>.allocate(0);
+                set bank7 = true;
+            }
+        }
+        else if (slot == 8) {
+            if (bank8) {
+                Storage<Byte>.release(a8);
+                set a8 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b8);
+                set b8 = Storage<Byte>.allocate(0);
+                set bank8 = false;
+            } else {
+                Storage<Byte>.release(b8);
+                set b8 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a8);
+                set a8 = Storage<Byte>.allocate(0);
+                set bank8 = true;
+            }
+        }
+        else if (slot == 9) {
+            if (bank9) {
+                Storage<Byte>.release(a9);
+                set a9 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b9);
+                set b9 = Storage<Byte>.allocate(0);
+                set bank9 = false;
+            } else {
+                Storage<Byte>.release(b9);
+                set b9 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a9);
+                set a9 = Storage<Byte>.allocate(0);
+                set bank9 = true;
+            }
+        }
+        else if (slot == 10) {
+            if (bank10) {
+                Storage<Byte>.release(a10);
+                set a10 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b10);
+                set b10 = Storage<Byte>.allocate(0);
+                set bank10 = false;
+            } else {
+                Storage<Byte>.release(b10);
+                set b10 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a10);
+                set a10 = Storage<Byte>.allocate(0);
+                set bank10 = true;
+            }
+        }
+        else if (slot == 11) {
+            if (bank11) {
+                Storage<Byte>.release(a11);
+                set a11 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b11);
+                set b11 = Storage<Byte>.allocate(0);
+                set bank11 = false;
+            } else {
+                Storage<Byte>.release(b11);
+                set b11 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a11);
+                set a11 = Storage<Byte>.allocate(0);
+                set bank11 = true;
+            }
+        }
+        else if (slot == 12) {
+            if (bank12) {
+                Storage<Byte>.release(a12);
+                set a12 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b12);
+                set b12 = Storage<Byte>.allocate(0);
+                set bank12 = false;
+            } else {
+                Storage<Byte>.release(b12);
+                set b12 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a12);
+                set a12 = Storage<Byte>.allocate(0);
+                set bank12 = true;
+            }
+        }
+        else if (slot == 13) {
+            if (bank13) {
+                Storage<Byte>.release(a13);
+                set a13 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b13);
+                set b13 = Storage<Byte>.allocate(0);
+                set bank13 = false;
+            } else {
+                Storage<Byte>.release(b13);
+                set b13 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a13);
+                set a13 = Storage<Byte>.allocate(0);
+                set bank13 = true;
+            }
+        }
+        else if (slot == 14) {
+            if (bank14) {
+                Storage<Byte>.release(a14);
+                set a14 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b14);
+                set b14 = Storage<Byte>.allocate(0);
+                set bank14 = false;
+            } else {
+                Storage<Byte>.release(b14);
+                set b14 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a14);
+                set a14 = Storage<Byte>.allocate(0);
+                set bank14 = true;
+            }
+        }
+        else if (slot == 15) {
+            if (bank15) {
+                Storage<Byte>.release(a15);
+                set a15 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b15);
+                set b15 = Storage<Byte>.allocate(0);
+                set bank15 = false;
+            } else {
+                Storage<Byte>.release(b15);
+                set b15 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a15);
+                set a15 = Storage<Byte>.allocate(0);
+                set bank15 = true;
+            }
+        }
+        else if (slot == 16) {
+            if (bank16) {
+                Storage<Byte>.release(a16);
+                set a16 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b16);
+                set b16 = Storage<Byte>.allocate(0);
+                set bank16 = false;
+            } else {
+                Storage<Byte>.release(b16);
+                set b16 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a16);
+                set a16 = Storage<Byte>.allocate(0);
+                set bank16 = true;
+            }
+        }
+        else if (slot == 17) {
+            if (bank17) {
+                Storage<Byte>.release(a17);
+                set a17 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b17);
+                set b17 = Storage<Byte>.allocate(0);
+                set bank17 = false;
+            } else {
+                Storage<Byte>.release(b17);
+                set b17 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a17);
+                set a17 = Storage<Byte>.allocate(0);
+                set bank17 = true;
+            }
+        }
+        else if (slot == 18) {
+            if (bank18) {
+                Storage<Byte>.release(a18);
+                set a18 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b18);
+                set b18 = Storage<Byte>.allocate(0);
+                set bank18 = false;
+            } else {
+                Storage<Byte>.release(b18);
+                set b18 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a18);
+                set a18 = Storage<Byte>.allocate(0);
+                set bank18 = true;
+            }
+        }
+        else if (slot == 19) {
+            if (bank19) {
+                Storage<Byte>.release(a19);
+                set a19 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(b19);
+                set b19 = Storage<Byte>.allocate(0);
+                set bank19 = false;
+            } else {
+                Storage<Byte>.release(b19);
+                set b19 = Storage<Byte>.allocate(size);
+                Storage<Byte>.release(a19);
+                set a19 = Storage<Byte>.allocate(0);
+                set bank19 = true;
+            }
+        }
+        set i = i + 1;
+    }
+    var elapsed = benchmarkNanos() - start;
+    Storage<Byte>.release(a0);
+    Storage<Byte>.release(b0);
+    Storage<Byte>.release(a1);
+    Storage<Byte>.release(b1);
+    Storage<Byte>.release(a2);
+    Storage<Byte>.release(b2);
+    Storage<Byte>.release(a3);
+    Storage<Byte>.release(b3);
+    Storage<Byte>.release(a4);
+    Storage<Byte>.release(b4);
+    Storage<Byte>.release(a5);
+    Storage<Byte>.release(b5);
+    Storage<Byte>.release(a6);
+    Storage<Byte>.release(b6);
+    Storage<Byte>.release(a7);
+    Storage<Byte>.release(b7);
+    Storage<Byte>.release(a8);
+    Storage<Byte>.release(b8);
+    Storage<Byte>.release(a9);
+    Storage<Byte>.release(b9);
+    Storage<Byte>.release(a10);
+    Storage<Byte>.release(b10);
+    Storage<Byte>.release(a11);
+    Storage<Byte>.release(b11);
+    Storage<Byte>.release(a12);
+    Storage<Byte>.release(b12);
+    Storage<Byte>.release(a13);
+    Storage<Byte>.release(b13);
+    Storage<Byte>.release(a14);
+    Storage<Byte>.release(b14);
+    Storage<Byte>.release(a15);
+    Storage<Byte>.release(b15);
+    Storage<Byte>.release(a16);
+    Storage<Byte>.release(b16);
+    Storage<Byte>.release(a17);
+    Storage<Byte>.release(b17);
+    Storage<Byte>.release(a18);
+    Storage<Byte>.release(b18);
+    Storage<Byte>.release(a19);
+    Storage<Byte>.release(b19);
+    return elapsed;
+}

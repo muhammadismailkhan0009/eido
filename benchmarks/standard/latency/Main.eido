@@ -1,0 +1,63 @@
+// Independent dependent-load benchmark using the fixed-stride and randomized
+// circular traversal methodologies; not a port of lmbench's harness.
+function main() {
+    var slots = benchmarkArgument(0);
+    var stride = benchmarkArgument(1);
+    var random = benchmarkArgument(2);
+    if (slots < 2 or stride < 1 or slots * stride > 8388608 or (random != 0 and random != 1)) { Process.exit(2); return; }
+    var data = Storage<Int>.allocate(slots * stride);
+    var order = Storage<Int>.allocate(slots);
+    var i = 0;
+    while (i < slots) {
+        Storage<Int>.write(order, i, i);
+        set i = i + 1;
+    }
+    if (random == 1) {
+        var seed = 42;
+        set i = slots - 1;
+        while (i > 0) {
+            set seed = seed * 1664525 + 1013904223;
+            set seed = seed - (seed / 4294967296) * 4294967296;
+            var j = seed - (seed / (i + 1)) * (i + 1);
+            var temp = Storage<Int>.read(order, i);
+            Storage<Int>.write(order, i, Storage<Int>.read(order, j));
+            Storage<Int>.write(order, j, temp);
+            set i = i - 1;
+        }
+    }
+    set i = 0;
+    while (i < slots - 1) {
+        Storage<Int>.write(data, Storage<Int>.read(order, i) * stride, Storage<Int>.read(order, i + 1) * stride);
+        set i = i + 1;
+    }
+    var first = Storage<Int>.read(order, 0) * stride;
+    Storage<Int>.write(data, Storage<Int>.read(order, slots - 1) * stride, first);
+    Storage<Int>.release(order);
+    // Verify exactly one cycle visiting all nodes.
+    var pos = first + 0;
+    set i = 0;
+    while (i < slots) {
+        set pos = Storage<Int>.read(data, pos);
+        set i = i + 1;
+        if (pos == first and i < slots) { Process.exit(3); return; }
+    }
+    if (pos != first) { Process.exit(3); return; }
+    var rounds = 4000000 / slots + 1;
+    var steps = rounds * slots;
+    // A complete warm traversal precedes seven measured trials.
+    var trial = 0;
+    while (trial < 8) {
+        var start = benchmarkNanos();
+        set i = 0;
+        while (i < steps) {
+            set pos = Storage<Int>.read(data, pos);
+            set i = i + 1;
+        }
+        var elapsed = benchmarkNanos() - start;
+        if (pos != first) { Process.exit(4); return; }
+        if (trial > 0) { Console.writeLine(Text.fromInt(elapsed)); }
+        set trial = trial + 1;
+    }
+    Storage<Int>.release(data);
+    Console.writeLine("VALID");
+}

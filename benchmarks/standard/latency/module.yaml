@@ -1,0 +1,11 @@
+module: latency_variant
+sources:
+  - Main.eido
+  - Native.eido
+  - ../support/Text.eido
+  - ../support/Bytes.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

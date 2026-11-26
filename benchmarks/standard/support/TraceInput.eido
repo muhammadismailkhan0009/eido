@@ -1,0 +1,3 @@
+class TraceInput {
+    native function read(String path, Int address, Int capacity) returns Int;
+}

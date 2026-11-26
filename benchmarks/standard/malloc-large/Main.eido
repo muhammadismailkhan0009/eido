@@ -1,0 +1,29 @@
+function main() {
+    var buf = Storage<Byte>.allocate(64000);
+    var length = TraceInput.read(Process.argument(0), Storage<Byte>.address(buf), 64000);
+    if (length < 0) { Process.exit(2); return; }
+    var slots = Storage<Int>.allocate(2000);
+    var sizes = Storage<Int>.allocate(2000);
+    var i = 0;
+    var pos = 0;
+    while (i < 2000) {
+        var start = pos + 0;
+        while (pos < length and Bytes.at(buf, pos) != 32) { set pos = pos + 1; }
+        var slot = Text.unsignedDecimal(buf, start, pos);
+        set pos = pos + 1;
+        set start = pos;
+        while (pos < length and Bytes.at(buf, pos) != 10) { set pos = pos + 1; }
+        var size = Text.unsignedDecimal(buf, start, pos);
+        set pos = pos + 1;
+        if (slot < 0 or slot >= 20 or size < 5242880 or size > 26214400 or pos > length) { Process.exit(2); return; }
+        Storage<Int>.write(slots, i, slot);
+        Storage<Int>.write(sizes, i, size);
+        set i = i + 1;
+    }
+    if (pos != length) { Process.exit(2); return; }
+    Storage<Byte>.release(buf);
+    var elapsed = allocateTrace(slots, sizes);
+    Storage<Int>.release(sizes);
+    Storage<Int>.release(slots);
+    Console.writeLine(Text.fromInt(elapsed));
+}

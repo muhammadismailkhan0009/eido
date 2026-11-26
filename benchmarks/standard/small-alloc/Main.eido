@@ -1,0 +1,26 @@
+// Single-worker cache-scratch-derived workload. Zero initialization is matched
+// by the C baseline; read/write checksum prevents removal of the workload.
+function main() {
+    var size = benchmarkArgument(0);
+    var count = benchmarkArgument(1);
+    if (size < 1 or size > 128 or count < 1 or count > 10000000) { Process.exit(2); return; }
+    var sum = 0;
+    var i = 0;
+    var start = benchmarkNanos();
+    while (i < count) {
+        var data = Storage<Byte>.allocate(size);
+        var k = 0;
+        while (k < size) {
+            Bytes.put(data, k, k);
+            set sum = sum + Bytes.at(data, k);
+            set k = k + 1;
+        }
+        Storage<Byte>.release(data);
+        set i = i + 1;
+    }
+    var elapsed = benchmarkNanos() - start;
+    if (sum != count * size * (size - 1) / 2) { Process.exit(3); return; }
+    Console.writeLine(Text.fromInt(elapsed));
+    Console.writeLine(Text.fromInt(sum));
+    Console.writeLine("VALID");
+}

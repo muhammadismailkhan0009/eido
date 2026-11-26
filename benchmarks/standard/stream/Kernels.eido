@@ -1,0 +1,30 @@
+// Derived from STREAM v5.10, John D. McCalpin.
+function streamCopy(Storage<Float> a, Storage<Float> c) {
+    var i = 0;
+    while (i < 8000000) {
+        Storage<Float>.write(c, i, Storage<Float>.read(a, i));
+        set i = i + 1;
+    }
+}
+function streamScale(Storage<Float> c, Storage<Float> b) {
+    var i = 0;
+    while (i < 8000000) {
+        Storage<Float>.write(b, i, 3.0 * Storage<Float>.read(c, i));
+        set i = i + 1;
+    }
+}
+function streamAdd(Storage<Float> a, Storage<Float> b, Storage<Float> c) {
+    var i = 0;
+    while (i < 8000000) {
+        Storage<Float>.write(c, i, Storage<Float>.read(a, i) + Storage<Float>.read(b, i));
+        set i = i + 1;
+    }
+}
+function streamTriad(Storage<Float> b, Storage<Float> c, Storage<Float> a) {
+    var i = 0;
+    while (i < 8000000) {
+        Storage<Float>.write(a, i, Storage<Float>.read(b, i) + 3.0 * Storage<Float>.read(c, i));
+        set i = i + 1;
+    }
+}
+native function benchmarkNanos() returns Int;

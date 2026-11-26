@@ -1,0 +1,12 @@
+module: malloc_large_variant
+sources:
+  - Main.eido
+  - Allocation.eido
+  - ../support/Text.eido
+  - ../support/Bytes.eido
+  - ../support/TraceInput.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

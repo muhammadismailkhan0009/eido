@@ -1,0 +1,18 @@
+// Benchmark-only numeric formatting and trace parsing.
+class Text {
+    native function fromInt(Int value) returns String;
+
+    // Nonnegative decimal, with overflow checked before multiplying.
+    function unsignedDecimal(Storage<Byte> buffer, Int start, Int end) returns Int {
+        if (end <= start or not Bytes.validRange(buffer, start, end - start)) { return -1; }
+        var resultValue = 0;
+        var i = start + 0;
+        while (i < end) {
+            var digit = Bytes.at(buffer, i) - 48;
+            if (digit < 0 or digit > 9 or resultValue > (9223372036854775807 - digit) / 10) { return -1; }
+            set resultValue = resultValue * 10 + digit;
+            set i = i + 1;
+        }
+        return resultValue;
+    }
+}

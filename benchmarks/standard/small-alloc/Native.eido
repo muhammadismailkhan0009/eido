@@ -1,0 +1,2 @@
+native function benchmarkNanos() returns Int;
+native function benchmarkArgument(Int index) returns Int;

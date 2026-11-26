@@ -34,3 +34,6 @@ Thumbs.db
 /benchmarks/build/
 /benchmarks/**/build/
 /benchmarks/**/__pycache__/
+
+/packages/**/build/
+/tests/integration/__pycache__/

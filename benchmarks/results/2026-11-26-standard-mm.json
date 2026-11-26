@@ -1,0 +1,289 @@
+{
+  "head": "c577c0010357ab2edc78abda0a9302f0eb046312",
+  "dirty": true,
+  "cpu": 0,
+  "cpu_model": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+  "gcc": "gcc (Ubuntu 14.2.0-4ubuntu2) 14.2.0",
+  "nim": "Nim Compiler Version 2.2.10 [Linux: amd64]",
+  "repeats": 3,
+  "stream_N": 8000000,
+  "stream_iterations": 10,
+  "upstream": {
+    "https://www.cs.virginia.edu/stream/FTP/Code/stream.c": "a52bae5e175bea3f7832112af9c085adab47117f7d2ce219165379849231692b",
+    "https://raw.githubusercontent.com/daanx/mimalloc-bench/acb85084d5a0f071ca6424aaaa06c5b663957e0e/bench/malloc-large/malloc-large.cpp": "5781d6954184198277fc70ca476dd1b8e69082be89a9712acb2d0d2b2a31b27e"
+  },
+  "binary_sha256": {
+    "stream-eido": "05bc358a04033f283efebe95fc5a70b86b3c1ab3da4f7deb6e0b5d97e3331b20",
+    "malloc-cpp": "ff25051b3afc200fccd4b8e6a8fbe4292e8fd9dd08dd39ef8e6243b926182e12",
+    "malloc-eido": "7276f01fa90aecfe06119a11bef52f348cbad95216ea270a64fddf6ffd984cf7",
+    "stream-c": "19a1102a85e3716030dc80f4b6a739ad2b3b0609fd9dbacf83ed133de19037ca"
+  },
+  "trace_sha256": "f1f5d02da466b4e30ff7285e2bb8b8d91196b03486c0d66263bd3388c007319d",
+  "summary": {
+    "stream-c": {
+      "median_rss_KiB": 188768,
+      "median_best_MBps": {
+        "Copy": 30476.3,
+        "Scale": 17570.6,
+        "Add": 19733.1,
+        "Triad": 19861.1
+      }
+    },
+    "stream-eido": {
+      "median_rss_KiB": 188672,
+      "median_best_MBps": {
+        "Copy": 3602.3053741246013,
+        "Scale": 3328.276519869824,
+        "Add": 3388.1083397051534,
+        "Triad": 3249.9557193533237
+      }
+    },
+    "malloc-cpp": {
+      "median_rss_KiB": 533412,
+      "median_wall_ms": 2099.128657
+    },
+    "malloc-eido": {
+      "median_rss_KiB": 618116,
+      "median_wall_ms": 1405.47049,
+      "median_allocation_ms": 1366.140646
+    }
+  },
+  "samples": {
+    "stream-c": [
+      {
+        "best_MBps": {
+          "Copy": 30986.4,
+          "Scale": 17570.6,
+          "Add": 19733.1,
+          "Triad": 18762.5
+        },
+        "reference_output": "-------------------------------------------------------------\nSTREAM version $Revision: 5.10 $\n-------------------------------------------------------------\nThis system uses 8 bytes per array element.\n-------------------------------------------------------------\nArray size = 8000000 (elements), Offset = 0 (elements)\nMemory per array = 61.0 MiB (= 0.1 GiB).\nTotal memory required = 183.1 MiB (= 0.2 GiB).\nEach kernel will be executed 10 times.\n The *best* time for each kernel (excluding the first iteration)\n will be used to compute the reported bandwidth.\n-------------------------------------------------------------\nYour clock granularity/precision appears to be 1 microseconds.\nEach test below will take on the order of 6500 microseconds.\n   (= 6500 clock ticks)\nIncrease the size of the arrays if this shows that\nyou are not getting at least 20 clock ticks per test.\n-------------------------------------------------------------\nWARNING -- The above is only a rough guideline.\nFor best results, please be sure you know the\nprecision of your system timer.\n-------------------------------------------------------------\nFunction    Best Rate MB/s  Avg time     Min time     Max time\nCopy:           30986.4     0.004579     0.004131     0.005782\nScale:          17570.6     0.008333     0.007285     0.011761\nAdd:            19733.1     0.010662     0.009730     0.013357\nTriad:          18762.5     0.010755     0.010233     0.011337\n-------------------------------------------------------------\nSolution Validates: avg error less than 1.000000e-13 on all three arrays\n-------------------------------------------------------------\n",
+        "rss_KiB": 188820
+      },
+      {
+        "best_MBps": {
+          "Copy": 30476.3,
+          "Scale": 17942.3,
+          "Add": 20040.0,
+          "Triad": 19861.1
+        },
+        "reference_output": "-------------------------------------------------------------\nSTREAM version $Revision: 5.10 $\n-------------------------------------------------------------\nThis system uses 8 bytes per array element.\n-------------------------------------------------------------\nArray size = 8000000 (elements), Offset = 0 (elements)\nMemory per array = 61.0 MiB (= 0.1 GiB).\nTotal memory required = 183.1 MiB (= 0.2 GiB).\nEach kernel will be executed 10 times.\n The *best* time for each kernel (excluding the first iteration)\n will be used to compute the reported bandwidth.\n-------------------------------------------------------------\nYour clock granularity/precision appears to be 1 microseconds.\nEach test below will take on the order of 5330 microseconds.\n   (= 5330 clock ticks)\nIncrease the size of the arrays if this shows that\nyou are not getting at least 20 clock ticks per test.\n-------------------------------------------------------------\nWARNING -- The above is only a rough guideline.\nFor best results, please be sure you know the\nprecision of your system timer.\n-------------------------------------------------------------\nFunction    Best Rate MB/s  Avg time     Min time     Max time\nCopy:           30476.3     0.004588     0.004200     0.005487\nScale:          17942.3     0.008152     0.007134     0.010725\nAdd:            20040.0     0.010867     0.009581     0.012661\nTriad:          19861.1     0.010669     0.009667     0.012782\n-------------------------------------------------------------\nSolution Validates: avg error less than 1.000000e-13 on all three arrays\n-------------------------------------------------------------\n",
+        "rss_KiB": 188768
+      },
+      {
+        "best_MBps": {
+          "Copy": 29010.6,
+          "Scale": 17084.7,
+          "Add": 17679.6,
+          "Triad": 19944.2
+        },
+        "reference_output": "-------------------------------------------------------------\nSTREAM version $Revision: 5.10 $\n-------------------------------------------------------------\nThis system uses 8 bytes per array element.\n-------------------------------------------------------------\nArray size = 8000000 (elements), Offset = 0 (elements)\nMemory per array = 61.0 MiB (= 0.1 GiB).\nTotal memory required = 183.1 MiB (= 0.2 GiB).\nEach kernel will be executed 10 times.\n The *best* time for each kernel (excluding the first iteration)\n will be used to compute the reported bandwidth.\n-------------------------------------------------------------\nYour clock granularity/precision appears to be 1 microseconds.\nEach test below will take on the order of 5743 microseconds.\n   (= 5743 clock ticks)\nIncrease the size of the arrays if this shows that\nyou are not getting at least 20 clock ticks per test.\n-------------------------------------------------------------\nWARNING -- The above is only a rough guideline.\nFor best results, please be sure you know the\nprecision of your system timer.\n-------------------------------------------------------------\nFunction    Best Rate MB/s  Avg time     Min time     Max time\nCopy:           29010.6     0.005196     0.004412     0.005900\nScale:          17084.7     0.010615     0.007492     0.012792\nAdd:            17679.6     0.012371     0.010860     0.014718\nTriad:          19944.2     0.012083     0.009627     0.014734\n-------------------------------------------------------------\nSolution Validates: avg error less than 1.000000e-13 on all three arrays\n-------------------------------------------------------------\n",
+        "rss_KiB": 188756
+      }
+    ],
+    "stream-eido": [
+      {
+        "best_MBps": {
+          "Copy": 3640.1933886864554,
+          "Scale": 3380.231313982266,
+          "Add": 3442.008291367723,
+          "Triad": 3231.1645823972212
+        },
+        "kernel_ns": [
+          41111114,
+          40235923,
+          58391243,
+          60409708,
+          39280455,
+          43916267,
+          61640447,
+          61310511,
+          38419144,
+          39280526,
+          62613677,
+          62940862,
+          38281060,
+          39161183,
+          59872476,
+          65978588,
+          37883707,
+          39423404,
+          59607429,
+          61853398,
+          38462805,
+          40704011,
+          57790803,
+          60137637,
+          40544860,
+          72158104,
+          66248632,
+          59421300,
+          35162967,
+          37867231,
+          55781388,
+          60381707,
+          42228470,
+          43416159,
+          80002269,
+          120880127,
+          64255000,
+          73013121,
+          79778297,
+          60237884
+        ],
+        "rss_KiB": 188680
+      },
+      {
+        "best_MBps": {
+          "Copy": 3537.096040834447,
+          "Scale": 3328.276519869824,
+          "Add": 3388.1083397051534,
+          "Triad": 3310.669044830597
+        },
+        "kernel_ns": [
+          40129923,
+          44258384,
+          63941088,
+          95423398,
+          39892487,
+          44926448,
+          64805013,
+          77543326,
+          42854239,
+          46695620,
+          68384130,
+          75625133,
+          41086091,
+          38458343,
+          60618202,
+          64840112,
+          42773035,
+          58135564,
+          78240799,
+          67307025,
+          37492119,
+          38745174,
+          56668790,
+          61580936,
+          36187878,
+          52638531,
+          66398168,
+          59617916,
+          40242611,
+          40390301,
+          59150466,
+          57994320,
+          51360934,
+          43343315,
+          84543837,
+          69567956,
+          56772741,
+          43464984,
+          62920770,
+          73722083
+        ],
+        "rss_KiB": 188668
+      },
+      {
+        "best_MBps": {
+          "Copy": 3602.3053741246013,
+          "Scale": 3289.0839338502524,
+          "Add": 3355.375294619864,
+          "Triad": 3249.9557193533237
+        },
+        "kernel_ns": [
+          36345529,
+          43604200,
+          62070231,
+          65229377,
+          41640134,
+          45965614,
+          68407178,
+          62349913,
+          38525090,
+          44331669,
+          63747652,
+          79114499,
+          40041442,
+          39674728,
+          57221617,
+          59077728,
+          38927560,
+          40092833,
+          69210363,
+          66604196,
+          37301624,
+          38916611,
+          59253644,
+          62326430,
+          35532801,
+          39334701,
+          66877149,
+          80162211,
+          63144804,
+          66568155,
+          108171352,
+          90603142,
+          37496921,
+          41138521,
+          59637749,
+          68412603,
+          65669697,
+          61594922,
+          90411767,
+          85673820
+        ],
+        "rss_KiB": 188672
+      }
+    ],
+    "malloc-cpp": [
+      {
+        "wall_ms": 2099.124621,
+        "rss_KiB": 533340
+      },
+      {
+        "wall_ms": 2153.597045,
+        "rss_KiB": 533412
+      },
+      {
+        "wall_ms": 2099.128657,
+        "rss_KiB": 533452
+      }
+    ],
+    "malloc-eido": [
+      {
+        "wall_ms": 1405.47049,
+        "rss_KiB": 618112,
+        "allocation_ms": 1366.140646
+      },
+      {
+        "wall_ms": 1492.822453,
+        "rss_KiB": 618116,
+        "allocation_ms": 1454.56391
+      },
+      {
+        "wall_ms": 1354.365982,
+        "rss_KiB": 618128,
+        "allocation_ms": 1314.928258
+      }
+    ]
+  },
+  "audit": {
+    "malloc_allocations": 2000,
+    "malloc_frees": 2000,
+    "peak_requested_live_bytes": 416442509,
+    "exact_trace_and_replacement_order": true,
+    "timed_binary_evidence": {
+      "stream": {
+        "binary_sha256": "05bc358a04033f283efebe95fc5a70b86b3c1ab3da4f7deb6e0b5d97e3331b20",
+        "generated_sha256": "e1a66b69a686b06b0cdbb69ce400299cc2b9c7daceb8b0c6ad1f64aede8572a9"
+      },
+      "malloc": {
+        "binary_sha256": "7276f01fa90aecfe06119a11bef52f348cbad95216ea270a64fddf6ffd984cf7",
+        "generated_sha256": "ca11aa6e8e245736b69a04384c9843a289346fa01c9047e1a9e6e2519f42ed22"
+      }
+    },
+    "note": "Allocation audit is a separate binary, excluded from timings; STREAM validates every array element on each run."
+  },
+  "build_note": "Initial measured binaries built with the existing current repository CLI; upstream C/C++ compiled with -O3; Eido --memory=none; benchmark-local monotonic clock only. Full source-build runner included for reproduction."
+}

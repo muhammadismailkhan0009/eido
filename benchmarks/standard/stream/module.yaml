@@ -1,0 +1,11 @@
+module: stream_variant
+sources:
+  - Main.eido
+  - Kernels.eido
+  - ../support/Text.eido
+  - ../support/Bytes.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

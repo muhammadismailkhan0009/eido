@@ -1,0 +1,1164 @@
+{
+  "head": "c577c0010357ab2edc78abda0a9302f0eb046312",
+  "dirty": true,
+  "cpu": 0,
+  "cpu_model": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+  "gcc": "gcc (Ubuntu 14.2.0-4ubuntu2) 14.2.0",
+  "nim": "Nim Compiler Version 2.2.10 [Linux: amd64]",
+  "rounds": 1,
+  "stride_bytes": 64,
+  "small_count": 200000,
+  "audit": {
+    "cache_scratch_worker_calls_new_array": false,
+    "cache_scratch_worker_calls_delete_array": false,
+    "matched_c_retains_calloc_free": true,
+    "latency_binary_sha256": "86c426e1376eb8c25a5129f930375de676fa3e86cb31bd386d468e183e6a3d00",
+    "small-alloc_binary_sha256": "8beb52161f128697752519b63afb3dea7ffb4f3643b9487182779c12a7560b1b",
+    "audited_small_allocations": 4096,
+    "audited_small_frees": 4096,
+    "cache_scratch_source_sha256": "5014cd7c0c7b57ceb99c329078427b93c2c65bda0aee33f4ed4e93dada868a78",
+    "cache_scratch_revision": "ec3e85908f4cec7e51012a37e2a2c5c0a8680711"
+  },
+  "binaries": {
+    "latency-c": "4d5fa6e8f3cbf6c8cd851c218dd908f6603e1a775a58458f7d1c9323f46cdf0d",
+    "latency-eido": "86c426e1376eb8c25a5129f930375de676fa3e86cb31bd386d468e183e6a3d00",
+    "small-alloc-c": "6354e35f67ee02c7bf3d2a018d0cdafa551ff47c3adde0e1a9faebf887525323",
+    "small-alloc-eido": "8beb52161f128697752519b63afb3dea7ffb4f3643b9487182779c12a7560b1b"
+  },
+  "latency": [
+    {
+      "steps": 4000256,
+      "trial_ns": [
+        13783069,
+        12804702,
+        8753983,
+        7069588,
+        6645741,
+        6636515,
+        7310771
+      ],
+      "median_ns_per_load": 1.8275757851497505,
+      "min_ns_per_load": 1.6590225725553565,
+      "max_ns_per_load": 3.4455467350089592,
+      "rss_KiB": 1304,
+      "size_bytes": 32768,
+      "pattern": "random",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4001792,
+      "trial_ns": [
+        9977975,
+        10523978,
+        10610500,
+        10860909,
+        10456087,
+        10061529,
+        11121531
+      ],
+      "median_ns_per_load": 2.629816342278659,
+      "min_ns_per_load": 2.4933767172306807,
+      "max_ns_per_load": 2.779137696312052,
+      "rss_KiB": 1604,
+      "size_bytes": 262144,
+      "pattern": "fixed",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4000064,
+      "trial_ns": [
+        14501991,
+        16019234,
+        15032776,
+        15210863,
+        14580598,
+        15412508,
+        14844470
+      ],
+      "median_ns_per_load": 3.7581338698580824,
+      "min_ns_per_load": 3.6254397429641125,
+      "max_ns_per_load": 4.004744424089215,
+      "rss_KiB": 1164,
+      "size_bytes": 4096,
+      "pattern": "random",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4063232,
+      "trial_ns": [
+        331821700,
+        377062063,
+        430438192,
+        498417150,
+        418505092,
+        436246898,
+        423279437
+      ],
+      "median_ns_per_load": 104.17309102704448,
+      "min_ns_per_load": 81.66447301064768,
+      "max_ns_per_load": 122.66519608036164,
+      "rss_KiB": 10116,
+      "size_bytes": 8388608,
+      "pattern": "random",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4194304,
+      "trial_ns": [
+        32982265,
+        31490571,
+        32890605,
+        30898639,
+        34684866,
+        32090034,
+        35994940
+      ],
+      "median_ns_per_load": 7.841731309890747,
+      "min_ns_per_load": 7.366809606552124,
+      "max_ns_per_load": 8.581862449645996,
+      "rss_KiB": 74916,
+      "size_bytes": 67108864,
+      "pattern": "fixed",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4014080,
+      "trial_ns": [
+        17688558,
+        17246846,
+        17264279,
+        17196595,
+        17343837,
+        18140099,
+        17850966
+      ],
+      "median_ns_per_load": 4.320750209263393,
+      "min_ns_per_load": 4.284068827726403,
+      "max_ns_per_load": 4.519117456552934,
+      "rss_KiB": 2340,
+      "size_bytes": 1048576,
+      "pattern": "fixed",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4194304,
+      "trial_ns": [
+        22781083,
+        22877076,
+        23080629,
+        23696574,
+        23077089,
+        23020361,
+        24482190
+      ],
+      "median_ns_per_load": 5.502006769180298,
+      "min_ns_per_load": 5.431433439254761,
+      "max_ns_per_load": 5.837008953094482,
+      "rss_KiB": 74624,
+      "size_bytes": 67108864,
+      "pattern": "fixed",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4063232,
+      "trial_ns": [
+        25969121,
+        26829653,
+        25839440,
+        26219994,
+        31135691,
+        25161694,
+        27431968
+      ],
+      "median_ns_per_load": 6.4529896397744455,
+      "min_ns_per_load": 6.1925319548576105,
+      "max_ns_per_load": 7.662789375551285,
+      "rss_KiB": 10108,
+      "size_bytes": 8388608,
+      "pattern": "fixed",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4014080,
+      "trial_ns": [
+        32769202,
+        34301309,
+        39689416,
+        36377339,
+        39452513,
+        36078326,
+        34957496
+      ],
+      "median_ns_per_load": 8.987943937340562,
+      "min_ns_per_load": 8.163564752072704,
+      "max_ns_per_load": 9.887549824617347,
+      "rss_KiB": 2340,
+      "size_bytes": 1048576,
+      "pattern": "random",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4063232,
+      "trial_ns": [
+        32849267,
+        30631252,
+        30426939,
+        30895745,
+        30506356,
+        31477076,
+        30476847
+      ],
+      "median_ns_per_load": 7.538642144972278,
+      "min_ns_per_load": 7.488358774492817,
+      "max_ns_per_load": 8.08451670985068,
+      "rss_KiB": 10404,
+      "size_bytes": 8388608,
+      "pattern": "fixed",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4194304,
+      "trial_ns": [
+        28488077,
+        26000112,
+        26569415,
+        27297182,
+        27334832,
+        25795254,
+        28350370
+      ],
+      "median_ns_per_load": 6.508155345916748,
+      "min_ns_per_load": 6.1500678062438965,
+      "max_ns_per_load": 6.792086839675903,
+      "rss_KiB": 74620,
+      "size_bytes": 67108864,
+      "pattern": "fixed",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4000256,
+      "trial_ns": [
+        6507188,
+        6943208,
+        7039494,
+        6508112,
+        6554717,
+        6497432,
+        6532327
+      ],
+      "median_ns_per_load": 1.6329772394566748,
+      "min_ns_per_load": 1.6242540477409446,
+      "max_ns_per_load": 1.7597608753039806,
+      "rss_KiB": 1308,
+      "size_bytes": 32768,
+      "pattern": "random",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4000256,
+      "trial_ns": [
+        14991955,
+        14573767,
+        14507216,
+        15403000,
+        14531831,
+        14627325,
+        15410059
+      ],
+      "median_ns_per_load": 3.6565972277774224,
+      "min_ns_per_load": 3.6265718993984386,
+      "max_ns_per_load": 3.8522682048348904,
+      "rss_KiB": 1156,
+      "size_bytes": 32768,
+      "pattern": "random",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4063232,
+      "trial_ns": [
+        401338582,
+        382833439,
+        389577334,
+        397169316,
+        369542938,
+        371013820,
+        311788461
+      ],
+      "median_ns_per_load": 94.2189466414913,
+      "min_ns_per_load": 76.73410255678239,
+      "max_ns_per_load": 98.77323815130418,
+      "rss_KiB": 10148,
+      "size_bytes": 8388608,
+      "pattern": "random",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4000256,
+      "trial_ns": [
+        17329357,
+        17932248,
+        17406433,
+        17124265,
+        18371052,
+        17297816,
+        17641616
+      ],
+      "median_ns_per_load": 4.351329764895047,
+      "min_ns_per_load": 4.2807922792941255,
+      "max_ns_per_load": 4.592469081978753,
+      "rss_KiB": 1288,
+      "size_bytes": 32768,
+      "pattern": "fixed",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4014080,
+      "trial_ns": [
+        21854712,
+        22138329,
+        21907290,
+        21250661,
+        21201139,
+        22076926,
+        20746490
+      ],
+      "median_ns_per_load": 5.444513313137755,
+      "min_ns_per_load": 5.168429627710459,
+      "max_ns_per_load": 5.515168855628189,
+      "rss_KiB": 2364,
+      "size_bytes": 1048576,
+      "pattern": "fixed",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4001792,
+      "trial_ns": [
+        20054617,
+        21936605,
+        20027602,
+        22769972,
+        21775293,
+        19802415,
+        22380054
+      ],
+      "median_ns_per_load": 5.4413855092918375,
+      "min_ns_per_load": 4.948386872681039,
+      "max_ns_per_load": 5.689943905130502,
+      "rss_KiB": 1548,
+      "size_bytes": 262144,
+      "pattern": "random",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4194304,
+      "trial_ns": [
+        581080221,
+        585580403,
+        561354127,
+        576944115,
+        600135876,
+        585742069,
+        564884373
+      ],
+      "median_ns_per_load": 138.54032063484192,
+      "min_ns_per_load": 133.83725333213806,
+      "max_ns_per_load": 143.0835428237915,
+      "rss_KiB": 74892,
+      "size_bytes": 67108864,
+      "pattern": "random",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4000256,
+      "trial_ns": [
+        6675584,
+        6532788,
+        6514021,
+        7079606,
+        6727110,
+        6523388,
+        6516948
+      ],
+      "median_ns_per_load": 1.6330924820811468,
+      "min_ns_per_load": 1.6284010323339306,
+      "max_ns_per_load": 1.7697882335530526,
+      "rss_KiB": 1264,
+      "size_bytes": 32768,
+      "pattern": "fixed",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4063232,
+      "trial_ns": [
+        21796953,
+        22277234,
+        22885798,
+        22569583,
+        23941628,
+        25606696,
+        23883000
+      ],
+      "median_ns_per_load": 5.6324123259513605,
+      "min_ns_per_load": 5.364437226326235,
+      "max_ns_per_load": 6.302051175025202,
+      "rss_KiB": 10112,
+      "size_bytes": 8388608,
+      "pattern": "fixed",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4000064,
+      "trial_ns": [
+        6599198,
+        6616255,
+        6493042,
+        6613583,
+        7374273,
+        7522898,
+        7329752
+      ],
+      "median_ns_per_load": 1.6540372854034335,
+      "min_ns_per_load": 1.623234528247548,
+      "max_ns_per_load": 1.8806944088894577,
+      "rss_KiB": 1352,
+      "size_bytes": 4096,
+      "pattern": "fixed",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4194304,
+      "trial_ns": [
+        540931602,
+        549506777,
+        553500484,
+        574614444,
+        560983357,
+        565874132,
+        577702368
+      ],
+      "median_ns_per_load": 133.74885487556458,
+      "min_ns_per_load": 128.96814393997192,
+      "max_ns_per_load": 137.73497772216797,
+      "rss_KiB": 74624,
+      "size_bytes": 67108864,
+      "pattern": "random",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4001792,
+      "trial_ns": [
+        18755478,
+        19099355,
+        17644491,
+        15817867,
+        16951948,
+        15756707,
+        16498776
+      ],
+      "median_ns_per_load": 4.236089232024053,
+      "min_ns_per_load": 3.9374127890704966,
+      "max_ns_per_load": 4.772700580140097,
+      "rss_KiB": 1548,
+      "size_bytes": 262144,
+      "pattern": "fixed",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4014080,
+      "trial_ns": [
+        10327482,
+        10161330,
+        10165022,
+        10197529,
+        11436437,
+        10468396,
+        10388116
+      ],
+      "median_ns_per_load": 2.5728141940369897,
+      "min_ns_per_load": 2.531421894929847,
+      "max_ns_per_load": 2.849080486686862,
+      "rss_KiB": 2340,
+      "size_bytes": 1048576,
+      "pattern": "fixed",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4000064,
+      "trial_ns": [
+        14635449,
+        15568357,
+        14592638,
+        14787664,
+        14992674,
+        14546424,
+        14560724
+      ],
+      "median_ns_per_load": 3.6588037091406536,
+      "min_ns_per_load": 3.636547815234956,
+      "max_ns_per_load": 3.8920269775683587,
+      "rss_KiB": 1192,
+      "size_bytes": 4096,
+      "pattern": "fixed",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4194304,
+      "trial_ns": [
+        535421309,
+        564090202,
+        549882249,
+        563707444,
+        562613846,
+        572844945,
+        540435060
+      ],
+      "median_ns_per_load": 134.1375937461853,
+      "min_ns_per_load": 127.65438771247864,
+      "max_ns_per_load": 136.57687783241272,
+      "rss_KiB": 74628,
+      "size_bytes": 67108864,
+      "pattern": "random",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4063232,
+      "trial_ns": [
+        387402809,
+        231548822,
+        414113346,
+        391165478,
+        307722731,
+        299477270,
+        396710114
+      ],
+      "median_ns_per_load": 95.34351201211253,
+      "min_ns_per_load": 56.98636504142515,
+      "max_ns_per_load": 101.91722894483998,
+      "rss_KiB": 10476,
+      "size_bytes": 8388608,
+      "pattern": "random",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4014080,
+      "trial_ns": [
+        33119664,
+        39924214,
+        34870168,
+        36274565,
+        44576909,
+        34749395,
+        34067340
+      ],
+      "median_ns_per_load": 8.686963887117347,
+      "min_ns_per_load": 8.250872927295918,
+      "max_ns_per_load": 11.105137167171556,
+      "rss_KiB": 2372,
+      "size_bytes": 1048576,
+      "pattern": "random",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4000064,
+      "trial_ns": [
+        6603789,
+        6495867,
+        7180032,
+        7052889,
+        6552953,
+        6545757,
+        6632707
+      ],
+      "median_ns_per_load": 1.6509208352666358,
+      "min_ns_per_load": 1.6239407669477288,
+      "max_ns_per_load": 1.7949792803315148,
+      "rss_KiB": 1188,
+      "size_bytes": 4096,
+      "pattern": "random",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4014080,
+      "trial_ns": [
+        40027417,
+        40361653,
+        39444365,
+        39495684,
+        41341762,
+        40063207,
+        39589437
+      ],
+      "median_ns_per_load": 9.97175367705676,
+      "min_ns_per_load": 9.826501963089923,
+      "max_ns_per_load": 10.299187360491072,
+      "rss_KiB": 2304,
+      "size_bytes": 1048576,
+      "pattern": "random",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4000064,
+      "trial_ns": [
+        6712839,
+        6500057,
+        6502062,
+        6591906,
+        6531018,
+        6577822,
+        6650136
+      ],
+      "median_ns_per_load": 1.6444291891329739,
+      "min_ns_per_load": 1.624988250187997,
+      "max_ns_per_load": 1.6781828990736147,
+      "rss_KiB": 1236,
+      "size_bytes": 4096,
+      "pattern": "random",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4001792,
+      "trial_ns": [
+        19307337,
+        19028161,
+        19580913,
+        20934791,
+        20933711,
+        19771891,
+        19053210
+      ],
+      "median_ns_per_load": 4.8930361697959315,
+      "min_ns_per_load": 4.754910050297466,
+      "max_ns_per_load": 5.231354103361694,
+      "rss_KiB": 1420,
+      "size_bytes": 262144,
+      "pattern": "fixed",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4001792,
+      "trial_ns": [
+        18660171,
+        21372474,
+        18853679,
+        19218709,
+        18658862,
+        18554547,
+        18527129
+      ],
+      "median_ns_per_load": 4.662953746721469,
+      "min_ns_per_load": 4.629708140752943,
+      "max_ns_per_load": 5.340725854817042,
+      "rss_KiB": 1636,
+      "size_bytes": 262144,
+      "pattern": "random",
+      "variant": "c-pointer",
+      "round": 0
+    },
+    {
+      "steps": 4001792,
+      "trial_ns": [
+        26960787,
+        26796878,
+        26999858,
+        26724061,
+        27967695,
+        27833793,
+        29005580
+      ],
+      "median_ns_per_load": 6.746941870042221,
+      "min_ns_per_load": 6.678023495474028,
+      "max_ns_per_load": 7.248147829772262,
+      "rss_KiB": 1364,
+      "size_bytes": 262144,
+      "pattern": "random",
+      "variant": "eido",
+      "round": 0
+    },
+    {
+      "steps": 4000064,
+      "trial_ns": [
+        6735686,
+        6502416,
+        6522738,
+        6577775,
+        7136745,
+        7246769,
+        7426703
+      ],
+      "median_ns_per_load": 1.683894557687077,
+      "min_ns_per_load": 1.625577990752148,
+      "max_ns_per_load": 1.8566460436633014,
+      "rss_KiB": 1188,
+      "size_bytes": 4096,
+      "pattern": "fixed",
+      "variant": "c-index",
+      "round": 0
+    },
+    {
+      "steps": 4000256,
+      "trial_ns": [
+        9938144,
+        7840343,
+        8668711,
+        8356771,
+        8467885,
+        8697655,
+        8400238
+      ],
+      "median_ns_per_load": 2.1168357725105595,
+      "min_ns_per_load": 1.9599603125399974,
+      "max_ns_per_load": 2.484376999872008,
+      "rss_KiB": 1264,
+      "size_bytes": 32768,
+      "pattern": "fixed",
+      "variant": "c-index",
+      "round": 0
+    }
+  ],
+  "small_alloc": [
+    {
+      "ns": 4561560,
+      "checksum": 5600000,
+      "ns_per_cycle": 22.8078,
+      "rss_KiB": 1220,
+      "size_bytes": 8,
+      "variant": "c",
+      "round": 1
+    },
+    {
+      "ns": 49068413,
+      "checksum": 99200000,
+      "ns_per_cycle": 245.342065,
+      "rss_KiB": 1164,
+      "size_bytes": 32,
+      "variant": "eido",
+      "round": 1
+    },
+    {
+      "ns": 178637425,
+      "checksum": 1625600000,
+      "ns_per_cycle": 893.187125,
+      "rss_KiB": 1184,
+      "size_bytes": 128,
+      "variant": "eido",
+      "round": 1
+    },
+    {
+      "ns": 13375310,
+      "checksum": 5600000,
+      "ns_per_cycle": 66.87655,
+      "rss_KiB": 1192,
+      "size_bytes": 8,
+      "variant": "eido",
+      "round": 1
+    },
+    {
+      "ns": 6680431,
+      "checksum": 99200000,
+      "ns_per_cycle": 33.402155,
+      "rss_KiB": 1136,
+      "size_bytes": 32,
+      "variant": "c",
+      "round": 1
+    },
+    {
+      "ns": 20557098,
+      "checksum": 1625600000,
+      "ns_per_cycle": 102.78549,
+      "rss_KiB": 1232,
+      "size_bytes": 128,
+      "variant": "c",
+      "round": 1
+    },
+    {
+      "ns": 175511471,
+      "checksum": 1625600000,
+      "ns_per_cycle": 877.557355,
+      "rss_KiB": 1184,
+      "size_bytes": 128,
+      "variant": "eido",
+      "round": 2
+    },
+    {
+      "ns": 7799262,
+      "checksum": 99200000,
+      "ns_per_cycle": 38.99631,
+      "rss_KiB": 1236,
+      "size_bytes": 32,
+      "variant": "c",
+      "round": 2
+    },
+    {
+      "ns": 25027635,
+      "checksum": 1625600000,
+      "ns_per_cycle": 125.138175,
+      "rss_KiB": 1216,
+      "size_bytes": 128,
+      "variant": "c",
+      "round": 2
+    },
+    {
+      "ns": 5220854,
+      "checksum": 5600000,
+      "ns_per_cycle": 26.10427,
+      "rss_KiB": 1220,
+      "size_bytes": 8,
+      "variant": "c",
+      "round": 2
+    },
+    {
+      "ns": 45557398,
+      "checksum": 99200000,
+      "ns_per_cycle": 227.78699,
+      "rss_KiB": 1208,
+      "size_bytes": 32,
+      "variant": "eido",
+      "round": 2
+    },
+    {
+      "ns": 13137506,
+      "checksum": 5600000,
+      "ns_per_cycle": 65.68753,
+      "rss_KiB": 1108,
+      "size_bytes": 8,
+      "variant": "eido",
+      "round": 2
+    },
+    {
+      "ns": 45378041,
+      "checksum": 99200000,
+      "ns_per_cycle": 226.890205,
+      "rss_KiB": 1148,
+      "size_bytes": 32,
+      "variant": "eido",
+      "round": 3
+    },
+    {
+      "ns": 163780231,
+      "checksum": 1625600000,
+      "ns_per_cycle": 818.901155,
+      "rss_KiB": 1156,
+      "size_bytes": 128,
+      "variant": "eido",
+      "round": 3
+    },
+    {
+      "ns": 4562460,
+      "checksum": 5600000,
+      "ns_per_cycle": 22.8123,
+      "rss_KiB": 1232,
+      "size_bytes": 8,
+      "variant": "c",
+      "round": 3
+    },
+    {
+      "ns": 6398693,
+      "checksum": 99200000,
+      "ns_per_cycle": 31.993465,
+      "rss_KiB": 1232,
+      "size_bytes": 32,
+      "variant": "c",
+      "round": 3
+    },
+    {
+      "ns": 20639198,
+      "checksum": 1625600000,
+      "ns_per_cycle": 103.19599,
+      "rss_KiB": 1164,
+      "size_bytes": 128,
+      "variant": "c",
+      "round": 3
+    },
+    {
+      "ns": 14533670,
+      "checksum": 5600000,
+      "ns_per_cycle": 72.66835,
+      "rss_KiB": 1148,
+      "size_bytes": 8,
+      "variant": "eido",
+      "round": 3
+    },
+    {
+      "ns": 163445972,
+      "checksum": 1625600000,
+      "ns_per_cycle": 817.22986,
+      "rss_KiB": 1200,
+      "size_bytes": 128,
+      "variant": "eido",
+      "round": 4
+    },
+    {
+      "ns": 4822515,
+      "checksum": 5600000,
+      "ns_per_cycle": 24.112575,
+      "rss_KiB": 1180,
+      "size_bytes": 8,
+      "variant": "c",
+      "round": 4
+    },
+    {
+      "ns": 48088606,
+      "checksum": 99200000,
+      "ns_per_cycle": 240.44303,
+      "rss_KiB": 1192,
+      "size_bytes": 32,
+      "variant": "eido",
+      "round": 4
+    },
+    {
+      "ns": 13896664,
+      "checksum": 5600000,
+      "ns_per_cycle": 69.48332,
+      "rss_KiB": 1164,
+      "size_bytes": 8,
+      "variant": "eido",
+      "round": 4
+    },
+    {
+      "ns": 23138803,
+      "checksum": 1625600000,
+      "ns_per_cycle": 115.694015,
+      "rss_KiB": 1216,
+      "size_bytes": 128,
+      "variant": "c",
+      "round": 4
+    },
+    {
+      "ns": 7005079,
+      "checksum": 99200000,
+      "ns_per_cycle": 35.025395,
+      "rss_KiB": 1164,
+      "size_bytes": 32,
+      "variant": "c",
+      "round": 4
+    },
+    {
+      "ns": 13367087,
+      "checksum": 5600000,
+      "ns_per_cycle": 66.835435,
+      "rss_KiB": 1108,
+      "size_bytes": 8,
+      "variant": "eido",
+      "round": 5
+    },
+    {
+      "ns": 47852590,
+      "checksum": 99200000,
+      "ns_per_cycle": 239.26295,
+      "rss_KiB": 1108,
+      "size_bytes": 32,
+      "variant": "eido",
+      "round": 5
+    },
+    {
+      "ns": 20734684,
+      "checksum": 1625600000,
+      "ns_per_cycle": 103.67342,
+      "rss_KiB": 1216,
+      "size_bytes": 128,
+      "variant": "c",
+      "round": 5
+    },
+    {
+      "ns": 6414970,
+      "checksum": 99200000,
+      "ns_per_cycle": 32.07485,
+      "rss_KiB": 1220,
+      "size_bytes": 32,
+      "variant": "c",
+      "round": 5
+    },
+    {
+      "ns": 181550143,
+      "checksum": 1625600000,
+      "ns_per_cycle": 907.750715,
+      "rss_KiB": 1148,
+      "size_bytes": 128,
+      "variant": "eido",
+      "round": 5
+    },
+    {
+      "ns": 6379885,
+      "checksum": 5600000,
+      "ns_per_cycle": 31.899425,
+      "rss_KiB": 1220,
+      "size_bytes": 8,
+      "variant": "c",
+      "round": 5
+    }
+  ],
+  "lmbench": {
+    "package_version": "3.0-a9+debian.1-6build3",
+    "package_sha256": "372b9d640b5c319f68530ad8c324b1a77b2c228933fd4c50e60ee89855a14cb0",
+    "binary_sha256": "1880b5a349d2bb52b2b84b950de71edc8e76c6233e1893b5b1ef7090285ae761",
+    "raw": "\n\"stride=64\n0.00049 1.640\n0.00098 1.649\n0.00195 1.669\n0.00293 1.649\n0.00391 1.661\n0.00586 1.667\n0.00781 1.766\n0.01172 1.750\n0.01562 1.692\n0.02344 1.708\n0.03125 1.691\n0.04688 1.779\n0.06250 2.267\n0.09375 2.060\n0.12500 2.194\n0.18750 2.269\n0.25000 2.238\n0.37500 2.238\n0.50000 2.115\n0.75000 2.166\n1.00000 2.096\n1.50000 2.171\n2.00000 2.302\n3.00000 2.347\n4.00000 2.550\n6.00000 2.983\n8.00000 4.291\n12.00000 4.259\n16.00000 4.620\n24.00000 4.898\n32.00000 4.933\n48.00000 4.992\n64.00000 4.991\n\n",
+    "MiB_ns": [
+      [
+        0.00049,
+        1.64
+      ],
+      [
+        0.00098,
+        1.649
+      ],
+      [
+        0.00195,
+        1.669
+      ],
+      [
+        0.00293,
+        1.649
+      ],
+      [
+        0.00391,
+        1.661
+      ],
+      [
+        0.00586,
+        1.667
+      ],
+      [
+        0.00781,
+        1.766
+      ],
+      [
+        0.01172,
+        1.75
+      ],
+      [
+        0.01562,
+        1.692
+      ],
+      [
+        0.02344,
+        1.708
+      ],
+      [
+        0.03125,
+        1.691
+      ],
+      [
+        0.04688,
+        1.779
+      ],
+      [
+        0.0625,
+        2.267
+      ],
+      [
+        0.09375,
+        2.06
+      ],
+      [
+        0.125,
+        2.194
+      ],
+      [
+        0.1875,
+        2.269
+      ],
+      [
+        0.25,
+        2.238
+      ],
+      [
+        0.375,
+        2.238
+      ],
+      [
+        0.5,
+        2.115
+      ],
+      [
+        0.75,
+        2.166
+      ],
+      [
+        1.0,
+        2.096
+      ],
+      [
+        1.5,
+        2.171
+      ],
+      [
+        2.0,
+        2.302
+      ],
+      [
+        3.0,
+        2.347
+      ],
+      [
+        4.0,
+        2.55
+      ],
+      [
+        6.0,
+        2.983
+      ],
+      [
+        8.0,
+        4.291
+      ],
+      [
+        12.0,
+        4.259
+      ],
+      [
+        16.0,
+        4.62
+      ],
+      [
+        24.0,
+        4.898
+      ],
+      [
+        32.0,
+        4.933
+      ],
+      [
+        48.0,
+        4.992
+      ],
+      [
+        64.0,
+        4.991
+      ]
+    ]
+  },
+  "small_rounds": 5,
+  "initial_build_note": "Initial executable builds used the current repository CLI with a benchmark-local copy of the native SDK; no compiler/SDK edits for benchmarks. One independent process per latency case, seven measured internal trials. Small-block cases measured in five independent rounds."
+}

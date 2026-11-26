@@ -1,0 +1,62 @@
+// STREAM-derived variant, John D. McCalpin (1991-2013), reference v5.10.
+// Same four double-precision kernels, initialization and ten iterations.
+// Only first iteration excluded; timer excludes allocation and validation.
+function main() {
+    var a = Storage<Float>.allocate(8000000);
+    var b = Storage<Float>.allocate(8000000);
+    var c = Storage<Float>.allocate(8000000);
+    var times = Storage<Int>.allocate(40);
+    var i = 0;
+    while (i < 8000000) {
+        Storage<Float>.write(a, i, 2.0);
+        Storage<Float>.write(b, i, 2.0);
+        Storage<Float>.write(c, i, 0.0);
+        set i = i + 1;
+    }
+    var k = 0;
+    while (k < 10) {
+        var t = benchmarkNanos();
+        streamCopy(a, c);
+        Storage<Int>.write(times, k * 4, benchmarkNanos() - t);
+        set t = benchmarkNanos();
+        streamScale(c, b);
+        Storage<Int>.write(times, k * 4 + 1, benchmarkNanos() - t);
+        set t = benchmarkNanos();
+        streamAdd(a, b, c);
+        Storage<Int>.write(times, k * 4 + 2, benchmarkNanos() - t);
+        set t = benchmarkNanos();
+        streamTriad(b, c, a);
+        Storage<Int>.write(times, k * 4 + 3, benchmarkNanos() - t);
+        set k = k + 1;
+    }
+    // Same scalar recurrence as reference; values are exactly representable.
+    var expectedA = 2.0;
+    var expectedB = 2.0;
+    var expectedC = 0.0;
+    set k = 0;
+    while (k < 10) {
+        set expectedC = expectedA;
+        set expectedB = 3.0 * expectedC;
+        set expectedC = expectedA + expectedB;
+        set expectedA = expectedB + 3.0 * expectedC;
+        set k = k + 1;
+    }
+    set i = 0;
+    while (i < 8000000) {
+        if (Storage<Float>.read(a, i) != expectedA or Storage<Float>.read(b, i) != expectedB or Storage<Float>.read(c, i) != expectedC) {
+            Process.exit(1);
+            return;
+        }
+        set i = i + 1;
+    }
+    Console.writeLine("VALID");
+    set i = 0;
+    while (i < 40) {
+        Console.writeLine(Text.fromInt(Storage<Int>.read(times, i)));
+        set i = i + 1;
+    }
+    Storage<Int>.release(times);
+    Storage<Float>.release(c);
+    Storage<Float>.release(b);
+    Storage<Float>.release(a);
+}
