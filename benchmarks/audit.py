@@ -164,7 +164,15 @@ def storage_native_calls(policy):
         calls = re.findall(r"\bcall\s+[^\n]*<([^>]+)>",asm)
         operations = []
         if fn in ("scan","churn","reuse","placement"):
-            operations += ["eidoStorageRead__","eidoStorageWrite__"]
+            # Inlining can erase the call boundaries; verify direct memory
+            # instructions in the workload itself when those symbols disappear.
+            if not any(n.startswith("eidoStorageRead__") for n in sym):
+                require((fn != "scan" or re.search(r"\bimul\b", asm)) and "raiseExceptionEx" in asm,
+                        f"{policy}/{fn}: missing inlined address/check evidence")
+                require(re.search(r"\b(?:mov|add)\w*\s+[^\n]*\([^\n]*%r", asm),
+                        f"{policy}/{fn}: missing native memory access")
+            else:
+                operations += ["eidoStorageRead__","eidoStorageWrite__"]
         if fn in ("churn","reuse","typed"):
             operations += ["_allocate__","_release__"]
         if fn == "rawView":
@@ -185,10 +193,13 @@ def actual_layout_probe(variant):
             "native debugger probe currently requires Linux x86-64")
     binary = BUILD / f"layout-{variant}"
     sym = symbols(binary)
-    slot, = [n for n in sym if n.startswith("eidoStorageSlotIdentity__")]
+    slots = [n for n in sym if n.startswith("eidoStorageSlotIdentity__")]
     main_hex = encoded("layout_bench.main").replace("_", "")
     main, = [n for n in sym if re.match(r"eido_fn\d+_nominal"+main_hex+r"__", n)]
     asm = disassemble(binary, main)
+    if not slots:
+        return inlined_layout_probe(variant, binary, sym, main, asm)
+    slot, = slots
     calls = re.findall(r"^\s*([0-9a-f]+):[^\n]*\bcall\s+[^\n]*<"+re.escape(slot)+r">", asm, re.M)
     require(len(calls) == 2, f"{variant}: expected separate constructor and scan slot calls")
     offset = int(calls[1], 16)-sym[main]
@@ -219,6 +230,58 @@ def actual_layout_probe(variant):
                 f"SCAN {N} {stride} 0 0","ROW 1 1 2 2","ROW 1 2 2 3"]
     require(evidence==expected, f"{variant}: native scan probe failed: {evidence}")
     (AUDIT / f"layout-{variant}-native.txt").write_text(proc.stdout+proc.stderr+"\n"+asm)
+    return evidence
+
+def inlined_layout_probe(variant, binary, sym, main, asm):
+    # Fail closed if this compiler's actual scan loop changes shape.
+    # Identify the bounds comparison, descriptor stride, slot calculation
+    # and first payload access in the optimized machine code, not a source
+    # line or a breakpoint on a helper that no longer exists.
+    stride, alignment, fields = EXPECTED_LAYOUTS[variant]
+    instructions = []
+    for line in asm.splitlines():
+        m = re.match(r"^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2}\s+)+\s*(.*)$", line)
+        if m:
+            instructions.append((int(m[1],16),m[2]))
+    candidates = []
+    for i in range(2,len(instructions)-4):
+        cap = re.fullmatch(r"cmp\s+(0x[0-9a-f]+)\(%rsp\),%(r\w+)",instructions[i-2][1])
+        load = re.fullmatch(r"mov\s+(0x[0-9a-f]+)\(%rsp\),%(r\w+)",instructions[i][1])
+        if not (cap and load): continue
+        if not instructions[i-1][1].startswith("jge"): continue
+        if not re.fullmatch(r"imul\s+%"+cap[2]+",%"+load[2],instructions[i+1][1]): continue
+        base = re.fullmatch(r"add\s+(0x[0-9a-f]+)\(%rsp\),%"+load[2],instructions[i+2][1])
+        if not base or not instructions[i+3][1].startswith("js"): continue
+        field = re.fullmatch(r"add\s+(?:(0x[0-9a-f]+))?\(%"+load[2]+r"\),%r\w+",instructions[i+4][1])
+        if not field or int(field[1] or "0",16)!=fields["value"]: continue
+        candidates.append((instructions[i+4][0]-sym[main],cap[1],load[1],base[1],cap[2],load[2]))
+    require(len(candidates)==1,f"{variant}: expected one inlined scan address path, got {candidates}")
+    off, cap, step, base, index, address = candidates[0]
+    constructors=[n for n in sym if "_writeConstruct__" in n]
+    require(len(constructors)==1, f"{variant}: constructor entry missing")
+    commands=["set debuginfod enabled off","set pagination off",
+              f"break {constructors[0]}","run scan",
+              'printf "WRITE %ld %ld %ld\\n", *(long*)($rdi+8), *(long*)($rdi+16), $rsi',
+              "continue",
+              'printf "WRITE %ld %ld %ld\\n", *(long*)($rdi+8), *(long*)($rdi+16), $rsi',
+              "disable 1",f"tbreak *{main}+{off}","continue",
+              f"set $base = *(unsigned long*)($rsp+{base})",
+              f'printf "SCAN %ld %ld %ld %ld\\n", *(long*)($rsp+{cap}), *(long*)($rsp+{step}), ${index}, $base % {alignment}',
+              f'printf "ADDRESS %ld\\n", ${address} - $base']
+    for j in range(2):
+        addresses=[]
+        for f in ("flag","value","category","other"):
+            ctype="unsigned char" if f in ("flag","category") else "long"
+            addresses.append(f"*({ctype}*)($base+{j*stride+fields[f]})")
+        commands.append('printf "ROW %ld %ld %ld %ld\\n", '+", ".join(addresses))
+    args=["gdb","-q","-batch"]
+    for cmd in commands: args.extend(["-ex",cmd])
+    proc=run(*args,"--args",binary,capture_output=True,text=True)
+    evidence=[l for l in proc.stdout.splitlines() if l.startswith(("WRITE ","SCAN ","ADDRESS ","ROW "))]
+    expected=[f"WRITE {N} {stride} 0",f"WRITE {N} {stride} 1",f"SCAN {N} {stride} 0 0",
+              "ADDRESS 0","ROW 1 1 2 2","ROW 1 2 2 3"]
+    require(evidence==expected,f"{variant}: inlined native scan probe failed: {evidence}")
+    (AUDIT/f"layout-{variant}-native.txt").write_text(proc.stdout+proc.stderr+"\n"+asm)
     return evidence
 
 def layout_oracle(variant):
@@ -253,7 +316,8 @@ def audit():
         "proc auditReport*() =\n  var output = \"\"\n"
         "  for i, val in auditCounts:\n    if i > 0: output.add \",\"\n    output.add $val\n  echo output\n")
     (AUDIT / "eido_storage.nim").write_text(instrument_sdk())
-    shutil.copyfile(SDK / "eido_native.nim", AUDIT / "eido_native.nim")
+    for provider in SDK.glob("eido_native*.nim"):
+        shutil.copyfile(provider, AUDIT / provider.name)
     results = {}
     hashes = {}
     for policy in ("none",):

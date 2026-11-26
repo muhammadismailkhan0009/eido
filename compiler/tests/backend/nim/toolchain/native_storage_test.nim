@@ -81,3 +81,23 @@ suite "Native Storage boundary":
     var owned = eidoStorageRebaseOwnedRaw(raw, eidoStorageAddress(raw), 4, 8)
     check owned.allocationBase.isNil
     eidoStorageRelease(owned)
+
+  test "native read write and slot identity preserve bounds and liveness checks":
+    var raw = eidoStorageAllocateRaw(2, 16)
+    var typed = eidoStorageFromRaw[int64](raw)
+    let base = eidoStorageAddress(typed)
+    check eidoStorageSlotIdentity(typed, 1) == base + 16
+    eidoStorageWrite(typed, 1, 73'i64)
+    check eidoStorageRead(typed, 1) == 73
+    for invalid in [-1'i64, 2'i64]:
+      expect IndexDefect:
+        discard eidoStorageRead(typed, invalid)
+      expect IndexDefect:
+        eidoStorageWrite(typed, invalid, 1'i64)
+      expect IndexDefect:
+        discard eidoStorageSlotIdentity(typed, invalid)
+    eidoStorageRelease(typed)
+    expect AssertionDefect:
+      eidoStorageWrite(typed, 0, 1'i64)
+    expect AssertionDefect:
+      discard eidoStorageSlotIdentity(typed, 0)

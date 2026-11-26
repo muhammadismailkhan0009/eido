@@ -16,12 +16,12 @@ type
     allocationBase*: pointer
 
 ## Requires a live storage capability before any operation touches its backing region.
-proc requireEidoStorageLive[T](storage: EidoStorage[T]) =
+proc requireEidoStorageLive[T](storage: EidoStorage[T]) {.inline.} =
   if not storage.live:
     raise newException(AssertionDefect, "Eido storage access after release")
 
 ## Requires an element index to fall inside a storage capability's slot capacity.
-proc requireEidoStorageIndex[T](storage: EidoStorage[T], index: int64) =
+proc requireEidoStorageIndex[T](storage: EidoStorage[T], index: int64) {.inline.} =
   if index < 0 or index >= storage.capacity:
     raise newException(IndexDefect, "Eido storage index out of bounds")
 
@@ -50,7 +50,7 @@ proc requireEidoStorageAddressRange(address, count, stride: int64) =
       raise newException(ValueError, "Eido storage region exceeds target address space")
 
 ## Returns the byte address of one validated storage slot.
-proc eidoStorageSlotAddress[T](storage: EidoStorage[T], index: int64): uint =
+proc eidoStorageSlotAddress[T](storage: EidoStorage[T], index: int64): uint {.inline.} =
   requireEidoStorageLive(storage)
   requireEidoStorageIndex(storage, index)
   cast[uint](storage.data) + uint(index) * uint(storage.strideBytes)
@@ -271,16 +271,16 @@ proc eidoStorageAddress*[T](storage: EidoStorage[T]): int64 =
 
 ## Returns the address of one inline typed slot as an object identity.
 ## No allocation, reference ownership, or policy bookkeeping occurs here.
-proc eidoStorageSlotIdentity*[T](storage: EidoStorage[T], index: int64): int64 =
+proc eidoStorageSlotIdentity*[T](storage: EidoStorage[T], index: int64): int64 {.inline.} =
   int64(eidoStorageSlotAddress(storage, index))
 
 ## Reads one typed slot after live and bounds validation.
-proc eidoStorageRead*[T](storage: EidoStorage[T], index: int64): T =
+proc eidoStorageRead*[T](storage: EidoStorage[T], index: int64): T {.inline.} =
   let address = eidoStorageSlotAddress(storage, index)
   cast[ptr T](address)[]
 
 ## Writes one typed slot after live and bounds validation.
-proc eidoStorageWrite*[T](storage: EidoStorage[T], index: int64, value: T) =
+proc eidoStorageWrite*[T](storage: EidoStorage[T], index: int64, value: T) {.inline.} =
   let address = eidoStorageSlotAddress(storage, index)
   cast[ptr T](address)[] = value
 
