@@ -137,6 +137,7 @@ proc resolveModuleArchitectureWithInfo*(
     project.rootModule
   )
   result.publicSurfaces = publicSurfaces
+  validateExternalImplementationPermissions(modules, interfaces)
 
   let adoptedSurfaces = buildAdoptedSurfaces(
     modules,

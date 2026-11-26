@@ -22,6 +22,8 @@ dependencies:
 exports:
   - Payments
 
+allowsExternalImplementation: []
+
 provides:
   PaymentProcessor:
     by: processor
@@ -50,6 +52,9 @@ Every `.eido` source uses one of three mutually exclusive categories: a single n
   to the parent. Architectural identity comes from parent + child name.
 - `dependencies` are explicit direct module dependencies.
 - `exports` are the module's outward API.
+- `allowsExternalImplementation` is an optional sequence of locally owned, explicitly exported
+  interface names whose implementations may live outside the owning module family.
+  It does not grant visibility or extension permission.
 - `adopts` explicitly accepts an exported child contract/API into the parent
   family. Nothing propagates upward automatically.
 - `provides` records that a child module fulfills a parent-owned interface
@@ -135,10 +140,30 @@ Declarations that are not reachable from an allowed API surface remain
 module-internal. Top-level functions remain module-internal and cannot be
 exported.
 
-Interfaces are still closed to their owning module family by default.
+Interfaces are closed to their owning module family by default.
 Parent-owned `provides` contracts and their full nominal closure propagate only
-into the declared provider subtree, while external dependencies may consume an
-exported interface but may not implement it.
+into the declared provider subtree. External consumers may implement a public
+interface only when its owning module explicitly authorizes implementation:
+
+```yaml
+exports:
+  - FrameInterface
+  - FrameLink
+allowsExternalImplementation:
+  - FrameInterface
+```
+
+The optional list defaults to empty. Each entry names a distinct, locally owned
+interface named directly in the owning module's `exports`. Transitive
+visibility alone is not sufficient. Unknown names, classes, non-exported
+contracts and foreign/re-exported declarations are rejected. Permission does not expose an
+interface or create a dependency: ordinary visibility checks still apply.
+Every inherited interface must independently permit implementation by the
+class's module, so opening a child contract cannot bypass a closed ancestor.
+Interface `extends` remains limited to the owning module family, even for an
+externally implementable interface. Generic permissions name the declaration
+without type arguments and cover its valid specializations. `provides`, `adopts`,
+export roots, factory selection and runtime dispatch retain their existing rules.
 
 ## Dependency graph
 

@@ -102,7 +102,54 @@ proc validateInterfacePurpose(
           "' must participate in an exported, adopted, or provided module API surface"
       )
 
-## Verifies closed interface extension and class implementation ownership.
+## Validates owner-local, explicitly exported interface permissions.
+proc validateExternalImplementationPermissions(
+  modules: ModuleRegistry,
+  interfaces: InterfaceRegistry
+) =
+  for moduleName, moduleSpec in modules:
+    var seen = initHashSet[string]()
+    for entry in moduleSpec.allowsExternalImplementation:
+      let key = declarationKey(moduleName, entry)
+      if key notin interfaces or interfaces[key].moduleName != moduleName:
+        failAt(moduleSpec.manifestPath, 1, 1,
+          "allowsExternalImplementation must name an interface owned by the module: '" & entry & "'")
+      if entry notin moduleSpec.exports:
+        failAt(moduleSpec.manifestPath, 1, 1,
+          "allowsExternalImplementation requires an explicitly exported interface: '" & entry & "'")
+      if key in seen:
+        failAt(moduleSpec.manifestPath, 1, 1,
+          "duplicate allowsExternalImplementation entry '" & entry & "'")
+      seen.incl key
+
+## Checks each inherited contract independently: a permitted child cannot
+## grant permission to implement a closed ancestor owned by another module.
+proc requireImplementationPermission(
+  interfaces: InterfaceRegistry,
+  modules: ModuleRegistry,
+  sourceClass: ClassDecl,
+  implemented: string,
+  seen: var HashSet[string]
+) =
+  if implemented in seen or implemented notin interfaces:
+    return
+  seen.incl implemented
+  let contract = interfaces[implemented]
+  let owner = contract.moduleName
+  if not isSameOrDescendant(owner, sourceClass.moduleName) and
+      (owner notin modules or
+        declarationLocalName(implemented) notin modules[owner].allowsExternalImplementation):
+    failAt(
+      sourceClass.span,
+      "class '" & declarationLocalName(sourceClass.name) &
+        "' cannot implement closed interface '" &
+        declarationLocalName(implemented) &
+        "' outside its owning module family '" & owner & "'"
+    )
+  for parent in contract.extends:
+    requireImplementationPermission(interfaces, modules, sourceClass, parent, seen)
+
+## Verifies closed interface extension and authorized class implementation.
 ## References must already be canonical when this pass runs.
 proc validateInterfaceOwnership(
   classes: ClassRegistry,
@@ -157,15 +204,8 @@ proc validateInterfaceOwnership(
         sourceClass.span.column
       )
 
-      let owner = interfaces[implemented].moduleName
-      if not isSameOrDescendant(owner, sourceClass.moduleName):
-        failAt(
-          sourceClass.span,
-          "class '" & declarationLocalName(sourceClass.name) &
-            "' cannot implement closed interface '" &
-            declarationLocalName(implemented) &
-            "' outside its owning module family '" & owner & "'"
-        )
+      var seen = initHashSet[string]()
+      requireImplementationPermission(interfaces, modules, sourceClass, implemented, seen)
 
 ## Verifies each provides declaration names a parent-owned interface and a real provider.
 proc validateProviders(

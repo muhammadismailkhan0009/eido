@@ -192,6 +192,7 @@ proc loadModuleProject*(
       directory: directory,
       dependencies: manifest.dependencies,
       exports: manifest.exports,
+      allowsExternalImplementation: manifest.allowsExternalImplementation,
       adopts: manifest.adopts
     )
 

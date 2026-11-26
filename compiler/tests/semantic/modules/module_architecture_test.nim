@@ -555,6 +555,101 @@ suite "Module architecture":
 
     check not checkModule(root).success
 
+  test "external implementation is explicit, owner-authorized and not external extension":
+    let root = freshModuleDir("external_implementation")
+    defer: removeDir(root)
+    createDir(root / "contracts")
+    createDir(root / "plugin")
+    writeFile(root / "module.yaml", """
+      module: app
+      sources: []
+      children:
+        contracts: { path: contracts }
+        plugin: { path: plugin }
+      dependencies: []
+      exports: []
+    """)
+    let ownerPath = root / "contracts" / "module.yaml"
+    let ownerManifest = """
+      module: contracts
+      sources:
+        - Base.eido
+        - Extended.eido
+        - Factory.eido
+      exports:
+        - Extended
+        - Base
+        - Factory
+    """
+    writeFile(root / "contracts" / "Base.eido", """
+      interface Base {
+        function value() returns Int;
+      }
+    """)
+    writeFile(root / "contracts" / "Extended.eido", """
+      interface Extended extends Base {
+        function other() returns Int;
+      }
+    """)
+    writeFile(root / "contracts" / "Factory.eido", "class Factory { function value() returns Int { return 1; } }")
+    let pluginPath = root / "plugin" / "module.yaml"
+    let pluginManifest = """
+      module: plugin
+      sources:
+        - Main.eido
+        - Impl.eido
+      dependencies:
+        - contracts
+      exports: []
+    """
+    writeFile(pluginPath, pluginManifest)
+    writeFile(root / "plugin" / "Main.eido", "function main() {}")
+    let implPath = root / "plugin" / "Impl.eido"
+    let implementation = """
+      class Impl implements Extended {
+        Int stored;
+        function value() returns Int { return self.stored; }
+        function other() returns Int { return self.stored + 1; }
+      }
+    """
+    writeFile(implPath, implementation)
+    # Append at the same indentation as the manifest's existing keys.
+    template ownerPermission(entries: string) =
+      writeFile(ownerPath, ownerManifest.strip(leading = false) & "\n      allowsExternalImplementation:\n" & entries)
+    template rejects(expectedMessage: string) =
+      block:
+        let checked = checkModule(root)
+        check not checked.success
+        if checked.diagnostics.len > 0:
+          check expectedMessage in checked.diagnostics[0].message
+    ownerPermission("        - Extended\n")
+    rejects("closed interface 'Base'")
+    ownerPermission("        - Extended\n        - Base\n")
+    check checkModule(root).success
+    writeFile(implPath, "interface Impl extends Extended { function extra() returns Int; }")
+    writeFile(pluginPath, pluginManifest.replace("exports: []", "exports:\n        - Impl"))
+    rejects("cannot extend closed interface")
+    writeFile(implPath, implementation)
+    writeFile(pluginPath, pluginManifest.replace("dependencies:\n        - contracts", "dependencies: []"))
+    rejects("Extended")
+    writeFile(pluginPath, pluginManifest.strip(leading = false) & "\n      allowsExternalImplementation:\n        - Extended\n")
+    rejects("interface owned by the module")
+    writeFile(pluginPath, pluginManifest)
+    ownerPermission("        - Factory\n")
+    rejects("interface owned by the module")
+    ownerPermission("        - Missing\n")
+    rejects("interface owned by the module")
+    ownerPermission("        - Extended\n        - Extended\n")
+    rejects("duplicate allowsExternalImplementation")
+    writeFile(ownerPath, ownerManifest.replace("        - Extended\n", "").strip(leading = false) &
+      "\n      allowsExternalImplementation:\n        - Extended\n")
+    rejects("requires an explicitly exported interface")
+    # Base is visible through Extended's inherited contract, but its owner
+    # must explicitly export Base before granting external implementation.
+    writeFile(ownerPath, ownerManifest.replace("        - Base\n", "").strip(leading = false) &
+      "\n      allowsExternalImplementation:\n        - Extended\n        - Base\n")
+    rejects("requires an explicitly exported interface")
+
   test "provides requires an implementation in the declared provider subtree":
     let root = freshModuleDir("missing_provider")
     defer: removeDir(root)

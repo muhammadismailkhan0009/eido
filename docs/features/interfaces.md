@@ -223,12 +223,15 @@ may be direct or may arise transitively because a reachable public class
 implements the interface or another reachable interface extends/references it.
 
 Interfaces are closed to their owning module family by default. A class may
-implement, and an interface may extend, a contract only inside the module that
-owns the interface or one of that module's descendants.
-
-There is no implicit external/plugin implementation permission in v0. If Eido
-later needs open extension contracts, that will require an explicit opt-in
-design rather than weakening closed interfaces globally.
+implement a contract within its owner or descendants, or externally when the
+owner explicitly lists the interface in both `exports` and
+`allowsExternalImplementation` in `module.yaml`. Transitive API visibility
+alone does not grant eligibility. The permission is optional, owner-local, and applies only to
+`implements`, not `extends`. Every ancestor contract must independently
+authorize the implementing module. Re-exports cannot grant permission on
+behalf of another owner, and normal dependency, visibility, conformance and
+contract enforcement rules still apply. See [modules](modules.md) for the
+manifest rules. Interface extension remains closed to the owning family.
 
 Example:
 

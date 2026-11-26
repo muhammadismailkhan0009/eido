@@ -309,6 +309,7 @@ proc loadEmbeddedStdlibModule(
     directory: parentDir(manifestPath),
     dependencies: manifest.dependencies,
     exports: manifest.exports,
+    allowsExternalImplementation: manifest.allowsExternalImplementation,
     adopts: manifest.adopts
   )
 

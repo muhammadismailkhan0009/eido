@@ -32,6 +32,9 @@ suite "Module manifest parsing":
       adopts:
         - processor.ProcessorHealth
 
+      allowsExternalImplementation:
+        - PaymentService
+
       policySources:
         - policy.eido
     """, "payments/module.yaml")
@@ -50,6 +53,7 @@ suite "Module manifest parsing":
     check manifest.provides[0].by == "processor"
     check manifest.adopts == @["processor.ProcessorHealth"]
     check manifest.policySources == @["policy.eido"]
+    check manifest.allowsExternalImplementation == @["PaymentService"]
 
   test "accepts empty YAML sequences":
     let manifest = parseModuleManifest("""
@@ -61,6 +65,7 @@ suite "Module manifest parsing":
       exports: []
       provides: {}
       adopts: []
+      allowsExternalImplementation: []
       policySources: []
     """, "module.yaml")
 
@@ -71,6 +76,11 @@ suite "Module manifest parsing":
     check manifest.provides.len == 0
     check manifest.adopts.len == 0
     check manifest.policySources.len == 0
+    check manifest.allowsExternalImplementation.len == 0
+
+  test "rejects non-sequence external implementation permissions":
+    expect ValueError:
+      discard parseModuleManifest("module: app\nallowsExternalImplementation: true", "module.yaml")
 
   test "rejects unknown top-level keys":
     expect ValueError:

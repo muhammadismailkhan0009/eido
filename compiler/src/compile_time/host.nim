@@ -47,7 +47,8 @@ proc lowerPhaseModuleToNim(
       manifest.dependencies.len > 0 or
       manifest.provides.len > 0 or
       manifest.adopts.len > 0 or
-      manifest.exports.len > 0:
+      manifest.exports.len > 0 or
+      manifest.allowsExternalImplementation.len > 0:
     raise newException(
       ValueError,
       "compiler-standard Eido phase modules must remain private and self-contained"

@@ -154,3 +154,12 @@ suite "Generic interface module integration":
     check checked.diagnostics.len == 1
     if checked.diagnostics.len == 1:
       check "closed interface" in checked.diagnostics[0].message
+
+    let ownerPath = root / "contracts" / "module.yaml"
+    writeFile(ownerPath, readFile(ownerPath).strip(leading = false) &
+      "\n      allowsExternalImplementation:\n        - Pair\n")
+    let authorized = checkProject(loadModuleProject(root / "module.yaml", ptExecutable))
+    if not authorized.success:
+      for diagnostic in authorized.diagnostics:
+        checkpoint diagnostic.message
+    check authorized.success
