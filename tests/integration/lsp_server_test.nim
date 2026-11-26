@@ -609,6 +609,7 @@ class Factory {
     """)
     let mainPath = root / "app" / "Main.eido"
     let mainSource = """
+import shop.api.Factory;
 function main() returns Int {
     return Factory.value();
 }
@@ -642,7 +643,7 @@ function main() returns Int {
       "method": "textDocument/definition",
       "params": {
         "textDocument": {"uri": uri},
-        "position": {"line": 1, "character": 20}
+        "position": {"line": 2, "character": 20}
       }
     })
 
@@ -651,6 +652,52 @@ function main() returns Int {
     check messages[0]["result"]["uri"].getStr ==
       pathToFileUri(factoryPath)
     check messages[0]["result"]["range"]["start"]["line"].getInt == 1
+
+    let imported = server.handleMessage(%*{
+      "jsonrpc": "2.0",
+      "id": 5,
+      "method": "textDocument/definition",
+      "params": {
+        "textDocument": {"uri": uri},
+        "position": {"line": 0, "character": 17}
+      }
+    })
+    check imported[0]["result"].kind == JObject
+    check imported[0]["result"]["uri"].getStr == pathToFileUri(factoryPath)
+
+  test "SDK imports navigate to embedded generic and static declarations":
+    let root = freshLspProject("sdk_imports")
+    defer: removeDir(root)
+    writeFile(root / "module.yaml", "module: app\nsources:\n  - Main.eido\n")
+    let sourcePath = root / "Main.eido"
+    let source = "import eido.stdlib.io.Console;\nimport eido.stdlib.storage.Storage;\nfunction main() { Console.writeLine(\"ok\"); }"
+    writeFile(sourcePath, source)
+    let uri = pathToFileUri(sourcePath)
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0", "id": 1, "method": "initialize",
+      "params": {"rootUri": pathToFileUri(root)}
+    })
+    let opened = server.handleMessage(%*{
+      "jsonrpc": "2.0", "method": "textDocument/didOpen",
+      "params": {"textDocument": {"uri": uri, "languageId": "eido",
+        "version": 1, "text": source}}
+    })
+    let diagnostics = diagnosticsFor(opened, uri)
+    check not diagnostics.isNil
+    if not diagnostics.isNil:
+      check diagnostics["params"]["diagnostics"].len == 0
+    for (line, character, filename) in [(0, 24, "console.eido"), (1, 29, "storage.eido")]:
+      let definition = server.handleMessage(%*{
+        "jsonrpc": "2.0", "id": 2, "method": "textDocument/definition",
+        "params": {"textDocument": {"uri": uri},
+          "position": {"line": line, "character": character}}
+      })
+      check definition[0]["result"].kind == JObject
+      if definition[0]["result"].kind == JObject:
+        let targetPath = fileUriToPath(definition[0]["result"]["uri"].getStr)
+        check fileExists(targetPath)
+        check targetPath.extractFilename == filename
 
   test "formatting returns a full document edit":
     let root = freshLspProject("formatting")

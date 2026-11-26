@@ -1,7 +1,7 @@
 ## Implements the thin Eido Language Server Protocol adapter.
 ## Compiler/project tooling remains authoritative for parsing, modules, typing, and diagnostics.
 
-import std/[json, os, sets, tables]
+import std/[json, os, sets, tables, strutils, hashes]
 import ../../../compiler/src/diagnostics/errors
 import ../../../compiler/src/project/model
 import ../../../compiler/src/tooling/[compiler_service, formatting_service, hover_service, symbol_service]
@@ -279,8 +279,28 @@ proc definitionResponse(
   if definition.sourcePath.len == 0:
     return newJNull()
 
-  let targetPath = absolutePath(definition.sourcePath)
-  let targetText = server.documents.effectiveSourceText(targetPath)
+  var targetPath = absolutePath(definition.sourcePath)
+  var targetText = server.documents.effectiveSourceText(targetPath)
+  if definition.sourcePath.startsWith("eido://stdlib/"):
+    # Resolve embedded SDK locations to a matching checkout or immutable
+    # cached source, not a fictitious filesystem path derived from its URI.
+    for source in context.project.sources:
+      if source.path == definition.sourcePath:
+        targetText = source.text
+        let relative = definition.sourcePath["eido://".len .. ^1]
+        let checkout = server.documents.workspaceRoot / relative
+        if server.documents.workspaceRoot.len > 0 and fileExists(checkout) and
+            readFile(checkout) == targetText:
+          targetPath = checkout
+        else:
+          let directory = getCacheDir("eido") / "lsp-sdk" / $hash(targetText)
+          createDir(directory)
+          targetPath = directory / extractFilename(relative)
+          if not fileExists(targetPath) or readFile(targetPath) != targetText:
+            let temporary = targetPath & "." & $getCurrentProcessId()
+            writeFile(temporary, targetText)
+            moveFile(temporary, targetPath)
+        break
   if targetText.len == 0:
     return newJNull()
 

@@ -177,6 +177,46 @@ reachable declaration becomes part of A's public API and is therefore visible
 to consumers of A. Unrelated declarations from B remain invisible unless they
 also become reachable through A's API graph.
 
+## Source imports
+
+A module project may begin each source file with explicit nominal imports:
+
+```eido
+import eido.stdlib.io.Console;
+import eido.stdlib.storage.Storage;
+
+class BufferPrinter {
+    function printCapacity(Storage<Byte> buffer) returns Int {
+        Console.writeLine("Buffer capacity");
+        return Storage<Byte>.capacity(buffer);
+    }
+}
+```
+
+Each import uses the full canonical module path and one class or interface name,
+terminated by a semicolon. Import the generic declaration without type arguments;
+specialize it normally at use sites. Imports are file-local bindings and must
+precede all declarations. They do not count as top-level declarations for source
+file isolation. Comments are permitted before or between imports.
+
+The manifest remains authoritative for module ownership, dependencies,
+exports, provider contracts, adopted APIs and external implementation
+permission. Imports select already visible declarations, including types
+reachable through an existing authorized API closure, and cannot create a
+dependency or make a private declaration public. Imported references in public
+signatures participate in the existing closure only after the binding is
+authorized; the signature cannot grant its own import permission.
+
+Unknown or inaccessible targets, repeated imports and conflicting short names
+(including conflicts with a module-local nominal) are errors. Different files
+may bind the same short name differently. No wildcard imports, aliases, function
+imports or filesystem-relative paths are supported. Existing unqualified
+resolution and explicit qualified references remain supported; import
+requirements for cross-module references are not introduced in this increment.
+The compiler resolves imports before ordinary semantic analysis, with no runtime
+effect. The editor indexes import references and supports go-to-definition,
+including embedded SDK declarations.
+
 ## Name resolution and qualification
 
 Declarations are internally identified by canonical module identity plus local name, for example `shop.payments.Result` and `shop.users.Result`. Same-named declarations in different modules are legal.

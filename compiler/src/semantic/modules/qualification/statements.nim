@@ -9,6 +9,7 @@ proc qualifyStatements(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ) =
   var locals = initialLocals
@@ -20,6 +21,7 @@ proc qualifyStatements(
         statement.initializer, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       locals.incl statement.name
@@ -29,12 +31,14 @@ proc qualifyStatements(
         statement.target, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       qualifyExpr(
         statement.assignedValue, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -43,6 +47,7 @@ proc qualifyStatements(
         statement.call, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -51,6 +56,7 @@ proc qualifyStatements(
         statement.value, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -59,18 +65,21 @@ proc qualifyStatements(
         statement.condition, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       qualifyStatements(
         statement.thenBranch, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       qualifyStatements(
         statement.elseBranch, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -79,12 +88,14 @@ proc qualifyStatements(
         statement.existsTarget, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       qualifyStatements(
         statement.existsBody, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -93,12 +104,14 @@ proc qualifyStatements(
         statement.whileCondition, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       qualifyStatements(
         statement.body, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -109,6 +122,7 @@ proc qualifyStatements(
           @[statement.forInitializer], currentModule, loopLocals, typeParameters,
           modules, classes, interfaces, functions,
           publicSurfaces, adoptedSurfaces, providedSurfaces,
+          imports,
           rootModule
         )
         if statement.forInitializer.kind == skVar:
@@ -117,6 +131,7 @@ proc qualifyStatements(
         statement.forCondition, currentModule, loopLocals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       if not statement.forUpdate.isNil:
@@ -124,12 +139,14 @@ proc qualifyStatements(
           @[statement.forUpdate], currentModule, loopLocals, typeParameters,
           modules, classes, interfaces, functions,
           publicSurfaces, adoptedSurfaces, providedSurfaces,
+          imports,
           rootModule
         )
       qualifyStatements(
         statement.forBody, currentModule, loopLocals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 

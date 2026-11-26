@@ -187,6 +187,33 @@ proc buildSymbolIndex*(
         true
       )
 
+  # Import targets are nominal declarations, including generic templates that
+  # may not have a materialized HIR specialization in this checked project.
+  var importDefinitions = initTable[string, ToolingSymbol]()
+  for source in project.sources:
+    if source.moduleName.len == 0: continue
+    let tokens = registry[source.id.value]
+    let header = parseSourceImports(tokens)
+    let afterImports = if header.len == 0: 0 else: header[^1].span.endOffset
+    for i in 0 ..< tokens.len - 1:
+      let tok = tokens[i]
+      if tok.span.startOffset < afterImports: continue
+      if tok.kind in {tkClass, tkInterface} and tokens[i+1].kind == tkIdentifier:
+        let nameToken = tokens[i+1]
+        let key = source.moduleName & "." & nameToken.lexeme
+        importDefinitions[key] = ToolingSymbol(
+          kind: (if tok.kind == tkClass: tskClass else: tskInterface),
+          name: nameToken.lexeme, span: nameToken.span,
+          declarationSpan: nameToken.span, isDeclaration: true
+        )
+        break
+  for source in project.sources:
+    for item in parseSourceImports(registry[source.id.value]):
+      if item.path in importDefinitions:
+        let definition = importDefinitions[item.path]
+        result.addSymbol(seen, definition.kind, definition.name,
+          item.nameSpan, definition.declarationSpan, false)
+
   # Pass 2: declaration signatures and callable bodies.
   for interfaceDecl in program.interfaces:
     for parent in interfaceDecl.extends:

@@ -14,6 +14,7 @@ type
     tkStringLiteral,
     tkNone,
     tkExists,
+    tkImport,
     tkFunction,
     tkNative,
     tkRequire,

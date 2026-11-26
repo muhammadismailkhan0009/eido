@@ -1795,3 +1795,71 @@ test "module interface contracts resolve self and propagate into provider implem
   writeFile(root / "Main.eido", "function main() {}")
 
   check checkModule(root).success
+
+  test "imports resolve file-local names without creating architectural access":
+    let root = freshModuleDir("imports")
+    defer: removeDir(root)
+    for child in ["left", "right", "app"]:
+      createDir(root / child)
+    writeFile(root / "module.yaml", """
+      module: shop
+      sources: []
+      children:
+        left: { path: left }
+        right: { path: right }
+        app: { path: app }
+    """)
+    for child in ["left", "right"]:
+      writeFile(root / child / "module.yaml", "module: " & child &
+        "\nsources:\n  - Result.eido\n  - Secret.eido\nexports:\n  - Result\n")
+      writeFile(root / child / "Result.eido", "class Result { function value() returns Int { return 1; } }")
+      writeFile(root / child / "Secret.eido", "class Secret {}")
+    let manifest = root / "app" / "module.yaml"
+    let appManifest = """
+      module: app
+      sources:
+        - Main.eido
+        - Other.eido
+      dependencies:
+        - left
+        - right
+      exports:
+        - Other
+    """
+    writeFile(manifest, appManifest)
+    let mainPath = root / "app" / "Main.eido"
+    let otherPath = root / "app" / "Other.eido"
+    let mainSource = "import shop.left.Result;\nfunction main() returns Int { return Result.value(); }"
+    let otherSource = "import shop.right.Result;\nclass Other { function create() returns Result { return Result {}; } }"
+    writeFile(mainPath, mainSource)
+    writeFile(otherPath, otherSource)
+    check checkModule(root).success
+    template rejectImport(expected: string) =
+      block:
+        let checked = checkModule(root)
+        check not checked.success
+        if checked.diagnostics.len > 0:
+          check expected in checked.diagnostics[0].message
+    writeFile(mainPath, "import shop.left.Result; import shop.right.Result; function main() {}")
+    rejectImport("duplicate or conflicting import")
+    writeFile(mainPath, "import shop.left.Missing; function main() {}")
+    rejectImport("unknown imported type")
+    writeFile(mainPath, "function main() {} import shop.left.Result;")
+    rejectImport("imports must precede")
+    writeFile(mainPath, "import shop.left.*; function main() {}")
+    rejectImport("expected identifier")
+    writeFile(mainPath, "import shop.left.Secret; function main() {}")
+    rejectImport("cannot import")
+    writeFile(mainPath, mainSource)
+    writeFile(otherPath, "import shop.left.Secret; class Other { function create() returns Secret { return Secret {}; } }")
+    rejectImport("cannot import")
+    writeFile(otherPath, "import shop.left.Secret; class Other { function create() returns left.Secret { return left.Secret {}; } }")
+    rejectImport("cannot import")
+    writeFile(otherPath, otherSource)
+    writeFile(manifest, appManifest.replace("        - left\n", ""))
+    rejectImport("cannot import")
+    writeFile(manifest, appManifest)
+    writeFile(otherPath, "class Other { function create() returns Result { return Result {}; } }")
+    rejectImport("ambiguous type")
+    writeFile(otherPath, otherSource)
+    check checkModule(root).success

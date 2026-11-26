@@ -14,6 +14,7 @@ proc qualifyExpr(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 )
 
@@ -28,6 +29,7 @@ proc qualifyStatements(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 )
 

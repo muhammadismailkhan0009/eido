@@ -9,6 +9,7 @@ proc qualifyCallable(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ) =
   var locals = initHashSet[string]()
@@ -20,6 +21,7 @@ proc qualifyCallable(
       parameter.typeRef, currentModule, typeParameters,
       modules, classes, interfaces,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
     locals.incl parameter.name
@@ -29,6 +31,7 @@ proc qualifyCallable(
       source.result.typeRef, currentModule, typeParameters,
       modules, classes, interfaces,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 
@@ -37,6 +40,7 @@ proc qualifyCallable(
       clause, currentModule, locals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
   var ensureLocals = locals
@@ -47,6 +51,7 @@ proc qualifyCallable(
       clause, currentModule, ensureLocals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 
@@ -54,6 +59,7 @@ proc qualifyCallable(
     source.body, currentModule, locals, typeParameters,
     modules, classes, interfaces, functions,
     publicSurfaces, adoptedSurfaces, providedSurfaces,
+    imports,
     rootModule
   )
 
@@ -65,6 +71,7 @@ proc qualifyModuleProgram(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ) =
   var noTypeParameters = initHashSet[string]()
@@ -80,6 +87,7 @@ proc qualifyModuleProgram(
         sourceInterface.moduleName,
         modules, classes, interfaces,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule,
         sourceInterface.span
       )
@@ -88,6 +96,7 @@ proc qualifyModuleProgram(
         methodDecl, sourceInterface.moduleName, typeParameters, true,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
     sourceInterface.name = declarationKey(
@@ -105,6 +114,7 @@ proc qualifyModuleProgram(
         implemented, sourceClass.moduleName, typeParameters,
         modules, classes, interfaces,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -114,6 +124,7 @@ proc qualifyModuleProgram(
         field.typeRef, sourceClass.moduleName, typeParameters,
         modules, classes, interfaces,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
       if field.isClassOwned and not field.initializer.isNil:
@@ -121,6 +132,7 @@ proc qualifyModuleProgram(
           field.initializer, sourceClass.moduleName, classFieldLocals, typeParameters,
           modules, classes, interfaces, functions,
           publicSurfaces, adoptedSurfaces, providedSurfaces,
+          imports,
           rootModule
         )
 
@@ -131,6 +143,7 @@ proc qualifyModuleProgram(
         clause, sourceClass.moduleName, invariantLocals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -139,6 +152,7 @@ proc qualifyModuleProgram(
         methodDecl, sourceClass.moduleName, typeParameters, true,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -156,6 +170,7 @@ proc qualifyModuleProgram(
       sourceLayout.targetType, sourceLayout.moduleName, typeParameters,
       modules, classes, interfaces,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
     sourceLayout.name = declarationKey(
@@ -168,6 +183,7 @@ proc qualifyModuleProgram(
       sourceFunction, sourceFunction.moduleName, noTypeParameters, false,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
     sourceFunction.name = declarationKey(

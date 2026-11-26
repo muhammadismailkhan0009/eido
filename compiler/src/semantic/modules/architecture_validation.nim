@@ -16,6 +16,10 @@ type
   InterfaceRegistry = Table[string, InterfaceDecl]
   FunctionOwnerRegistry = Table[string, string]
   ModuleRegistry = Table[string, moduleModel.ModuleSpec]
+  ImportBinding = object
+    target: string
+    authorized: bool
+  ImportRegistry = Table[string, Table[string, ImportBinding]]
   PublicSurfaceRegistry* = Table[string, HashSet[string]]
   SurfaceRegistry = PublicSurfaceRegistry
 
@@ -45,6 +49,7 @@ proc isStaticOnly(source: ClassDecl): bool =
   true
 
 include validation/visibility
+include validation/imports
 include validation/public_surface
 include validation/qualification
 include validation/interfaces
@@ -130,29 +135,29 @@ proc resolveModuleArchitectureWithInfo*(
     project.rootModule
   )
 
-  let publicSurfaces = buildPublicSurfaces(
-    modules,
-    classes,
-    interfaces,
-    project.rootModule
-  )
+  var imports = collectImports(source, classes, interfaces)
+  var publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
+
+  # Imports may bind names in public signatures, but those signatures cannot
+  # bootstrap their own visibility. Start with no foreign import permission
+  # and expand only when an existing architecture surface authorizes a binding.
+  while true:
+    publicSurfaces = buildPublicSurfaces(
+      modules, classes, interfaces, imports, project.rootModule
+    )
+    adoptedSurfaces = buildAdoptedSurfaces(
+      modules, classes, interfaces, publicSurfaces, imports, project.rootModule
+    )
+    providedSurfaces = buildProvidedSurfaces(
+      modules, classes, interfaces, publicSurfaces, imports, project.rootModule
+    )
+    if not authorizeVisibleImports(source, modules, publicSurfaces,
+        adoptedSurfaces, providedSurfaces, imports):
+      break
+
   result.publicSurfaces = publicSurfaces
   validateExternalImplementationPermissions(modules, interfaces)
-
-  let adoptedSurfaces = buildAdoptedSurfaces(
-    modules,
-    classes,
-    interfaces,
-    publicSurfaces,
-    project.rootModule
-  )
-  let providedSurfaces = buildProvidedSurfaces(
-    modules,
-    classes,
-    interfaces,
-    publicSurfaces,
-    project.rootModule
-  )
+  validateImportVisibility(source, imports)
 
   qualifyModuleProgram(
     source,
@@ -163,6 +168,7 @@ proc resolveModuleArchitectureWithInfo*(
     publicSurfaces,
     adoptedSurfaces,
     providedSurfaces,
+    imports,
     project.rootModule
   )
 

@@ -18,6 +18,11 @@ proc parseProject*(project: EidoProject): Program =
     var sourceProgram = parseProgram(lexAll(sourceUnit))
 
     validateSourceStructure(sourceProgram)
+    for item in sourceProgram.imports.mitems:
+      if project.modules.len == 0:
+        failAt(item.span, "imports require a module project")
+      item.moduleName = sourceUnit.moduleName
+    result.imports.add sourceProgram.imports
 
     for index in 0 ..< sourceProgram.interfaces.len:
       sourceProgram.interfaces[index].moduleName = sourceUnit.moduleName

@@ -90,6 +90,7 @@ proc formatSource*(source: string): string =
   var indent = 0
   var parenDepth = 0
   var previous = tkEof
+  var inImport = false
 
   for index, token in tokens:
     # Comments that occur before this token and were not attached to the previous
@@ -119,6 +120,10 @@ proc formatSource*(source: string): string =
           token.span.endOffset,
           comment.startOffset
         )
+
+    if token.kind == tkImport:
+      inImport = true
+    let endsImport = inImport and token.kind == tkSemicolon
 
     case token.kind
     of tkLBrace:
@@ -200,6 +205,12 @@ proc formatSource*(source: string): string =
         comments[commentIndex]
       )
       inc commentIndex
+
+    if endsImport:
+      inImport = false
+      if nextKind notin {tkImport, tkEof}:
+        result.newline()
+        result.add '\n'
 
     previous = token.kind
 

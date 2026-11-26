@@ -52,6 +52,7 @@ proc keywordKind*(text: string): TokenKind =
     return contractKeyword
 
   case text
+  of "import": tkImport
   of "layout": tkLayout
   of "function": tkFunction
   of "returns": tkReturns

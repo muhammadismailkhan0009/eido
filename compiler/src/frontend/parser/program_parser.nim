@@ -7,13 +7,18 @@ import core
 import statement_parser
 import ../ast/statements
 import declaration_parser
+import import_parser
 
 ## Parses all supported top-level declarations.
 proc parseProgram*(tokens: seq[Token]): Program =
   var parser = initParser(tokens)
 
+  result.imports = parser.parseImports()
+
   while not parser.check(tkEof):
-    if parser.check(tkInterface):
+    if parser.check(tkImport):
+      failAt(parser.peek.span, "imports must precede all top-level declarations")
+    elif parser.check(tkInterface):
       result.interfaces.add parser.parseInterface()
     elif parser.check(tkClass):
       result.classes.add parser.parseClass()

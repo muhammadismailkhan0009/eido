@@ -10,7 +10,14 @@ type
     moduleName*: string
     call*: Expr
 
+  ImportDecl* = object
+    path*: string
+    span*: SourceSpan
+    nameSpan*: SourceSpan
+    moduleName*: string
+
   Program* = object
+    imports*: seq[ImportDecl]
     interfaces*: seq[InterfaceDecl]
     classes*: seq[ClassDecl]
     layouts*: seq[LayoutDecl]

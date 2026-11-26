@@ -84,3 +84,8 @@ else{return;}}
 }
 // final comment
 """
+
+
+  test "formats imports as a separate file header":
+    check formatSource("import shop . api . Factory;import shop.api.Value;function main(){}") ==
+      "import shop.api.Factory;\nimport shop.api.Value;\n\nfunction main() {\n}\n"

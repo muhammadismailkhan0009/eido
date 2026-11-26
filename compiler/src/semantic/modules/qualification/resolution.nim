@@ -8,6 +8,7 @@ proc resolveVisibleNominal(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string,
   span: SourceSpan,
   strict: bool = true
@@ -56,6 +57,10 @@ proc resolveVisibleNominal(
         )
       return ""
     return key
+
+  let binding = importBinding(imports, span, reference)
+  if binding.authorized:
+    return binding.target
 
   let localKey = declarationKey(currentModule, reference)
   if nominalExists(classes, interfaces, localKey):
@@ -111,6 +116,7 @@ proc qualifyTypeRef(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ) =
   if source.name notin typeParameters and
@@ -124,6 +130,7 @@ proc qualifyTypeRef(
       publicSurfaces,
       adoptedSurfaces,
       providedSurfaces,
+      imports,
       rootModule,
       source.span
     )
@@ -133,6 +140,7 @@ proc qualifyTypeRef(
       argument, currentModule, typeParameters,
       modules, classes, interfaces,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 

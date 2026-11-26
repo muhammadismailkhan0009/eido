@@ -9,6 +9,7 @@ proc qualifyExpr(
   interfaces: InterfaceRegistry,
   functions: FunctionOwnerRegistry,
   publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ) =
   if source.isNil:
@@ -25,6 +26,7 @@ proc qualifyExpr(
       typeParameters,
       modules, classes, interfaces,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 
@@ -37,6 +39,7 @@ proc qualifyExpr(
         argument, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -47,6 +50,7 @@ proc qualifyExpr(
       typeParameters,
       modules, classes, interfaces,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
     for field in source.fields:
@@ -54,6 +58,7 @@ proc qualifyExpr(
         field.value, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -62,6 +67,7 @@ proc qualifyExpr(
       source.relatedValue, currentModule, locals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 
@@ -79,6 +85,7 @@ proc qualifyExpr(
         publicSurfaces,
         adoptedSurfaces,
         providedSurfaces,
+        imports,
         rootModule,
         source.target.span,
         false
@@ -94,6 +101,7 @@ proc qualifyExpr(
           source.target, currentModule, locals, typeParameters,
           modules, classes, interfaces, functions,
           publicSurfaces, adoptedSurfaces, providedSurfaces,
+          imports,
           rootModule
         )
     else:
@@ -101,6 +109,7 @@ proc qualifyExpr(
         source.target, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -119,6 +128,7 @@ proc qualifyExpr(
         publicSurfaces,
         adoptedSurfaces,
         providedSurfaces,
+        imports,
         rootModule,
         source.receiver.span,
         false
@@ -134,6 +144,7 @@ proc qualifyExpr(
           source.receiver, currentModule, locals, typeParameters,
           modules, classes, interfaces, functions,
           publicSurfaces, adoptedSurfaces, providedSurfaces,
+          imports,
           rootModule
         )
     else:
@@ -141,6 +152,7 @@ proc qualifyExpr(
         source.receiver, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -149,6 +161,7 @@ proc qualifyExpr(
         argument, currentModule, locals, typeParameters,
         modules, classes, interfaces, functions,
         publicSurfaces, adoptedSurfaces, providedSurfaces,
+        imports,
         rootModule
       )
 
@@ -157,6 +170,7 @@ proc qualifyExpr(
       source.operand, currentModule, locals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 
@@ -165,12 +179,14 @@ proc qualifyExpr(
       source.left, currentModule, locals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
     qualifyExpr(
       source.right, currentModule, locals, typeParameters,
       modules, classes, interfaces, functions,
       publicSurfaces, adoptedSurfaces, providedSurfaces,
+      imports,
       rootModule
     )
 

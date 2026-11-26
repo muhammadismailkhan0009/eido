@@ -3,6 +3,7 @@
 
 import std/[algorithm, os, sets, strutils, tables]
 import ../frontend/lexer/[scanner, token]
+import ../frontend/parser/import_parser
 import ../hir/[declarations, expressions, program, statements]
 import ../project/model
 import ../semantic/symbols/ids

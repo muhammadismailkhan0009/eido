@@ -16,9 +16,14 @@ proc resolveSurfaceReference(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule, currentModule, reference: string,
   span: SourceSpan
 ): string =
+  let binding = importBinding(imports, span, reference)
+  if binding.target.len > 0:
+    return (if binding.authorized: binding.target else: "")
+
   let separator = reference.rfind('.')
   if separator > 0:
     let moduleRef = reference[0 ..< separator]
@@ -31,6 +36,9 @@ proc resolveSurfaceReference(
       span.sourcePath
     )
     let key = declarationKey(moduleName, localName)
+    let qualifiedBinding = importBinding(imports, span, key)
+    if qualifiedBinding.target.len > 0 and not qualifiedBinding.authorized:
+      return ""
     if nominalExists(classes, interfaces, key):
       return key
     failAt(span, "unknown qualified type '" & reference & "'")
@@ -118,6 +126,7 @@ proc addTypeRefClosure(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string,
   seen: var HashSet[string]
 )
@@ -129,6 +138,7 @@ proc addDeclarationClosure(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string,
   seen: var HashSet[string]
 ) =
@@ -142,25 +152,25 @@ proc addDeclarationClosure(
     for implemented in sourceClass.implements:
       addTypeRefClosure(
         implemented, sourceClass.moduleName,
-        modules, classes, interfaces, publicSurfaces, rootModule, seen
+        modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
       )
 
     for field in sourceClass.fields:
       addTypeRefClosure(
         field.typeRef, sourceClass.moduleName,
-        modules, classes, interfaces, publicSurfaces, rootModule, seen
+        modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
       )
 
     for methodDecl in sourceClass.methods:
       for parameter in methodDecl.parameters:
         addTypeRefClosure(
           parameter.typeRef, sourceClass.moduleName,
-          modules, classes, interfaces, publicSurfaces, rootModule, seen
+          modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
         )
       if methodDecl.result.kind == frrSingle:
         addTypeRefClosure(
           methodDecl.result.typeRef, sourceClass.moduleName,
-          modules, classes, interfaces, publicSurfaces, rootModule, seen
+          modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
         )
     return
 
@@ -170,22 +180,22 @@ proc addDeclarationClosure(
     for parent in sourceInterface.extends:
       let resolved = resolveSurfaceReference(
         modules, classes, interfaces, publicSurfaces,
-        rootModule, sourceInterface.moduleName, parent, sourceInterface.span
+        imports, rootModule, sourceInterface.moduleName, parent, sourceInterface.span
       )
       addDeclarationClosure(
-        resolved, modules, classes, interfaces, publicSurfaces, rootModule, seen
+        resolved, modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
       )
 
     for methodDecl in sourceInterface.methods:
       for parameter in methodDecl.parameters:
         addTypeRefClosure(
           parameter.typeRef, sourceInterface.moduleName,
-          modules, classes, interfaces, publicSurfaces, rootModule, seen
+          modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
         )
       if methodDecl.result.kind == frrSingle:
         addTypeRefClosure(
           methodDecl.result.typeRef, sourceInterface.moduleName,
-          modules, classes, interfaces, publicSurfaces, rootModule, seen
+          modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
         )
 
 ## Adds nominal names and nested generic arguments from a source type.
@@ -196,22 +206,23 @@ proc addTypeRefClosure(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string,
   seen: var HashSet[string]
 ) =
   let resolved = resolveSurfaceReference(
     modules, classes, interfaces, publicSurfaces,
-    rootModule, ownerModule, source.name, source.span
+    imports, rootModule, ownerModule, source.name, source.span
   )
   if resolved.len > 0:
     addDeclarationClosure(
-      resolved, modules, classes, interfaces, publicSurfaces, rootModule, seen
+      resolved, modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
     )
 
   for argument in source.arguments:
     addTypeRefClosure(
       argument, ownerModule,
-      modules, classes, interfaces, publicSurfaces, rootModule, seen
+      modules, classes, interfaces, publicSurfaces, imports, rootModule, seen
     )
 
 ## Resolves one explicit manifest root to a canonical nominal identity.
@@ -238,6 +249,7 @@ proc buildPublicSurfaces(
   modules: ModuleRegistry,
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ): SurfaceRegistry =
   result = initTable[string, HashSet[string]]()
@@ -258,7 +270,7 @@ proc buildPublicSurfaces(
       var closure = initHashSet[string]()
       for key in roots:
         addDeclarationClosure(
-          key, modules, classes, interfaces, result, rootModule, closure
+          key, modules, classes, interfaces, result, imports, rootModule, closure
         )
 
       var expanded = result[moduleName]
@@ -275,6 +287,7 @@ proc buildAdoptedSurfaces(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ): SurfaceRegistry =
   result = initTable[string, HashSet[string]]()
@@ -288,7 +301,7 @@ proc buildAdoptedSurfaces(
       let key = declarationKey(target.moduleName, target.symbolName)
       addDeclarationClosure(
         key, modules, classes, interfaces,
-        publicSurfaces, rootModule, surface
+        publicSurfaces, imports, rootModule, surface
       )
     result[moduleName] = surface
 
@@ -302,6 +315,7 @@ proc buildProvidedSurfaces(
   classes: ClassRegistry,
   interfaces: InterfaceRegistry,
   publicSurfaces: SurfaceRegistry,
+  imports: ImportRegistry,
   rootModule: string
 ): SurfaceRegistry =
   result = initTable[string, HashSet[string]]()
@@ -315,7 +329,7 @@ proc buildProvidedSurfaces(
       var surface = initHashSet[string]()
       addDeclarationClosure(
         contractKey, modules, classes, interfaces,
-        publicSurfaces, rootModule, surface
+        publicSurfaces, imports, rootModule, surface
       )
       result[provisionSurfaceKey(
         moduleSpec.canonicalName,
