@@ -1,0 +1,6 @@
+/// Independent listener; accepted connections outlive listener closure.
+interface TcpListener {
+    function accept() returns TcpConnectionResult;
+    function localAddress() returns SocketAddress;
+    function close();
+}

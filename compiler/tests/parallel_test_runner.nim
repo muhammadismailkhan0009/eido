@@ -100,6 +100,8 @@ proc runTests() =
       prefix & cliPath & " " & quoteShell(integrationRoot / "eido_cli_dogfood_test.nim")
     integrationCommands["Integration::LSP server"] =
       prefix & compilerPath & lspPath & " " & quoteShell(integrationRoot / "lsp_server_test.nim")
+    integrationCommands["Integration::TCP networking"] =
+      prefix & compilerPath & cliPath & " " & quoteShell(integrationRoot / "tcp_networking_test.nim")
   let filter = getEnv("EIDO_TEST_FILTER")
   if filter.len > 0:
     var matching: seq[string]

@@ -1,0 +1,30 @@
+import eido.stdlib.storage.Storage;
+/// Shared complete-transfer loop; no intermediate backing allocation.
+class TransferOperations {
+    function complete(TcpConnection connection, Storage<Byte> buffer, Bool sending) returns TransferResult {
+        var size = Storage<Byte>.capacity(buffer);
+        var done = 0;
+        while (done < size) {
+            var remaining = Storage<Byte>.slice(buffer, done, size - done);
+            var count = 0;
+            if (sending) {
+                set count = connection.write(remaining);
+            } else {
+                set count = connection.read(remaining);
+            }
+            if (count < 0) {
+                return TransferResult { status = count; bytesTransferred = done; };
+            }
+            if (count == 0) {
+                var code = NetworkStatus.endOfStream();
+                if (sending) { set code = NetworkStatus.ioError(); }
+                return TransferResult { status = code; bytesTransferred = done; };
+            }
+            if (count > size - done) {
+                return TransferResult { status = NetworkStatus.ioError(); bytesTransferred = done; };
+            }
+            set done = done + count;
+        }
+        return TransferResult { status = NetworkStatus.success(); bytesTransferred = done; };
+    }
+}

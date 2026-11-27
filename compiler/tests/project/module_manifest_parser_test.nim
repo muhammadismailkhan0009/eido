@@ -99,7 +99,7 @@ suite "Module manifest parsing":
 
     check manifest.name == "stdlib"
     check manifest.sources.len == 0
-    check manifest.children.len == 7
+    check manifest.children.len == 8
     check manifest.children[0].name == "process"
     check manifest.children[1].name == "io"
     check manifest.children[2].name == "storage"
@@ -107,6 +107,7 @@ suite "Module manifest parsing":
     check manifest.children[4].name == "memory"
     check manifest.children[5].name == "text"
     check manifest.children[6].name == "runtime"
+    check manifest.children[7].name == "network"
     check manifest.dependencies.len == 0
     check manifest.exports == @[
       "process.Process",
@@ -114,7 +115,9 @@ suite "Module manifest parsing":
       "storage.Storage",
       "storage.Alignment",
       "collections.Array",
-      "collections.Arrays"
+      "collections.Arrays",
+      "network.NetworkStatus",
+      "network.Tcp", "network.TcpConnection", "network.TcpListener"
     ]
     check manifest.provides.len == 0
     check manifest.adopts.len == 0

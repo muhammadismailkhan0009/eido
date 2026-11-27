@@ -1,0 +1,12 @@
+import eido.stdlib.storage.Storage;
+/// Blocking byte stream over caller-owned live contiguous Storage.
+interface TcpConnection {
+    function read(Storage<Byte> buffer) returns Int;
+    function readExactly(Storage<Byte> buffer) returns TransferResult;
+    function write(Storage<Byte> buffer) returns Int;
+    function writeAll(Storage<Byte> buffer) returns TransferResult;
+    function localAddress() returns SocketAddress;
+    function remoteAddress() returns SocketAddress;
+    function shutdownWrite() returns Int;
+    function close();
+}

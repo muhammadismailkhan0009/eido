@@ -1,0 +1,9 @@
+/// Capture numeric endpoint snapshots before resource ownership is published.
+class SocketEndpoints {
+    function address(Int descriptor, Bool remote) returns SocketAddress {
+        return SocketAddress {
+            host = NativeSockets.host(descriptor, remote);
+            port = NativeSockets.port(descriptor, remote);
+        };
+    }
+}

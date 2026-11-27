@@ -1,0 +1,12 @@
+/// Outgoing TCP establishment and established-connection options.
+class TcpClientOptions {
+    Int connectTimeoutMs;
+    TcpConnectionOptions connectionOptions;
+    function defaults() returns TcpClientOptions {
+        return TcpClientOptions { connectTimeoutMs = 0; connectionOptions = TcpConnectionOptions.defaults(); };
+    }
+    function setConnectTimeout(Int timeoutMs) {
+        require { timeoutMs >= 0; }
+        set self.connectTimeoutMs = timeoutMs;
+    }
+}

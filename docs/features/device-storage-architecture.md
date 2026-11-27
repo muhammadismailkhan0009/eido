@@ -24,3 +24,11 @@ compile-time or runtime selection as appropriate. Avoid mandatory allocation,
 copying or dispatch merely for abstract flexibility. Native code supplies
 irreducible platform operations, not portable policy. Actual device control,
 permissions and completion remain distinct from ordinary memory reads/writes.
+
+## Networking order
+
+The initial frame-interface and in-memory link experiment has been removed:
+it is not used by the OS-managed socket API. Framework readiness takes
+priority over raw packet and device development. TCP first, then concurrency and application libraries; defer UDP, TAP/TUN
+and Eido-managed protocols until concrete requirements arise. A kernel TCP socket does not permit replacing its transport
+implementation. See [TCP networking](tcp-networking.md).

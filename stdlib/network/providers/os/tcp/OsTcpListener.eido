@@ -1,0 +1,41 @@
+/// Hidden listener; snapshot options, and transfer each accepted descriptor.
+class OsTcpListener implements TcpListener {
+    Int descriptor;
+    Int acceptTimeoutMs;
+    TcpConnectionOptions options;
+    SocketAddress local;
+
+    function open(Int handle, TcpListenOptions config) returns TcpListenerResult {
+        var endpoint = SocketEndpoints.address(handle, false);
+        if (endpoint.port < 0) {
+            NativeSockets.close(handle);
+            return TcpListenerResult.failed(NetworkStatus.ioError());
+        }
+        var listener = OsTcpListener {
+            descriptor = handle;
+            acceptTimeoutMs = config.acceptTimeoutMs;
+            options = TcpConnectionOptions {
+                readTimeoutMs = config.connectionOptions.readTimeoutMs;
+                writeTimeoutMs = config.connectionOptions.writeTimeoutMs;
+                noDelay = config.connectionOptions.noDelay;
+                keepAlive = config.connectionOptions.keepAlive;
+            };
+            local = ref endpoint;
+        };
+        return TcpListenerResult.opened(listener);
+    }
+    function accept() returns TcpConnectionResult {
+        if (self.descriptor < 0) { return TcpConnectionResult.failed(NetworkStatus.closed()); }
+        var handle = NativeSockets.accept(self.descriptor, self.acceptTimeoutMs);
+        if (handle < 0) { return TcpConnectionResult.failed(handle); }
+        return OsTcpConnection.open(handle, self.options);
+    }
+    function localAddress() returns SocketAddress { return SocketAddress { host = self.local.host; port = self.local.port; }; }
+    function close() {
+        if (self.descriptor >= 0) {
+            var handle = self.descriptor;
+            set self.descriptor = -1;
+            NativeSockets.close(handle);
+        }
+    }
+}

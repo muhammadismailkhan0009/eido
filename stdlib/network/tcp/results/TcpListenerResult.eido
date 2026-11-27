@@ -1,0 +1,17 @@
+/// Success has a listener; a negative status has no listener.
+class TcpListenerResult {
+    Int status;
+    TcpListener? listener;
+    invariant { self.valid(); }
+    function valid() returns Bool {
+        if self.listener exists { return self.status == NetworkStatus.success(); }
+        return self.status < 0;
+    }
+    function failed(Int code) returns TcpListenerResult {
+        require { code < 0; }
+        return TcpListenerResult { status = code; listener = none; };
+    }
+    function opened(TcpListener value) returns TcpListenerResult {
+        return TcpListenerResult { status = NetworkStatus.success(); listener = value; };
+    }
+}

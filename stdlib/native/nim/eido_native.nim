@@ -2,6 +2,8 @@
 ## These procedures are backend support for stdlib Eido declarations, not source-language semantics.
 
 import std/[os, syncio]
+import eido_native_sockets
+export eido_native_sockets
 
 ## Returns the number of user command-line arguments for Process.argumentCount().
 proc eido_native_method_Process_argumentCount*(): int64 =

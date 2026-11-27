@@ -10,6 +10,7 @@ children:
   memory: { path: memory }
   text: { path: text }
   runtime: { path: runtime }
+  network: { path: network }
 
 dependencies: []
 
@@ -20,6 +21,10 @@ exports:
   - storage.Alignment
   - collections.Array
   - collections.Arrays
+  - network.NetworkStatus
+  - network.Tcp
+  - network.TcpConnection
+  - network.TcpListener
 
 provides: {}
 adopts: []

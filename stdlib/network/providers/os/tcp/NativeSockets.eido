@@ -1,0 +1,13 @@
+/// Private primitive-only native ABI. Negative values use NetworkStatus.
+class NativeSockets {
+    native function connect(String host, Int port, Int timeoutMs) returns Int;
+    native function listen(String host, Int port, Int backlog) returns Int;
+    native function accept(Int descriptor, Int timeoutMs) returns Int;
+    native function configure(Int descriptor, Bool noDelay, Bool keepAlive) returns Int;
+    native function receive(Int descriptor, Int address, Int count, Int timeoutMs) returns Int;
+    native function send(Int descriptor, Int address, Int count, Int timeoutMs) returns Int;
+    native function host(Int descriptor, Bool remote) returns String;
+    native function port(Int descriptor, Bool remote) returns Int;
+    native function shutdownWrite(Int descriptor) returns Int;
+    native function close(Int descriptor);
+}

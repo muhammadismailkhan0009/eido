@@ -1,0 +1,9 @@
+module: tcp_networking_test
+sources:
+  - Main.eido
+  - TcpTests.eido
+children: []
+dependencies: []
+exports: []
+provides: {}
+adopts: []

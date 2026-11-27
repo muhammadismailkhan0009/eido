@@ -214,10 +214,10 @@ interface only when its owning module explicitly authorizes implementation:
 
 ```yaml
 exports:
-  - FrameInterface
-  - FrameLink
+  - TcpConnection
+  - TcpListener
 allowsExternalImplementation:
-  - FrameInterface
+  - TcpConnection
 ```
 
 The optional list defaults to empty. Each entry names a distinct, locally owned

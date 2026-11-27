@@ -1,0 +1,16 @@
+import eido.stdlib.process.Process;
+
+function main() {
+    var mode = Process.argument(0);
+    if (mode == "server") {
+        serve();
+    } else if (mode == "errors") {
+        errors();
+    } else if (mode == "connect-timeout") {
+        connectTimeout();
+    } else if (mode == "timeouts") {
+        timeoutClient(Process.argument(1));
+    } else {
+        client(Process.argument(1));
+    }
+}

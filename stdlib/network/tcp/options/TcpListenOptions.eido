@@ -1,0 +1,17 @@
+/// Listener configuration and options inherited by accepted connections.
+class TcpListenOptions {
+    Int backlog;
+    Int acceptTimeoutMs;
+    TcpConnectionOptions connectionOptions;
+    function defaults() returns TcpListenOptions {
+        return TcpListenOptions { backlog = 128; acceptTimeoutMs = 0; connectionOptions = TcpConnectionOptions.defaults(); };
+    }
+    function setBacklog(Int value) {
+        require { value > 0; }
+        set self.backlog = value;
+    }
+    function setAcceptTimeout(Int timeoutMs) {
+        require { timeoutMs >= 0; }
+        set self.acceptTimeoutMs = timeoutMs;
+    }
+}

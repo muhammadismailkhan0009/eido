@@ -1,0 +1,249 @@
+import eido.stdlib.network.Tcp;
+import eido.stdlib.network.TcpClientOptions;
+import eido.stdlib.network.TcpListenOptions;
+import eido.stdlib.network.TcpConnection;
+import eido.stdlib.network.TcpConnectionResult;
+import eido.stdlib.network.SocketAddress;
+import eido.stdlib.network.NetworkStatus;
+import eido.stdlib.storage.Storage;
+import eido.stdlib.io.Console;
+import eido.stdlib.process.Process;
+
+function check(Bool condition, String message) {
+    if (not condition) {
+        Console.errorLine(message);
+        Process.exit(1);
+    }
+}
+
+function digit(Int value) returns String {
+    if (value == 0) { return "0"; }
+    if (value == 1) { return "1"; }
+    if (value == 2) { return "2"; }
+    if (value == 3) { return "3"; }
+    if (value == 4) { return "4"; }
+    if (value == 5) { return "5"; }
+    if (value == 6) { return "6"; }
+    if (value == 7) { return "7"; }
+    if (value == 8) { return "8"; }
+    return "9";
+}
+
+function decimal(Int value) returns String {
+    if (value < 10) { return digit(value); }
+    return decimal(value / 10) + digit(value - (value / 10) * 10);
+}
+
+// The harness supplies five decimal digits to avoid needing a String parser.
+function parsePort() returns Int {
+    var number = 0;
+    var index = 2;
+    while (index < 7) {
+        var value = Process.argument(index);
+        var candidate = 0;
+        while (candidate < 9 and digit(candidate) != value) {
+            set candidate = candidate + 1;
+        }
+        set number = number * 10 + candidate;
+        set index = index + 1;
+    }
+    return number;
+}
+
+function serve() {
+    var host = Process.argument(1);
+    var options = TcpListenOptions.defaults();
+    options.setAcceptTimeout(3000);
+    options.connectionOptions.setReadTimeout(1000);
+    options.connectionOptions.setWriteTimeout(1000);
+    var opened = Tcp.listen(SocketAddress { host = host; port = 0; }, options);
+    check(opened.status == NetworkStatus.success(), "listen");
+    if opened.listener exists {
+        var listener = opened.listener;
+        var address = listener.localAddress();
+        check(address.port > 0, "assigned port");
+        // Changing the options must not change existing listener configuration.
+        options.setAcceptTimeout(1);
+        options.connectionOptions.setReadTimeout(1);
+        Console.writeLine(decimal(address.port));
+        var accepted = listener.accept();
+        check(accepted.status == NetworkStatus.success(), "accept");
+        if accepted.connection exists {
+            var connection = accepted.connection;
+            listener.close();
+            listener.close();
+            var closed = listener.accept();
+            check(closed.status == NetworkStatus.closed(), "closed listener");
+            var local = connection.localAddress();
+            var remote = connection.remoteAddress();
+            check(local.port == address.port and remote.port > 0, "endpoint addresses");
+            var buffer = Storage<Byte>.allocate(8);
+            check(Storage<Byte>.strideBytes(buffer) == 1, "byte stride");
+            var strided = Storage<Byte>.allocateRaw(8, 4);
+            check(Storage<Byte>.strideBytes(strided) == 4, "raw stride");
+            check(connection.read(strided) == NetworkStatus.invalidBuffer(), "strided receive");
+            check(connection.write(strided) == NetworkStatus.invalidBuffer(), "strided send");
+            Storage<Byte>.release(strided);
+            var empty = Storage<Byte>.slice(buffer, 0, 0);
+            check(connection.read(empty) == NetworkStatus.invalidBuffer(), "empty read");
+            check(connection.write(empty) == 0, "empty write");
+            var emptyResult = connection.readExactly(empty);
+            check(emptyResult.status == 0 and emptyResult.bytesTransferred == 0, "empty exact read");
+            var first = Storage<Byte>.slice(buffer, 0, 4);
+            var received = connection.readExactly(first);
+            check(received.status == 0 and received.bytesTransferred == 4, "read exactly");
+            check(Storage<Byte>.read(buffer, 0) == 80 and Storage<Byte>.read(buffer, 3) == 71, "payload");
+            var sent = connection.writeAll(first);
+            check(sent.status == 0 and sent.bytesTransferred == 4, "write all");
+            var tail = Storage<Byte>.slice(buffer, 0, 8);
+            var ended = connection.readExactly(tail);
+            check(ended.status == NetworkStatus.endOfStream() and ended.bytesTransferred == 2, "partial EOF");
+            check(Storage<Byte>.read(buffer, 0) == 11 and Storage<Byte>.read(buffer, 1) == 22, "partial payload");
+            check(connection.read(buffer) == 0, "EOF");
+            check(connection.shutdownWrite() == 0, "shutdown");
+            check(connection.shutdownWrite() == 0, "repeat shutdown");
+            check(connection.write(buffer) == NetworkStatus.closed(), "write after shutdown");
+            // Copying a result must preserve its opaque interface identity.
+            var alias = copy accepted;
+            connection.close();
+            connection.close();
+            var sameIdentity = false;
+            if alias.connection exists {
+                check(alias.connection.read(buffer) == NetworkStatus.closed(), "copied result aliases resource");
+                alias.connection.close();
+                set sameIdentity = true;
+            }
+            check(sameIdentity, "copy retained optional connection");
+            Storage<Byte>.release(buffer);
+            Console.writeLine("server PASS");
+            return;
+        }
+    }
+    check(false, "missing server resource");
+}
+
+function client(String host) {
+    var port = parsePort();
+    check(port > 0, "port parsing");
+    var options = TcpClientOptions.defaults();
+    options.setConnectTimeout(3000);
+    options.connectionOptions.setReadTimeout(3000);
+    options.connectionOptions.setWriteTimeout(3000);
+    options.connectionOptions.setNoDelay(true);
+    options.connectionOptions.setKeepAlive(true);
+    var opened = Tcp.connect(SocketAddress { host = host; port = port; }, options);
+    check(opened.status == 0, "connect");
+    if opened.connection exists {
+        var connection = opened.connection;
+        var buffer = Storage<Byte>.allocate(4);
+        Storage<Byte>.write(buffer, 0, 80);
+        Storage<Byte>.write(buffer, 1, 73);
+        Storage<Byte>.write(buffer, 2, 78);
+        Storage<Byte>.write(buffer, 3, 71);
+        var sent = connection.writeAll(buffer);
+        check(sent.status == 0 and sent.bytesTransferred == 4, "client write");
+        var received = connection.readExactly(buffer);
+        check(received.status == 0 and received.bytesTransferred == 4, "client read");
+        check(Storage<Byte>.read(buffer, 1) == 73, "echo payload");
+        var last = Storage<Byte>.slice(buffer, 0, 2);
+        Storage<Byte>.write(last, 0, 11);
+        Storage<Byte>.write(last, 1, 22);
+        var written = connection.writeAll(last);
+        check(written.status == 0, "tail");
+        check(connection.shutdownWrite() == 0, "client shutdown");
+        check(connection.read(buffer) == 0, "server EOF");
+        connection.close();
+        Storage<Byte>.release(buffer);
+        Console.writeLine("client PASS");
+        return;
+    }
+    check(false, "missing client connection");
+}
+
+function errors() {
+    var address = SocketAddress { host = "127.0.0.1"; port = 0; };
+    var clientOptions = TcpClientOptions.defaults();
+    var invalid = Tcp.connect(address, clientOptions);
+    check(invalid.status == NetworkStatus.invalidAddress(), "invalid connect port");
+    var listenOptions = TcpListenOptions.defaults();
+    listenOptions.setAcceptTimeout(100);
+    var independent = TcpListenOptions.defaults();
+    listenOptions.connectionOptions.setReadTimeout(250);
+    check(independent.connectionOptions.readTimeoutMs == 0, "fresh defaults");
+    var badOptions = TcpListenOptions { backlog = -1; acceptTimeoutMs = 0; connectionOptions = ref listenOptions.connectionOptions; };
+    var bad = Tcp.listen(address, badOptions);
+    check(bad.status == NetworkStatus.invalidOptions(), "invalid options");
+    // Repeated creation/closure must not accumulate descriptors.
+    var i = 0;
+    while (i < 32) {
+        var created = Tcp.listen(address, listenOptions);
+        check(created.status == 0, "repeated listen");
+        if created.listener exists { created.listener.close(); }
+        set i = i + 1;
+    }
+    var opened = Tcp.listen(address, listenOptions);
+    check(opened.status == 0, "timeout listen");
+    if opened.listener exists {
+        var listener = opened.listener;
+        var localAddress = listener.localAddress();
+        var duplicate = Tcp.listen(localAddress, listenOptions);
+        check(duplicate.status == NetworkStatus.addressInUse(), "address in use");
+        var expired = listener.accept();
+        check(expired.status == NetworkStatus.timedOut(), "accept timeout");
+        listener.close();
+        var refused = Tcp.connect(localAddress, clientOptions);
+        check(refused.status == NetworkStatus.connectionRefused(), "connection refused");
+    }
+    // Keep one active socket while the harness inspects the descriptor table.
+    var gateOptions = TcpListenOptions.defaults();
+    gateOptions.setAcceptTimeout(3000);
+    var gate = Tcp.listen(address, gateOptions);
+    check(gate.status == 0, "gate listen");
+    if gate.listener exists {
+        var listener = gate.listener;
+        var actual = listener.localAddress();
+        Console.writeLine(decimal(actual.port));
+        var accepted = listener.accept();
+        check(accepted.status == 0, "gate accept");
+        if accepted.connection exists { accepted.connection.close(); }
+        listener.close();
+        Console.writeLine("errors PASS");
+        return;
+    }
+    check(false, "missing gate");
+}
+
+function timeoutClient(String host) {
+    var options = TcpClientOptions.defaults();
+    options.setConnectTimeout(3000);
+    options.connectionOptions.setReadTimeout(150);
+    options.connectionOptions.setWriteTimeout(150);
+    var address = SocketAddress { host = host; port = parsePort(); };
+    var opened = Tcp.connect(address, options);
+    check(opened.status == 0, "timeout connect");
+    if opened.connection exists {
+        var connection = opened.connection;
+        var buffer = Storage<Byte>.allocate(4);
+        var result = connection.readExactly(buffer);
+        check(result.status == NetworkStatus.timedOut() and result.bytesTransferred == 2, "partial read timeout");
+        Storage<Byte>.release(buffer);
+        var large = Storage<Byte>.allocate(8388608);
+        var written = connection.writeAll(large);
+        check(written.status == NetworkStatus.timedOut() and written.bytesTransferred > 0 and written.bytesTransferred < 8388608, "partial write timeout");
+        Storage<Byte>.release(large);
+        connection.close();
+        Console.writeLine("timeouts PASS");
+        return;
+    }
+    check(false, "missing timeout connection");
+}
+
+function connectTimeout() {
+    var options = TcpClientOptions.defaults();
+    options.setConnectTimeout(150);
+    var address = SocketAddress { host = "127.0.0.1"; port = parsePort(); };
+    var opened = Tcp.connect(address, options);
+    if opened.connection exists { opened.connection.close(); }
+    check(opened.status == NetworkStatus.timedOut(), "connect timeout");
+    Console.writeLine("connect timeout PASS");
+}

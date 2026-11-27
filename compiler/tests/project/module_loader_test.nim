@@ -53,7 +53,7 @@ suite "Module project loading":
     let project = loadModuleProject(root / "module.yaml", ptExecutable)
 
     check project.rootModule == "shop"
-    check project.modules.len == 12
+    check project.modules.len == 13
     check project.modules[0].canonicalName == "shop"
     check project.modules[1].canonicalName == "shop.payments"
 
@@ -68,7 +68,8 @@ suite "Module project loading":
       BuiltinCollectionsModuleName,
       BuiltinMemoryModuleName,
       BuiltinTextModuleName,
-      BuiltinRuntimeModuleName
+      BuiltinRuntimeModuleName,
+      "eido.stdlib.network"
     ]
     check project.modules[2].exports == @[
       "process.Process",
@@ -76,7 +77,9 @@ suite "Module project loading":
       "storage.Storage",
       "storage.Alignment",
       "collections.Array",
-      "collections.Arrays"
+      "collections.Arrays",
+      "network.NetworkStatus",
+      "network.Tcp", "network.TcpConnection", "network.TcpListener"
     ]
 
     check project.modules[3].canonicalName == BuiltinProcessModuleName
@@ -137,8 +140,31 @@ suite "Module project loading":
     check project.modules[11].sourcePaths == @[BuiltinCopyRuntimeSourcePath]
     check project.modules[11].exports.len == 0
 
+    check project.modules[12].canonicalName == "eido.stdlib.network"
+    let networkPaths = @[
+      "eido://stdlib/network/address/SocketAddress.eido",
+      "eido://stdlib/network/providers/os/tcp/NativeSockets.eido",
+      "eido://stdlib/network/providers/os/tcp/OsTcpConnection.eido",
+      "eido://stdlib/network/providers/os/tcp/OsTcpListener.eido",
+      "eido://stdlib/network/providers/os/tcp/SocketEndpoints.eido",
+      "eido://stdlib/network/status/NetworkStatus.eido",
+      "eido://stdlib/network/tcp/Tcp.eido",
+      "eido://stdlib/network/tcp/TcpConnection.eido",
+      "eido://stdlib/network/tcp/TcpListener.eido",
+      "eido://stdlib/network/tcp/TransferOperations.eido",
+      "eido://stdlib/network/tcp/options/TcpClientOptions.eido",
+      "eido://stdlib/network/tcp/options/TcpConnectionOptions.eido",
+      "eido://stdlib/network/tcp/options/TcpListenOptions.eido",
+      "eido://stdlib/network/tcp/results/TcpConnectionResult.eido",
+      "eido://stdlib/network/tcp/results/TcpListenerResult.eido",
+      "eido://stdlib/network/tcp/results/TransferResult.eido"]
+    check project.modules[12].sourcePaths == networkPaths
+    check project.modules[12].exports == @["NetworkStatus", "Tcp", "TcpConnection", "TcpListener"]
+    check project.modules[12].allowsExternalImplementation == @["TcpConnection", "TcpListener"]
+    check project.modules[2].allowsExternalImplementation.len == 0
+    check BuiltinStorageModuleName in project.modules[12].dependencies
     check BuiltinStdlibModuleName in project.modules[0].dependencies
-    check project.sources.len == 23
+    check project.sources.len == 39
     check project.sources[0].moduleName == "shop"
     check project.sources[1].moduleName == "shop.payments"
     check project.sources[2].moduleName == BuiltinProcessModuleName
@@ -163,6 +189,10 @@ suite "Module project loading":
     check project.sources[21].runtimeCapability == lrcString
     check project.sources[22].origin == soLanguageRuntime
     check project.sources[22].runtimeCapability == lrcClassCopy
+    for index in 23 .. 38:
+      check project.sources[index].moduleName == "eido.stdlib.network"
+      check project.sources[index].origin == soOrdinary
+      check project.sources[index].runtimeCapability == lrcNone
     check project.sources.allIt(not it.path.endsWith("Ignored.eido"))
 
   test "rejects dependency cycles":

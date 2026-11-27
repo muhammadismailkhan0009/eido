@@ -180,6 +180,9 @@ const
   BuiltinNativeSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native.nim"
   )
+  BuiltinSocketSupportSource* = staticRead(
+    currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_native_sockets.nim"
+  )
   BuiltinStorageSupportSource* = staticRead(
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_storage.nim"
   )

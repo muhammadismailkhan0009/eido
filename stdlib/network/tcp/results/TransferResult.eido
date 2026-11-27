@@ -1,0 +1,6 @@
+/// Complete-transfer progress, including bytes moved before a failure.
+class TransferResult {
+    Int status;
+    Int bytesTransferred;
+    invariant { self.status <= 0; self.bytesTransferred >= 0; }
+}

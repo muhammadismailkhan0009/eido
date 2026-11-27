@@ -1,0 +1,23 @@
+/// Configuration shared by outbound and accepted TCP connections.
+class TcpConnectionOptions {
+    Int readTimeoutMs;
+    Int writeTimeoutMs;
+    Bool noDelay;
+    Bool keepAlive;
+    function defaults() returns TcpConnectionOptions {
+        return TcpConnectionOptions { readTimeoutMs = 0; writeTimeoutMs = 0; noDelay = false; keepAlive = false; };
+    }
+    function setReadTimeout(Int timeoutMs) {
+        require { timeoutMs >= 0; }
+        set self.readTimeoutMs = timeoutMs;
+    }
+    function setWriteTimeout(Int timeoutMs) {
+        require { timeoutMs >= 0; }
+        set self.writeTimeoutMs = timeoutMs;
+    }
+    function setNoDelay(Bool enabled) { set self.noDelay = enabled; }
+    function setKeepAlive(Bool enabled) { set self.keepAlive = enabled; }
+    function valid() returns Bool {
+        return self.readTimeoutMs >= 0 and self.writeTimeoutMs >= 0;
+    }
+}

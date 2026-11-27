@@ -1,0 +1,5 @@
+/// Hostname or numeric IP address and TCP/UDP port.
+class SocketAddress {
+    String host;
+    Int port;
+}

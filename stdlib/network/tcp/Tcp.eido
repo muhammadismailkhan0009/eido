@@ -1,0 +1,25 @@
+/// Default OS-managed TCP factory; explicit configuration.
+class Tcp {
+    function connect(SocketAddress address, TcpClientOptions options) returns TcpConnectionResult {
+        if (address.host == "" or address.port <= 0 or address.port > 65535) {
+            return TcpConnectionResult.failed(NetworkStatus.invalidAddress());
+        }
+        if (options.connectTimeoutMs < 0 or not options.connectionOptions.valid()) {
+            return TcpConnectionResult.failed(NetworkStatus.invalidOptions());
+        }
+        var handle = NativeSockets.connect(address.host, address.port, options.connectTimeoutMs);
+        if (handle < 0) { return TcpConnectionResult.failed(handle); }
+        return OsTcpConnection.open(handle, options.connectionOptions);
+    }
+    function listen(SocketAddress address, TcpListenOptions options) returns TcpListenerResult {
+        if (address.port < 0 or address.port > 65535) {
+            return TcpListenerResult.failed(NetworkStatus.invalidAddress());
+        }
+        if (options.backlog <= 0 or options.backlog > 2147483647 or options.acceptTimeoutMs < 0 or not options.connectionOptions.valid()) {
+            return TcpListenerResult.failed(NetworkStatus.invalidOptions());
+        }
+        var handle = NativeSockets.listen(address.host, address.port, options.backlog);
+        if (handle < 0) { return TcpListenerResult.failed(handle); }
+        return OsTcpListener.open(handle, options);
+    }
+}

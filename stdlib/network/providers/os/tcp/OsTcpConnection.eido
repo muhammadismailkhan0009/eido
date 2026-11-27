@@ -1,0 +1,71 @@
+import eido.stdlib.storage.Storage;
+/// Hidden single-owner socket implementation; publish only as TcpConnection.
+class OsTcpConnection implements TcpConnection {
+    Int descriptor;
+    Int readTimeoutMs;
+    Int writeTimeoutMs;
+    Bool writeClosed;
+    SocketAddress local;
+    SocketAddress remote;
+
+    function open(Int handle, TcpConnectionOptions options) returns TcpConnectionResult {
+        var configured = NativeSockets.configure(handle, options.noDelay, options.keepAlive);
+        if (configured != NetworkStatus.success()) {
+            NativeSockets.close(handle);
+            return TcpConnectionResult.failed(configured);
+        }
+        var localEndpoint = SocketEndpoints.address(handle, false);
+        var remoteEndpoint = SocketEndpoints.address(handle, true);
+        if (localEndpoint.port < 0 or remoteEndpoint.port < 0) {
+            NativeSockets.close(handle);
+            return TcpConnectionResult.failed(NetworkStatus.ioError());
+        }
+        var endpoint = OsTcpConnection {
+            descriptor = handle;
+            readTimeoutMs = options.readTimeoutMs;
+            writeTimeoutMs = options.writeTimeoutMs;
+            writeClosed = false;
+            local = ref localEndpoint;
+            remote = ref remoteEndpoint;
+        };
+        return TcpConnectionResult.opened(endpoint);
+    }
+    function read(Storage<Byte> buffer) returns Int {
+        if (self.descriptor < 0) { return NetworkStatus.closed(); }
+        var count = Storage<Byte>.capacity(buffer);
+        if (count == 0 or Storage<Byte>.strideBytes(buffer) != 1) {
+            return NetworkStatus.invalidBuffer();
+        }
+        return NativeSockets.receive(self.descriptor, Storage<Byte>.address(buffer), count, self.readTimeoutMs);
+    }
+    function write(Storage<Byte> buffer) returns Int {
+        if (self.descriptor < 0 or self.writeClosed) { return NetworkStatus.closed(); }
+        var count = Storage<Byte>.capacity(buffer);
+        if (count == 0) { return 0; }
+        if (Storage<Byte>.strideBytes(buffer) != 1) { return NetworkStatus.invalidBuffer(); }
+        return NativeSockets.send(self.descriptor, Storage<Byte>.address(buffer), count, self.writeTimeoutMs);
+    }
+    function readExactly(Storage<Byte> buffer) returns TransferResult {
+        return TransferOperations.complete(self, buffer, false);
+    }
+    function writeAll(Storage<Byte> buffer) returns TransferResult {
+        return TransferOperations.complete(self, buffer, true);
+    }
+    function localAddress() returns SocketAddress { return SocketAddress { host = self.local.host; port = self.local.port; }; }
+    function remoteAddress() returns SocketAddress { return SocketAddress { host = self.remote.host; port = self.remote.port; }; }
+    function shutdownWrite() returns Int {
+        if (self.descriptor < 0) { return NetworkStatus.closed(); }
+        if (self.writeClosed) { return NetworkStatus.success(); }
+        var code = NativeSockets.shutdownWrite(self.descriptor);
+        if (code == NetworkStatus.success()) { set self.writeClosed = true; }
+        return code;
+    }
+    function close() {
+        if (self.descriptor >= 0) {
+            var handle = self.descriptor;
+            set self.descriptor = -1;
+            set self.writeClosed = true;
+            NativeSockets.close(handle);
+        }
+    }
+}

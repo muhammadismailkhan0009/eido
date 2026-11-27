@@ -1,0 +1,19 @@
+/// Portable operational statuses, independent of OS errno values.
+class NetworkStatus {
+    function wouldBlock() returns Int { return -1; }
+    function closed() returns Int { return -3; }
+    function invalidBuffer() returns Int { return -5; }
+    function success() returns Int { return 0; }
+    function invalidAddress() returns Int { return -6; }
+    function invalidOptions() returns Int { return -7; }
+    function addressInUse() returns Int { return -8; }
+    function connectionRefused() returns Int { return -9; }
+    function connectionReset() returns Int { return -10; }
+    function timedOut() returns Int { return -11; }
+    function resolutionFailed() returns Int { return -12; }
+    function permissionDenied() returns Int { return -13; }
+    function unreachable() returns Int { return -14; }
+    function endOfStream() returns Int { return -15; }
+    function ioError() returns Int { return -16; }
+    function unsupported() returns Int { return -17; }
+}

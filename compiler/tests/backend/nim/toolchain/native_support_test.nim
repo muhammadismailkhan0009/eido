@@ -24,4 +24,5 @@ suite "Installed native support":
     let path = nativeSupportPath()
 
     check fileExists(path / "eido_native.nim")
+    check fileExists(path / "eido_native_sockets.nim")
     check readFile(path / "eido_native.nim").contains("eido_native_method_Console_writeLine")

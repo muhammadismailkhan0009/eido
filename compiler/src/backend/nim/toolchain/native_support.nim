@@ -15,7 +15,7 @@ proc publishEmbeddedSource(path, source: string) =
 ## Materializes the compiler-embedded native support into a content-versioned SDK cache.
 proc materializeEmbeddedNativeSupport(): string =
   let sdkCache = getCacheDir("eido")
-  let directory = sdkCache / "native" / ("nim-" & $hash(BuiltinNativeSupportSource & BuiltinStorageSupportSource))
+  let directory = sdkCache / "native" / ("nim-" & $hash(BuiltinNativeSupportSource & BuiltinStorageSupportSource & BuiltinSocketSupportSource))
   createDir(sdkCache)
   createDir(sdkCache / "native")
   createDir(directory)
@@ -25,6 +25,8 @@ proc materializeEmbeddedNativeSupport(): string =
 
   let storageFile = directory / "eido_storage.nim"
   publishEmbeddedSource(storageFile, BuiltinStorageSupportSource)
+
+  publishEmbeddedSource(directory / "eido_native_sockets.nim", BuiltinSocketSupportSource)
 
   directory
 

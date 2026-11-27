@@ -699,6 +699,39 @@ function main() returns Int {
         check fileExists(targetPath)
         check targetPath.extractFilename == filename
 
+  test "SDK TCP imports navigate to the embedded contract":
+    let root = freshLspProject("tcp_imports")
+    defer: removeDir(root)
+    writeFile(root / "module.yaml", "module: app\nsources:\n  - Main.eido\n")
+    let sourcePath = root / "Main.eido"
+    let source = "import eido.stdlib.network.TcpConnection;\nfunction main() { }"
+    writeFile(sourcePath, source)
+    let uri = pathToFileUri(sourcePath)
+    var server = initLanguageServer()
+    discard server.handleMessage(%*{
+      "jsonrpc": "2.0", "id": 1, "method": "initialize",
+      "params": {"rootUri": pathToFileUri(root)}
+    })
+    let opened = server.handleMessage(%*{
+      "jsonrpc": "2.0", "method": "textDocument/didOpen",
+      "params": {"textDocument": {"uri": uri, "languageId": "eido",
+        "version": 1, "text": source}}
+    })
+    let diagnostics = diagnosticsFor(opened, uri)
+    check not diagnostics.isNil
+    if not diagnostics.isNil:
+      check diagnostics["params"]["diagnostics"].len == 0
+    let definition = server.handleMessage(%*{
+      "jsonrpc": "2.0", "id": 2, "method": "textDocument/definition",
+      "params": {"textDocument": {"uri": uri},
+        "position": {"line": 0, "character": 32}}
+    })
+    check definition[0]["result"].kind == JObject
+    if definition[0]["result"].kind == JObject:
+      let targetPath = fileUriToPath(definition[0]["result"]["uri"].getStr)
+      check fileExists(targetPath)
+      check targetPath.extractFilename == "TcpConnection.eido"
+
   test "formatting returns a full document edit":
     let root = freshLspProject("formatting")
     defer: removeDir(root)

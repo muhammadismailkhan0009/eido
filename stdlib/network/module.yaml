@@ -1,0 +1,23 @@
+module: network
+
+sources: [.]
+
+dependencies: [storage]
+
+adopts:
+  - address.SocketAddress
+  - status.NetworkStatus
+  - tcp.TcpConnection
+  - tcp.TcpListener
+  - tcp.TcpListenOptions
+  - tcp.TcpConnectionOptions
+  - tcp.TcpConnectionResult
+  - tcp.TcpListenerResult
+  - tcp.TransferResult
+  - tcp.TransferOperations
+  - providers.NativeSockets
+  - providers.OsTcpConnection
+  - providers.OsTcpListener
+
+exports: [NetworkStatus, Tcp, TcpConnection, TcpListener]
+allowsExternalImplementation: [TcpConnection, TcpListener]

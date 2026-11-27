@@ -39,7 +39,7 @@ proc nativeTestIdentity(): string =
     if fileExists(path):
       data.add "\n" & path & "\n" & readFile(path)
   let support = nativeSupportPath()
-  for name in ["eido_native.nim", "eido_storage.nim"]:
+  for name in ["eido_native.nim", "eido_storage.nim", "eido_native_sockets.nim"]:
     let path = support / name
     if not fileExists(path): return ""
     data.add "\n" & path & "\n" & readFile(path)
