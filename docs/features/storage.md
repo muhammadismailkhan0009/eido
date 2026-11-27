@@ -25,6 +25,7 @@ Storage<T>.view(Storage<Byte> raw, Int start) returns Storage<T>;
 Storage<T>.viewAt(Storage<Byte> raw, Int byteOffset) returns Storage<T>;
 Storage<T>.slice(Storage<T> storage, Int start, Int count) returns Storage<T>;
 Storage<T>.capacity(Storage<T> storage) returns Int;
+Storage<T>.strideBytes(Storage<T> storage) returns Int;
 Storage<T>.address(Storage<T> storage) returns Int;
 Storage<T>.read(Storage<T> storage, Int index) returns T;
 Storage<T>.write(Storage<T> storage, Int index, T value);
@@ -49,6 +50,8 @@ Storage<Byte>.borrowAddress(
 ```
 
 `size()` and `alignment()` expose the target representation facts for `T`. Memory-policy compile-time code can query the equivalent dynamic facts through `StorageInfo.sizeOf(type)` and `StorageInfo.alignmentOf(type)`.
+
+`strideBytes(storage)` reports the actual byte distance between consecutive slots in a live descriptor, including padded raw blocks, typed views and slices. It is not the element size. Native contiguous byte I/O requires stride 1; observation does not allocate, change ownership, or bypass liveness validation.
 
 ## Typed Storage is Eido code
 

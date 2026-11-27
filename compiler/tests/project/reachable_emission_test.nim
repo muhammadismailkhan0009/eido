@@ -1,5 +1,5 @@
 import std/[os, strutils, unittest]
-import pipeline/project_compiler
+import pipeline/[project_compiler, options]
 import support/[project_fixture_support, feature_test_support]
 import project/model
 import project/modules/loader
@@ -76,10 +76,42 @@ suite "Reachable executable emission":
       adopts: []
     """)
     writeFile(root / "Main.eido", "function main() returns Int { return 5; }")
-    let generated = compileProjectToNim(loadModuleProject(root / "module.yaml", ptExecutable))
-    check "import eido_storage" notin generated
-    check "import eido_native" notin generated
-    check "AlignedHeapBacking" notin generated
+    let manifest = root / "module.yaml"
+    for policy in [DefaultMemoryPolicy, NoMemoryPolicy]:
+      let generated = compileProjectToNim(
+        loadModuleProject(manifest, ptExecutable),
+        CompilationOptions(memoryPolicy: policy)
+      )
+      check "import eido_storage" notin generated
+      check "import eido_native" notin generated
+      check "AlignedHeapBacking" notin generated
+      check "eido_interface_dispatch_" notin generated
+      check "eidoMemoryPayloadAt" notin generated
+
+    # Merely using a stateless SDK API must not pull in unrelated
+    # interface declarations, providers or memory policy.
+    writeFile(root / "Main.eido", "function main() returns Int { return Alignment.alignUp(17, 8); }")
+    let statusOnly = compileProjectToNim(
+      loadModuleProject(manifest, ptExecutable),
+      CompilationOptions(memoryPolicy: NoMemoryPolicy)
+    )
+    check "_alignUp(" in statusOnly
+    check "import eido_storage" notin statusOnly
+    check "eidoMemoryPayloadAt" notin statusOnly
+
+    # A genuinely reachable object-backed provider still needs a policy.
+    writeFile(root / "Main.eido", "function main() { var array = Arrays<Int>.create(2); array.release(); }")
+    expect ValueError:
+      discard compileProjectToNim(
+        loadModuleProject(manifest, ptExecutable),
+        CompilationOptions(memoryPolicy: NoMemoryPolicy)
+      )
+    let provider = compileProjectToNim(loadModuleProject(manifest, ptExecutable))
+    check "_create(" in provider
+    check "eido_interface_dispatch_" in provider
+    check "_setAt(" in provider
+    check "import eido_storage" in provider
+    check "eidoMemoryPayloadAt" in provider
 
   test "unreachable erroneous declarations still fail semantic validation":
     expect ValueError:

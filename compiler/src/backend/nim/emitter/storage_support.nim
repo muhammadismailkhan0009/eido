@@ -99,6 +99,10 @@ proc renderStorageClassSupport(
     result.add "proc " & methodNameFor("capacity") & "(storage: " & storageType & "): int64 =\n"
     result.add "  eidoStorageCapacity[" & physicalType & "](storage)\n\n"
 
+  if classDecl.hasNativeMethod("strideBytes"):
+    result.add "proc " & methodNameFor("strideBytes") & "(storage: " & storageType & "): int64 =\n"
+    result.add "  eidoStorageStrideBytes[" & physicalType & "](storage)\n\n"
+
   if classDecl.hasNativeMethod("address"):
     result.add "proc " & methodNameFor("address") & "(storage: " & storageType & "): int64 =\n"
     result.add "  eidoStorageAddress[" & physicalType & "](storage)\n\n"

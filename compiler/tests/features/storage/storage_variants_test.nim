@@ -19,6 +19,21 @@ suite "Storage execution":
         expected: "18"
       ),
       NativeFeatureCase(
+        name: "reports actual stride of a typed view and slice",
+        source: """
+      function main() returns Int {
+        var raw = Storage<Byte>.allocateRaw(3, 16);
+        var typed = Storage<Int>.view(raw, 0);
+        var sliced = Storage<Int>.slice(typed, 1, 1);
+        var result = Storage<Byte>.strideBytes(raw) +
+          Storage<Int>.strideBytes(typed) + Storage<Int>.strideBytes(sliced);
+        Storage<Byte>.release(raw);
+        return result;
+      }
+    """,
+        expected: "48"
+      ),
+      NativeFeatureCase(
         name: "allocates typed slots and assigns values independently",
         source: """
       function main() returns Int {

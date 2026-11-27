@@ -10,8 +10,10 @@ import program, declarations, expressions, statements
 type
   Reachability = object
     classes: HashSet[string]
+    interfaces: HashSet[string]
     functions: HashSet[int]
     classQueue: seq[string]
+    interfaceQueue: seq[string]
     functionQueue: seq[int]
 
 ## Marks a class and schedules its declaration dependencies once.
@@ -19,6 +21,12 @@ proc markClass(reach: var Reachability, name: string) =
   if name notin reach.classes:
     reach.classes.incl name
     reach.classQueue.add name
+
+## Marks an interface and schedules its signature and inheritance dependencies.
+proc markInterface(reach: var Reachability, name: string) =
+  if name notin reach.interfaces:
+    reach.interfaces.incl name
+    reach.interfaceQueue.add name
 
 ## Marks a resolved function identity once, including recursive calls.
 proc markFunction(reach: var Reachability, id: FunctionId) =
@@ -28,8 +36,10 @@ proc markFunction(reach: var Reachability, id: FunctionId) =
 
 ## Marks nominal representation dependencies (including optional classes).
 proc markType(reach: var Reachability, typ: EidoType) =
-  if typ.kind == etkClass:
-    reach.markClass(typ.className)
+  case typ.kind
+  of etkClass: reach.markClass(typ.className)
+  of etkInterface: reach.markInterface(typ.interfaceName)
+  else: discard
 
 ## Marks a callable result representation when present.
 proc markResult(reach: var Reachability, value: FunctionResult) =
@@ -133,6 +143,7 @@ proc scanCallable(reach: var Reachability, parameters: seq[HirParameter],
 
 ## Includes all methods of retained classes and their hidden representation needs.
 proc scanClass(reach: var Reachability, decl: HirClass) =
+  for implemented in decl.implements: reach.markInterface(implemented)
   for field in decl.fields: reach.markType(field.typ)
   for field in decl.classFields:
     reach.markType(field.typ)
@@ -142,6 +153,15 @@ proc scanClass(reach: var Reachability, decl: HirClass) =
     reach.scanCallable(meth.parameters, meth.result, meth.requires, meth.ensures, meth.body)
     for clause in meth.inheritedRequires: reach.scanExpr(clause.expr)
     for clause in meth.inheritedEnsures: reach.scanExpr(clause.expr)
+
+## Includes the nominal dependencies of a retained interface. Implementations
+## are reached through actual class use (including interface conversions),
+## not merely because a contract exists in the implicit SDK.
+proc scanInterface(reach: var Reachability, decl: HirInterface) =
+  for parent in decl.extends: reach.markInterface(parent)
+  for meth in decl.methods:
+    for typ in meth.parameterTypes: reach.markType(typ)
+    reach.scanCallable(meth.parameters, meth.result, meth.requires, meth.ensures, @[])
 
 ## Retains declarations reachable from main, eager state, interface adapters,
 ## runtime hooks and explicit metadata roots. During SDK selection preserve every
@@ -153,11 +173,11 @@ proc reachableProgram*(source: HirProgram, preserveUser = false,
   var reach: Reachability
   var classes = initTable[string, int]()
   var functions = initTable[int, int]()
+  var interfaces = initTable[string, int]()
   for i, decl in source.classes:
     classes[decl.sourceName] = i
     if (preserveUser and not decl.span.embeddedSdk) or
-        decl.span.isHiddenRuntime or decl.classFields.len > 0 or
-        decl.implements.len > 0:
+        decl.span.isHiddenRuntime or decl.classFields.len > 0:
       reach.markClass(decl.sourceName)
   for i, fn in source.functions:
     functions[fn.functionId.value] = i
@@ -166,15 +186,19 @@ proc reachableProgram*(source: HirProgram, preserveUser = false,
   reach.markFunction(source.mainFunctionId)
   for name in requiredClasses: reach.markClass(name)
   for layout in source.layouts: reach.markClass(layout.targetClass)
-  # Interface dispatch/adapters are generated as a family, so retain their
-  # signatures and contract dependencies conservatively.
-  for decl in source.interfaces:
-    for meth in decl.methods:
-      for typ in meth.parameterTypes: reach.markType(typ)
-      reach.scanCallable(meth.parameters, meth.result, meth.requires, meth.ensures, @[])
+  for i, decl in source.interfaces:
+    interfaces[decl.sourceName] = i
+    if (preserveUser and not decl.span.embeddedSdk) or decl.span.isHiddenRuntime:
+      reach.markInterface(decl.sourceName)
   var ci = 0
   var fi = 0
-  while ci < reach.classQueue.len or fi < reach.functionQueue.len:
+  var ii = 0
+  while ci < reach.classQueue.len or fi < reach.functionQueue.len or
+      ii < reach.interfaceQueue.len:
+    while ii < reach.interfaceQueue.len:
+      let name = reach.interfaceQueue[ii]
+      inc ii
+      if interfaces.hasKey(name): reach.scanInterface(source.interfaces[interfaces[name]])
     while ci < reach.classQueue.len:
       let name = reach.classQueue[ci]
       inc ci
@@ -187,6 +211,9 @@ proc reachableProgram*(source: HirProgram, preserveUser = false,
         reach.scanCallable(fn.parameters, fn.result, fn.requires, fn.ensures, fn.body)
   result = source
   result.classes = @[]
+  result.interfaces = @[]
+  for decl in source.interfaces:
+    if decl.sourceName in reach.interfaces: result.interfaces.add decl
   result.functions = @[]
   for decl in source.classes:
     if decl.sourceName in reach.classes: result.classes.add decl

@@ -101,3 +101,14 @@ suite "Native Storage boundary":
       eidoStorageWrite(typed, 0, 1'i64)
     expect AssertionDefect:
       discard eidoStorageSlotIdentity(typed, 0)
+
+  test "stride observation preserves raw and typed slice geometry and rejects released storage":
+    var raw = eidoStorageAllocateRaw(3, 16)
+    var typed = eidoStorageFromRaw[int64](raw)
+    let view = eidoStorageSlice(typed, 1, 2)
+    check eidoStorageStrideBytes(raw) == 16
+    check eidoStorageStrideBytes(typed) == 16
+    check eidoStorageStrideBytes(view) == 16
+    eidoStorageRelease(typed)
+    expect AssertionDefect:
+      discard eidoStorageStrideBytes(typed)

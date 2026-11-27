@@ -9,22 +9,25 @@ import names
 import type_emitter
 import runtime_bindings
 
+## Uses canonical callable names because inserting selected runtime sources
+## can renumber semantic IDs between base and runtime-inclusive analyses.
 ## Returns identity-valued lexical slots described for one function.
 proc identityValuesForFunction*(
   metadata: CompileTimeMemoryMetadata,
-  functionId: FunctionId
+  sourceName: string
 ): seq[CompileTimeIdentityValue] =
   for callable in metadata.callables:
-    if callable.kind == ctkFunction and callable.semanticId == functionId.value:
+    if callable.kind == ctkFunction and callable.sourceName == sourceName:
       return callable.identityValues
 
 ## Returns identity-valued lexical slots described for one method.
 proc identityValuesForMethod*(
   metadata: CompileTimeMemoryMetadata,
-  methodId: MethodId
+  ownerName, sourceName: string
 ): seq[CompileTimeIdentityValue] =
   for callable in metadata.callables:
-    if callable.kind == ctkMethod and callable.semanticId == methodId.value:
+    if callable.kind == ctkMethod and callable.ownerName == ownerName and
+        callable.sourceName == sourceName:
       return callable.identityValues
 
 ## Extracts LocalIds from compiler-described identity values.

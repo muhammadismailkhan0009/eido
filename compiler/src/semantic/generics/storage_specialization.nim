@@ -138,6 +138,11 @@ proc specializeRawStorageClass*(
       FunctionResultRef(kind: frrSingle, typeRef: intRef)
     ),
     makeMethod(
+      "strideBytes",
+      @[Parameter(span: span, name: "storage", typeRef: rawType)],
+      FunctionResultRef(kind: frrSingle, typeRef: intRef)
+    ),
+    makeMethod(
       "address",
       @[Parameter(span: span, name: "storage", typeRef: rawType)],
       FunctionResultRef(kind: frrSingle, typeRef: intRef)

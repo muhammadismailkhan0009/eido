@@ -264,6 +264,11 @@ proc eidoStorageCapacity*[T](storage: EidoStorage[T]): int64 =
   requireEidoStorageLive(storage)
   storage.capacity
 
+## Returns the byte distance between consecutive slots in a live descriptor.
+proc eidoStorageStrideBytes*[T](storage: EidoStorage[T]): int64 =
+  requireEidoStorageLive(storage)
+  storage.strideBytes
+
 ## Returns the base byte address represented by one live Storage capability.
 proc eidoStorageAddress*[T](storage: EidoStorage[T]): int64 =
   requireEidoStorageLive(storage)

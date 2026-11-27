@@ -1,5 +1,5 @@
 import std/[strutils, unittest]
-import backend/nim/emitter/memory_metadata_emitter
+import backend/nim/emitter/[memory_metadata_emitter, instrumentation_emitter]
 import compile_time/model
 
 suite "Memory metadata emission":
@@ -36,3 +36,19 @@ suite "Memory metadata emission":
 
   test "renders nothing for empty memory metadata":
     check renderMemoryMetadata(CompileTimeMemoryMetadata(), @[]) == ""
+
+  test "identity slots follow canonical callable names across semantic ID renumbering":
+    let metadata = CompileTimeMemoryMetadata(callables: @[
+      CompileTimeCallableMetadata(kind: ctkFunction, semanticId: 1,
+        sourceName: "app.main", identityValues: @[CompileTimeIdentityValue(localId: 3, sourceName: "first")]),
+      CompileTimeCallableMetadata(kind: ctkMethod, semanticId: 1,
+        ownerName: "app.First", sourceName: "run",
+        identityValues: @[CompileTimeIdentityValue(localId: 4, sourceName: "left")]),
+      CompileTimeCallableMetadata(kind: ctkMethod, semanticId: 2,
+        ownerName: "app.Second", sourceName: "run",
+        identityValues: @[CompileTimeIdentityValue(localId: 8, sourceName: "right")])
+    ])
+    check identityValuesForFunction(metadata, "app.main")[0].localId == 3
+    check identityValuesForMethod(metadata, "app.First", "run")[0].localId == 4
+    check identityValuesForMethod(metadata, "app.Second", "run")[0].localId == 8
+    check identityValuesForMethod(metadata, "app.Missing", "run").len == 0

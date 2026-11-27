@@ -33,7 +33,7 @@ proc renderFunction*(
 ): string =
   result.add renderSignature(fn) & " =\n"
 
-  let identityValues = memoryMetadata.identityValuesForFunction(fn.functionId)
+  let identityValues = memoryMetadata.identityValuesForFunction(fn.sourceName)
   if memoryMetadata.types.len > 0:
     result.add renderFunctionValuePreamble(fn, identityValues, runtimeBindings)
 

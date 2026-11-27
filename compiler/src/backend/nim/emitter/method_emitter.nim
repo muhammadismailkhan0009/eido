@@ -73,7 +73,9 @@ proc renderMethod*(
     if suppressMemoryInstrumentation:
       @[]
     else:
-      memoryMetadata.identityValuesForMethod(methodDecl.methodId)
+      memoryMetadata.identityValuesForMethod(
+        methodDecl.ownerType.className, methodDecl.sourceName
+      )
   if memoryMetadata.types.len > 0 and not suppressMemoryInstrumentation:
     result.add renderMethodValuePreamble(methodDecl, identityValues, runtimeBindings)
 

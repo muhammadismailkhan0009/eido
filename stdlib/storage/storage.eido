@@ -65,6 +65,11 @@ class Storage<T> {
         return Storage<Byte>.capacity(Storage<T>.compilerRaw(storage));
     }
 
+    /// Distance in bytes between consecutive slots in a live Storage view.
+    function strideBytes(Storage<T> storage) returns Int {
+        return Storage<Byte>.strideBytes(Storage<T>.compilerRaw(storage));
+    }
+
     function address(Storage<T> storage) returns Int {
         return Storage<Byte>.address(Storage<T>.compilerRaw(storage));
     }
