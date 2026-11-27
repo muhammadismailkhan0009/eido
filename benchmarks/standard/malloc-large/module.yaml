@@ -9,4 +9,4 @@ children: []
 dependencies: []
 exports: []
 provides: {}
-adopts: []
+adopts: [../support.Text, ../support.Bytes, ../support.TraceInput]

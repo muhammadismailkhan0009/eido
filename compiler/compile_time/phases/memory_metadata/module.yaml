@@ -18,4 +18,4 @@ children: []
 dependencies: []
 exports: []
 provides: {}
-adopts: []
+adopts: [../../api.Compiler, ../../api.TypeInfo, ../../api.CallableInfo, ../../api.ValueInfo, ../../api.FieldInfo, ../../api.StorageInfo]

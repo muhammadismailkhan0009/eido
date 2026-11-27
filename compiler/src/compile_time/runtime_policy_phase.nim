@@ -4,6 +4,8 @@
 import std/[os, strutils]
 import ../hir/program as hirProgram
 import ../project/modules/model as moduleModel
+import ../semantic/modules/policy_directory_adoptions
+import std/sets
 import host
 import instrumentation_model
 import snapshot
@@ -124,7 +126,16 @@ proc policyPhaseSources(
       text: policySource.text
     )
 
-  result.manifest.add "children: []\ndependencies: []\nexports: []\nprovides: {}\nadopts: []\n"
+  let policyNames = policyDirectoryAdoptionNames(policyModule)
+  var adoptions: seq[string]
+  for adoption in policyModule.adopts:
+    if adoption in policyNames: adoptions.add adoption
+  # Compiler-owned policy API is an existing capability supplied by the phase
+  # host, not a user directory dependency. Its injected declarations are roots.
+  for entry in ReservedPolicyApiEntries:
+    adoptions.add entry.splitFile.name
+  result.manifest.add "adopts:\n"
+  for adoption in adoptions: result.manifest.add "  - " & adoption & "\n"
 
 ## Runs the selected Eido memory policy through the generic compile-time policy API.
 proc runRuntimePolicyPhase*(

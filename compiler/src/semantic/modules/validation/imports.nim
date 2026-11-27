@@ -2,7 +2,8 @@
 proc collectImports(
   source: Program,
   classes: ClassRegistry,
-  interfaces: InterfaceRegistry
+  interfaces: InterfaceRegistry,
+  modules: ModuleRegistry
 ): ImportRegistry =
   result = initTable[string, Table[string, ImportBinding]]()
   for item in source.imports:
@@ -12,6 +13,8 @@ proc collectImports(
     let localKey = declarationKey(item.moduleName, name)
     if localKey != item.path and (localKey in classes or localKey in interfaces):
       failAt(item.nameSpan, "import conflicts with module-local type '" & name & "'")
+    if localKey == item.path:
+      requireNominalDirectoryAccess(modules, classes, interfaces, item.moduleName, item.path, item.span)
     let path = item.span.sourcePath
     if path notin result:
       result[path] = initTable[string, ImportBinding]()

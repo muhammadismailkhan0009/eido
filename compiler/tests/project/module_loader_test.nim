@@ -214,3 +214,64 @@ suite "Module project loading":
 
     expect ValueError:
       discard loadModuleProject(root / "module.yaml", ptExecutable)
+
+  test "directory sources discover deterministically without crossing manifests or policy roles":
+    let root = freshDir("directory_sources")
+    defer: removeDir(root)
+    for dir in ["a/nested", "b", "child", "other"]:
+      createDir(root / dir)
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nchildren:\n  child: { path: child }\npolicySources: [policy.eido]\n")
+    writeFile(root / "Main.eido", "function main() {}")
+    writeFile(root / "a/nested/First.eido", "class First { Int value; }")
+    writeFile(root / "b/Second.eido", "class Second { Int value; }")
+    writeFile(root / "policy.eido", "function main() {}")
+    writeFile(root / "b/ignore.txt", "not source")
+    writeFile(root / "child/module.yaml", "module: child\nsources: [.]\n")
+    writeFile(root / "child/Child.eido", "class Child { Int value; }")
+    writeFile(root / "other/module.yaml", "module: other\nsources: [.]\n")
+    writeFile(root / "other/Unregistered.eido", "class Unregistered { Int value; }")
+    let project = loadModuleProject(root / "module.yaml", ptLibrary)
+    check project.modules[0].sourcePaths == @[root / "Main.eido", root / "a/nested/First.eido", root / "b/Second.eido"]
+    check project.modules[0].policySources.len == 1
+    check project.modules[1].sourcePaths == @[root / "child/Child.eido"]
+    check project.sources.allIt(not it.path.endsWith("Unregistered.eido"))
+
+  test "rejects duplicate directory discovery and explicit child source registration":
+    let root = freshDir("duplicate_directory_sources")
+    defer: removeDir(root)
+    createDir(root / "logic")
+    writeFile(root / "Main.eido", "function main() {}")
+    writeFile(root / "logic/Helper.eido", "class Helper { Int value; }")
+    writeFile(root / "module.yaml", "module: app\nsources: [., logic]\n")
+    expect ValueError:
+      discard loadModuleProject(root / "module.yaml", ptExecutable)
+    writeFile(root / "logic/module.yaml", "module: logic\nsources: [.]\n")
+    writeFile(root / "module.yaml", "module: app\nsources: [Main.eido, logic/Helper.eido]\nchildren:\n  logic: { path: logic }\n")
+    expect ValueError:
+      discard loadModuleProject(root / "module.yaml", ptExecutable)
+
+  test "a logical child may physically enclose its owning manifest":
+    let root = freshDir("ancestor_child")
+    defer: removeDir(root)
+    createDir(root / "tests")
+    writeFile(root / "module.yaml", "module: package\nsources: [.]\n")
+    writeFile(root / "Package.eido", "class Package { Int value; }")
+    writeFile(root / "tests/Main.eido", "function main() {}")
+    let testsManifest = root / "tests/module.yaml"
+
+    for sources in ["[Main.eido]", "[.]"]:
+      writeFile(testsManifest,
+        "module: tests\nsources: " & sources &
+        "\nchildren:\n  package: { path: .. }\n")
+      let project = loadModuleProject(testsManifest, ptExecutable)
+      check project.modules[0].sourcePaths == @[root / "tests/Main.eido"]
+      check project.modules[1].canonicalName == "tests.package"
+      check project.modules[1].sourcePaths == @[root / "Package.eido"]
+
+    # The exception permits only sources owned by the test manifest, not
+    # directly claiming the enclosing package's implementation.
+    writeFile(testsManifest,
+      "module: tests\nsources: [Main.eido, ../Package.eido]\n" &
+      "children:\n  package: { path: .. }\n")
+    expect ValueError:
+      discard loadModuleProject(testsManifest, ptExecutable)

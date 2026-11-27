@@ -7,6 +7,13 @@ import ../../frontend/ast/[declarations, expressions, program, statements, type_
 import ../../source/span
 import ../../project/model as projectModel
 import ../../project/modules/model as moduleModel
+import ../../project/modules/source_directories
+import ../../hir/program as hirProgram
+import ../../hir/[declarations as hirDeclarations, expressions as hirExpressions, statements as hirStatements]
+import ../../types/model
+import ../../types/function_result
+import ../symbols/ids
+import policy_directory_adoptions
 import ../../types/method_kind
 import ../../types/storage
 import ../analysis/method_classification
@@ -14,7 +21,7 @@ import ../analysis/method_classification
 type
   ClassRegistry = Table[string, ClassDecl]
   InterfaceRegistry = Table[string, InterfaceDecl]
-  FunctionOwnerRegistry = Table[string, string]
+  FunctionOwnerRegistry = Table[string, FunctionDecl]
   ModuleRegistry = Table[string, moduleModel.ModuleSpec]
   ImportBinding = object
     target: string
@@ -49,6 +56,7 @@ proc isStaticOnly(source: ClassDecl): bool =
   true
 
 include validation/visibility
+include validation/directory_access
 include validation/imports
 include validation/public_surface
 include validation/qualification
@@ -108,7 +116,7 @@ proc collectModuleDeclarations(
           declarationLocalName(sourceFunction.name) &
           "' in module '" & sourceFunction.moduleName & "'"
       )
-    functions[key] = sourceFunction.moduleName
+    functions[key] = sourceFunction
 
 ## Validates and canonicalizes one parsed module project while retaining its public API surfaces.
 proc resolveModuleArchitectureWithInfo*(
@@ -124,7 +132,7 @@ proc resolveModuleArchitectureWithInfo*(
 
   var classes = initTable[string, ClassDecl]()
   var interfaces = initTable[string, InterfaceDecl]()
-  var functions = initTable[string, string]()
+  var functions = initTable[string, FunctionDecl]()
   collectModuleDeclarations(source, classes, interfaces, functions)
 
   validateManifestSurfaces(
@@ -135,7 +143,8 @@ proc resolveModuleArchitectureWithInfo*(
     project.rootModule
   )
 
-  var imports = collectImports(source, classes, interfaces)
+  let internalAdoptions = validateDirectoryAdoptions(source, modules, classes, interfaces, functions, project.rootModule)
+  var imports = collectImports(source, classes, interfaces, modules)
   var publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
 
   # Imports may bind names in public signatures, but those signatures cannot
@@ -175,14 +184,14 @@ proc resolveModuleArchitectureWithInfo*(
   # Rebuild registries from the canonicalized AST before semantic architecture checks.
   classes = initTable[string, ClassDecl]()
   interfaces = initTable[string, InterfaceDecl]()
-  functions = initTable[string, string]()
+  functions = initTable[string, FunctionDecl]()
   collectModuleDeclarations(source, classes, interfaces, functions)
 
   validateInterfacePurpose(
     interfaces,
     publicSurfaces,
     adoptedSurfaces,
-    providedSurfaces
+    providedSurfaces, internalAdoptions
   )
   validateInterfaceOwnership(
     classes,
@@ -303,3 +312,5 @@ proc validateModuleArchitecture*(
 ) =
   var resolved = source
   resolveModuleArchitecture(resolved, project)
+
+include validation/directory_hir

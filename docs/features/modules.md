@@ -35,17 +35,19 @@ policySources: []
 ```
 
 The v0 parser accepts the YAML subset needed by this schema: mappings,
-sequences, plain/quoted scalars, empty `[]`/`{}`, and small inline mappings
+sequences, plain/quoted scalars, inline scalar lists such as `[storage, io]`,
+empty `[]`/`{}`, and small inline mappings
 such as `processor: { path: processor }`. YAML anchors/tags and unrelated YAML
-features are intentionally outside the manifest grammar.
+features are intentionally outside the manifest grammar. Only `module` is
+mandatory; omitted collection properties are empty.
 
-Every `.eido` source uses one of three mutually exclusive categories: a single non-function top-level declaration (class, interface, layout, or layout selection), one or more standalone functions other than `main` (including native functions), or a lone top-level `function main`. Comments and documentation do not count as declarations. Class and interface methods remain unrestricted by this file rule. No filename convention is enforced; the rule applies equally to standalone and manifest projects, including compile-time policy sources. Cross-file resolution within the module is unchanged.
+Every `.eido` source uses one of three mutually exclusive categories: a single non-function top-level declaration (class, interface, layout, or layout selection), one or more standalone functions other than `main` (including native functions), or a lone top-level `function main`. Comments and documentation do not count as declarations. Class and interface methods remain unrestricted by this file rule. No filename convention is enforced; the rule applies equally to standalone and manifest projects, including compile-time policy sources. Cross-file name resolution retains canonical module identities and enforces the internal directory boundary below.
 
 ## Architectural meaning
 
 - `module` is the local module name.
-- `sources` is the complete explicit list of Eido files owned directly by the
-  module. Undeclared `.eido` files are ignored.
+- `sources` lists files or recursively discovered directories owned directly by
+  the module. Files outside registered entries are ignored.
 - `children` is the only mechanism that establishes parent/child module
   containment. Filesystem nesting alone creates nothing.
 - `path` is only the physical location of a child's `module.yaml`, relative
@@ -55,8 +57,9 @@ Every `.eido` source uses one of three mutually exclusive categories: a single n
 - `allowsExternalImplementation` is an optional sequence of locally owned, explicitly exported
   interface names whose implementations may live outside the owning module family.
   It does not grant visibility or extension permission.
-- `adopts` explicitly accepts an exported child contract/API into the parent
-  family. Nothing propagates upward automatically.
+- `adopts` accepts exported child APIs into the parent family under the original
+  module rules, and authorizes named declarations for internal cross-directory
+  use. Local directory adoption does not expose a declaration outside its module.
 - `provides` records that a child module fulfills a parent-owned interface
   contract. The compiler validates that the contract is owned by the parent and
   that the declared provider subtree contains an explicit implementation.
@@ -76,6 +79,69 @@ payments
 ```
 
 A child manifest declares only its local name. It does not declare its parent.
+
+## Directory registration and internal architecture
+
+A single manifest can control all ordinary directories:
+
+```yaml
+module: network
+sources: [.]
+dependencies: [storage]
+adopts:
+  - address.SocketAddress
+  - status.NetworkStatus
+  - tcp.TcpConnection
+exports: [Tcp, TcpConnection]
+allowsExternalImplementation: [TcpConnection]
+```
+
+An individual file entry is still supported. Directory entries recursively
+select `.eido` files in lexical path order, preserving manifest entry order.
+Discovery does not cross a declared child root or any nested `module.yaml`;
+only declared children are loaded as modules. Logical module containment is
+independent of physical paths: a test module may declare its enclosing package
+with `path: ..`. Its own manifest subtree remains eligible for discovery,
+while the enclosing package cannot claim sources across that manifest boundary.
+Symbolic links are not followed.
+Files in `policySources` are excluded from directory discovery; explicit
+duplicate registrations (including overlapping directories) are errors.
+Directory entries must be inside the owning module. Existing explicit
+external support-file registrations remain possible outside independently
+manifest-owned trees.
+
+An ordinary directory is **not** a module. For internal access, files directly
+beside the manifest form one group, and each immediate directory subtree forms
+another group. Deeper directories inside that subtree introduce no additional
+access boundary unless they are separately declared modules. For example,
+`tcp/options` and `tcp/results` may freely reference one another; `tcp` cannot
+reference `address.SocketAddress` unless the parent lists it in `adopts`.
+
+Adopt a local declaration by its immediate directory and name, e.g.
+`address.SocketAddress`. For declarations directly beside the manifest use a
+bare name, e.g. `RootHelper`. Explicit external support files use their first
+relative directory group, e.g. `../support.Text`. The name identifies the
+declaration, not a source file or a new canonical namespace. Internal adoption
+may name an ordinary class, interface, top-level function or named layout.
+It authorizes all consumers within the owning module, without listing them.
+Unknown, incorrectly located and duplicate adoption entries are rejected.
+
+Actual child-module references retain their existing adoption semantics and
+take precedence over an identically named ordinary directory. Local adoption
+does not authorize other modules, does not imply public export, and does not
+relax the existing explicit export-root restrictions. Public exports alone
+do not grant internal cross-directory access. An internal adopted interface
+participates in the architectural surface without becoming externally visible.
+
+The compiler checks explicit imports, qualified and implicit type references,
+constructors, signatures, inheritance/implementation references, class-owned
+access, top-level calls, contracts, and resolved inferred types/member uses.
+Each local declaration used across a boundary needs its own adoption;
+adopting one directory declaration does not silently adopt its complete type
+closure. Generic declaration permissions cover its specializations; template
+parameter substitutions alone do not create new coupling for the template
+author. Source imports keep the canonical module name, e.g.
+`import eido.stdlib.network.SocketAddress;`, not a directory-based path.
 
 ## Memory-policy modules
 
@@ -114,7 +180,8 @@ child  -> parent   never automatic
 ```
 
 Parent dependencies propagate downward. Parent exports and explicitly adopted
-child exports are visible within the family. A child export does not rise to its
+child exports are visible within the family. Internal directory adoptions
+remain local to the declaring module. A child export does not rise to its
 parent or siblings unless the parent adopts or re-exports it.
 
 Containment controls visibility; dependencies control use.
@@ -243,7 +310,7 @@ Top-level functions stay module-internal. Same-named top-level functions in diff
 
 Normal module projects automatically receive the SDK module `eido.stdlib` as a root dependency, and ordinary child modules inherit visibility through the same dependency rules used for user modules. The stdlib itself is declared by the real `stdlib/module.yaml`; its source ownership and export roots therefore come from the same manifest schema used by ordinary Eido modules. Projects must not add repository-relative stdlib source paths to their manifests.
 
-The bootstrap compiler embeds the stdlib manifest plus the source payloads named by that manifest so an installation created with `nimble install` can compile projects outside the compiler repository. Bootstrap loading parses the embedded manifest with the normal module-manifest parser rather than maintaining a separate handwritten module definition. The reserved canonical identity `eido.stdlib` is SDK namespace policy; module/dependency visibility machinery remains authoritative.
+The bootstrap compiler expands the real stdlib manifest tree using the same directory discovery as user projects at compiler build time, and embeds the manifest plus the selected source payloads so an installation created with `nimble install` can compile projects outside the compiler repository. Bootstrap loading parses the embedded manifest with the normal module-manifest parser rather than maintaining a separate handwritten module definition. The reserved canonical identity `eido.stdlib` is SDK namespace policy; module/dependency visibility machinery remains authoritative.
 
 ## Project and build tooling
 

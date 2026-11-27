@@ -29,11 +29,12 @@ suite "Storage semantics":
         storage = classDecl
     check storage.typ == classType("Storage<Int>")
     check storage.fields.len == 0
-    check storage.methods.len == 16
+    check storage.methods.len == 17
 
     var eidoPublicMethods = 0
     var layoutMethods = 0
     var privateBridges = 0
+    var typedStrideFound = false
     for methodDecl in storage.methods:
       check methodDecl.kind == mkStatic
       case methodDecl.sourceName
@@ -41,6 +42,13 @@ suite "Storage semantics":
           "read", "write", "release":
         inc eidoPublicMethods
         check not methodDecl.isNative
+      of "strideBytes":
+        inc eidoPublicMethods
+        typedStrideFound = true
+        check not methodDecl.isNative
+        check methodDecl.parameters.len == 1
+        check methodDecl.parameters[0].typ == classType("Storage<Int>")
+        check methodDecl.result.typ == etInt
       of "size", "alignment":
         inc layoutMethods
         check methodDecl.isNative
@@ -50,7 +58,8 @@ suite "Storage semantics":
         check methodDecl.isNative
       else:
         check false
-    check eidoPublicMethods == 10
+    check typedStrideFound
+    check eidoPublicMethods == 11
     check layoutMethods == 2
     check privateBridges == 4
 
@@ -59,9 +68,17 @@ suite "Storage semantics":
       if classDecl.typ == classType("Storage<Byte>"):
         byteStorage = classDecl
     check byteStorage.typ == classType("Storage<Byte>")
-    check byteStorage.methods.len == 17
+    check byteStorage.methods.len == 18
+    var rawStrideFound = false
     for methodDecl in byteStorage.methods:
       check methodDecl.isNative
+      if methodDecl.sourceName == "strideBytes":
+        rawStrideFound = true
+        check methodDecl.kind == mkStatic
+        check methodDecl.parameters.len == 1
+        check methodDecl.parameters[0].typ == classType("Storage<Byte>")
+        check methodDecl.result.typ == etInt
+    check rawStrideFound
 
   test "supports nominal class payloads in typed Storage":
     let source = """

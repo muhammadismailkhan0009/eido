@@ -46,7 +46,6 @@ proc lowerPhaseModuleToNim(
   if manifest.children.len > 0 or
       manifest.dependencies.len > 0 or
       manifest.provides.len > 0 or
-      manifest.adopts.len > 0 or
       manifest.exports.len > 0 or
       manifest.allowsExternalImplementation.len > 0:
     raise newException(
@@ -146,7 +145,7 @@ proc lowerPhaseModuleToNim(
     dependencies: @[BuiltinStorageModuleName],
     exports: @[],
     provides: @[],
-    adopts: @[]
+    adopts: manifest.adopts
   )
   let project = projectModel.initModuleProject(
     projectModel.ptExecutable,
@@ -157,7 +156,9 @@ proc lowerPhaseModuleToNim(
 
   var parsed = parseProject(project)
   resolveModuleArchitecture(parsed, project)
-  emitNim(analyzeProgram(parsed, project.target))
+  let analyzed = analyzeProgram(parsed, project.target)
+  validateResolvedDirectoryUses(parsed, analyzed, project)
+  emitNim(analyzed)
 
 ## Derives a cache fingerprint from one phase module and its private native bridge.
 proc phaseFingerprint(

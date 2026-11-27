@@ -33,6 +33,7 @@ proc qualifyExpr(
   of ekCall:
     let localFunction = declarationKey(currentModule, source.callee)
     if localFunction in functions:
+      requireDirectoryAccess(modules, currentModule, localFunction, functions[localFunction].span, source.span)
       source.callee = localFunction
     for argument in source.arguments:
       qualifyExpr(

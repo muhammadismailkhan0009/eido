@@ -58,6 +58,7 @@ proc validateManifestSurfaces(
         )
 
     for adoption in moduleSpec.adopts:
+      if isDirectoryAdoption(modules, rootModule, moduleSpec, adoption): continue
       let target = resolveChildExport(
         modules,
         rootModule,
@@ -73,10 +74,11 @@ proc validateManifestSurfaces(
 ## Verifies every interface declaration participates in an architectural surface.
 proc validateInterfacePurpose(
   interfaces: InterfaceRegistry,
-  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry
+  publicSurfaces, adoptedSurfaces, providedSurfaces: SurfaceRegistry,
+  internalAdoptions: HashSet[string]
 ) =
   for interfaceName, sourceInterface in interfaces:
-    var architectural = false
+    var architectural = interfaceName in internalAdoptions
 
     for _, surface in publicSurfaces:
       if interfaceName in surface:

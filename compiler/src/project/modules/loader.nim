@@ -7,6 +7,7 @@ import ../../source/source_unit
 import ../model as projectModel
 import ../../stdlib/builtin_sources
 import manifest_parser
+import source_directories
 import model
 
 ## Documents the parentModuleName module helper behavior.
@@ -65,37 +66,6 @@ proc resolveModuleReference(
   for candidate in candidates:
     return candidate
 
-## Documents the resolveChildSymbolReference module helper behavior.
-proc resolveChildSymbolReference(
-  modules: seq[ModuleSpec],
-  rootModule: string,
-  owner: ModuleSpec,
-  reference: string
-): tuple[moduleName, symbolName: string] =
-  let separator = reference.rfind('.')
-  if separator <= 0 or separator == reference.high:
-    failAt(
-      owner.manifestPath, 1, 1,
-      "child contract reference must use '<child>.<name>': '" & reference & "'"
-    )
-
-  let moduleRef = reference[0 ..< separator]
-  result.symbolName = reference[separator + 1 .. ^1]
-  result.moduleName = resolveModuleReference(
-    modules,
-    rootModule,
-    owner.canonicalName,
-    moduleRef,
-    owner.manifestPath
-  )
-
-  if not isDescendant(owner.canonicalName, result.moduleName):
-    failAt(
-      owner.manifestPath, 1, 1,
-      "module '" & result.moduleName & "' is not a child of '" &
-        owner.canonicalName & "'"
-    )
-
 ## Documents the validateDependencyDag module helper behavior.
 proc validateDependencyDag(modules: seq[ModuleSpec]) =
   var states = initTable[string, int]()
@@ -131,7 +101,7 @@ proc loadModuleProject*(
   manifestPath: string,
   target: projectModel.ProjectTarget
 ): projectModel.EidoProject =
-  let rootManifest = absolutePath(manifestPath)
+  let rootManifest = normalizedPath(absolutePath(manifestPath))
   if rootManifest.extractFilename != "module.yaml":
     failAt(rootManifest, 1, 1, "Eido module projects must start from module.yaml")
   if not fileExists(rootManifest):
@@ -148,7 +118,7 @@ proc loadModuleProject*(
     parentCanonical,
     expectedLocalName: string
   ): string =
-    let normalizedManifest = absolutePath(currentManifestPath)
+    let normalizedManifest = normalizedPath(absolutePath(currentManifestPath))
     if normalizedManifest in loadedManifestPaths:
       failAt(
         normalizedManifest, 1, 1,
@@ -228,23 +198,10 @@ proc loadModuleProject*(
         text: readFile(policyPath)
       )
 
-    for sourceEntry in manifest.sources:
-      let sourcePath = absolutePath(directory / sourceEntry)
+    for sourcePath in discoverModuleSources(directory, normalizedManifest, manifest):
       if sourcePath in ownedSourcePaths:
-        failAt(
-          normalizedManifest, 1, 1,
-          "source file belongs to more than one module: " & sourcePath
-        )
-      if sourcePath.splitFile.ext != ".eido":
-        failAt(
-          normalizedManifest, 1, 1,
-          "module source must be an .eido file: " & sourceEntry
-        )
-      if not fileExists(sourcePath):
-        failAt(
-          normalizedManifest, 1, 1,
-          "module source does not exist: " & sourceEntry
-        )
+        failAt(normalizedManifest, 1, 1,
+          "source file belongs to more than one module: " & sourcePath)
 
       ownedSourcePaths.incl sourcePath
       modules[ownIndex].sourcePaths.add sourcePath
@@ -310,14 +267,6 @@ proc loadModuleProject*(
           "provided contract implementation must come from a child module"
         )
       modules[index].provides[provisionIndex].providerModule = provider
-
-    for adoption in modules[index].adopts:
-      discard resolveChildSymbolReference(
-        modules,
-        rootModule,
-        modules[index],
-        adoption
-      )
 
   validateDependencyDag(modules)
 

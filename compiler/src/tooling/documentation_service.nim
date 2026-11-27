@@ -237,7 +237,8 @@ proc sourceDeclarations(
 proc buildDocumentationReference*(project: EidoProject): DocumentationReference =
   var resolved = parseProject(project)
   let architecture = resolveModuleArchitectureWithInfo(resolved, project)
-  discard analyzeProgram(resolved, ptLibrary)
+  let analyzed = analyzeProgram(resolved, ptLibrary)
+  validateResolvedDirectoryUses(resolved, analyzed, project)
 
   result.projectName = project.rootModule
   for moduleSpec in project.modules:

@@ -1,5 +1,5 @@
 ## Parses Eido's schema-restricted YAML module manifests.
-## The accepted syntax is ordinary YAML for the v0 schema: mappings, sequences, plain/quoted scalars, and small inline mappings.
+## The accepted syntax is ordinary YAML for the v0 schema: mappings, sequences, plain/quoted scalars, scalar inline sequences and small inline mappings.
 
 import std/[strutils]
 import ../../diagnostics/errors
@@ -99,6 +99,29 @@ proc addSequenceValue(
       "section '" & section & "' does not accept YAML sequence items"
     )
 
+## Parses scalar-only inline YAML sequences, including quoted commas.
+proc addInlineSequence(manifest: var ModuleManifest, section, value, path: string,
+    lineNumber: int) =
+  if not value.startsWith("[") or not value.endsWith("]"):
+    failAt(path, lineNumber, 1, "'" & section & "' must be a YAML sequence")
+  let body = value[1 .. ^2].strip()
+  if body.len == 0: return
+  var quote = '\0'
+  var start = 0
+  for i, c in body:
+    if quote != '\0':
+      if c == quote: quote = '\0'
+    elif c in {'"', '\''}:
+      quote = c
+    elif c in {'[', ']', '{', '}'}:
+      failAt(path, lineNumber, 1, "inline module sequences accept only scalar items")
+    elif c == ',':
+      manifest.addSequenceValue(section, body[start ..< i], path, lineNumber)
+      start = i + 1
+  if quote != '\0':
+    failAt(path, lineNumber, 1, "unterminated quoted sequence item")
+  manifest.addSequenceValue(section, body[start .. ^1], path, lineNumber)
+
 ## Documents the parseModuleManifest module helper behavior.
 proc parseModuleManifest*(text, path: string): ModuleManifest =
   var section = ""
@@ -150,11 +173,12 @@ proc parseModuleManifest*(text, path: string): ModuleManifest =
         case pair.key
         of "sources", "dependencies", "exports", "adopts", "policySources",
             "allowsExternalImplementation":
-          if pair.value != "[]":
-            failAt(path, lineNumber, 1, "'" & pair.key & "' must be a YAML sequence")
+          result.addInlineSequence(section, pair.value, path, lineNumber)
+          section = ""
         of "children", "provides":
           if pair.value != "{}" and pair.value != "[]":
             failAt(path, lineNumber, 1, "'" & pair.key & "' must be a YAML mapping")
+          section = ""
         else:
           discard
       continue

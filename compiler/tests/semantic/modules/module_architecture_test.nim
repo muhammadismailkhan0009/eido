@@ -1863,3 +1863,117 @@ test "module interface contracts resolve self and propagate into provider implem
     rejectImport("ambiguous type")
     writeFile(otherPath, otherSource)
     check checkModule(root).success
+
+suite "Internal directory architecture":
+  test "layout configuration suffix qualifiers require local directory adoption":
+    let root = freshModuleDir("directory_layout_config")
+    defer: removeDir(root)
+    createDir(root / "child" / "config")
+    writeFile(root / "module.yaml", "module: app\nsources: [Main.eido]\nchildren:\n  child: { path: child }\n")
+    writeFile(root / "Main.eido", "function main() {}")
+    writeFile(root / "child" / "module.yaml", "module: child\nsources: [.]\n")
+    writeFile(root / "child" / "config" / "Config.eido", "class Config { function configure() { LayoutPolicy.select(\"Data\", \"Compact\"); } }")
+    writeFile(root / "child" / "config" / "Data.eido", "class Data { Int number; }")
+    writeFile(root / "child" / "config" / "Compact.eido", "layout Compact for Data { var shape = Layout.create(); shape.field(\"number\"); return shape; }")
+    writeFile(root / "child" / "Selection.eido", "child.Config.configure();")
+    let denied = checkModule(root)
+    check not denied.success
+    if not denied.success: check "config.Config" in denied.diagnostics[0].message
+    writeFile(root / "child" / "module.yaml", "module: child\nsources: [.]\nadopts: [config.Config]\n")
+    check checkModule(root).success
+
+  test "same subtree is unrestricted but cross-directory references require adoption":
+    let root = freshModuleDir("directory_adoption")
+    defer: removeDir(root)
+    for dir in ["data/nested", "logic/options", "logic/results", "other"]:
+      createDir(root / dir)
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\n")
+    writeFile(root / "Main.eido", "function main() {}")
+    writeFile(root / "data/nested/Value.eido", "class Value { Int number; }")
+    writeFile(root / "logic/options/First.eido", "class First { function value() returns Int { return Second.value(); } }")
+    writeFile(root / "logic/results/Second.eido", "class Second { function value() returns Int { return 1; } }")
+    check checkModule(root).success
+    writeFile(root / "logic/options/First.eido", "class First { function value() returns Int { var v = Value { number = 1; }; return v.number; } }")
+    let denied = checkModule(root)
+    check not denied.success
+    if not denied.success: check "data.Value" in denied.diagnostics[0].message
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [data.Value]\n")
+    writeFile(root / "other/Third.eido", "class Third { function value(Value v) returns Int { return v.number; } }")
+    check checkModule(root).success
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [data.nested.Value]\n")
+    check not checkModule(root).success
+
+  test "imports, qualified names, exported types and generic references cannot bypass adoption":
+    let root = freshModuleDir("directory_imports")
+    defer: removeDir(root)
+    createDir(root / "shared")
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nexports: [Factory]\n")
+    writeFile(root / "shared/Factory.eido", "class Factory { function value() returns Int { return 1; } }")
+    writeFile(root / "shared/Box.eido", "class Box<T> { T value; }")
+    for source in [
+        "import app.Factory;\nfunction main() {}",
+        "function main() returns Int { return app.Factory.value(); }",
+        "function main() returns Int { return Factory.value(); }",
+        "function main() returns Int { var b = Box<Int> { value = 1; }; return b.value; }"]:
+      writeFile(root / "Main.eido", source)
+      let denied = checkModule(root)
+      check not denied.success
+      if not denied.success: check "cross-directory access" in denied.diagnostics[0].message
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nexports: [Factory]\nadopts: [shared.Factory, shared.Box]\n")
+    writeFile(root / "Main.eido", "import app.Factory;\nfunction main() returns Int { var b = Box<Int> { value = Factory.value(); }; return b.value; }")
+    check checkModule(root).success
+
+  test "root declarations, standalone functions and internal interfaces may be adopted":
+    let root = freshModuleDir("directory_kinds")
+    defer: removeDir(root)
+    createDir(root / "logic")
+    createDir(root / "contract")
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [contract.Value, logic.helper]\n")
+    writeFile(root / "Root.eido", "class Root { function value() returns Int { return 7; } }")
+    writeFile(root / "Main.eido", "function main() returns Int { return helper(); }")
+    writeFile(root / "contract/Value.eido", "interface Value { function value() returns Int; }")
+    writeFile(root / "logic/Impl.eido", "class Impl implements Value { Int n; function value() returns Int { return self.n + Root.value(); } }")
+    writeFile(root / "logic/Functions.eido", "function helper() returns Int { var v = Impl { n = 1; }; return v.value(); }")
+    let denied = checkModule(root)
+    check not denied.success
+    if not denied.success: check "adopts: Root" in denied.diagnostics[0].message
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [contract.Value, logic.helper, Root]\n")
+    check checkModule(root).success
+
+  test "inferred results and member access require authorization of the resolved type":
+    let root = freshModuleDir("directory_inference")
+    defer: removeDir(root)
+    createDir(root / "data")
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [data.Factory]\n")
+    writeFile(root / "data/Value.eido", "class Value { Int number; }")
+    writeFile(root / "data/Factory.eido", "class Factory { function create() returns Value { return Value { number = 7; }; } }")
+    writeFile(root / "Main.eido", "function main() returns Int { var v = Factory.create(); return v.number; }")
+    let denied = checkModule(root)
+    check not denied.success
+    if not denied.success: check "data.Value" in denied.diagnostics[0].message
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [data.Factory, data.Value]\n")
+    check checkModule(root).success
+
+  test "local adoption does not expose declarations to real child modules":
+    let root = freshModuleDir("directory_private")
+    defer: removeDir(root)
+    createDir(root / "internal")
+    createDir(root / "child")
+    writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [internal.Secret]\nchildren:\n  child: { path: child }\n")
+    writeFile(root / "Main.eido", "function main() returns Int { return Secret.value(); }")
+    writeFile(root / "internal/Secret.eido", "class Secret { function value() returns Int { return 1; } }")
+    writeFile(root / "child/module.yaml", "module: child\nsources: [.]\n")
+    writeFile(root / "child/Consumer.eido", "class Consumer { function value() returns Int { return app.Secret.value(); } }")
+    check not checkModule(root).success
+    writeFile(root / "child/Consumer.eido", "class Consumer { function value() returns Int { return 1; } }")
+    check checkModule(root).success
+
+  test "rejects unknown, misplaced and duplicate internal adoptions":
+    let root = freshModuleDir("directory_adoption_errors")
+    defer: removeDir(root)
+    createDir(root / "data")
+    writeFile(root / "Main.eido", "function main() {}")
+    writeFile(root / "data/Value.eido", "class Value { Int number; }")
+    for adoption in ["data.Missing", "wrong.Value", "Value", "data.Value, data.Value"]:
+      writeFile(root / "module.yaml", "module: app\nsources: [.]\nadopts: [" & adoption & "]\n")
+      check not checkModule(root).success

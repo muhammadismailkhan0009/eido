@@ -56,6 +56,7 @@ proc resolveVisibleNominal(
           "module '" & currentModule & "' cannot access '" & reference & "'"
         )
       return ""
+    requireNominalDirectoryAccess(modules, classes, interfaces, currentModule, key, span)
     return key
 
   let binding = importBinding(imports, span, reference)
@@ -64,6 +65,7 @@ proc resolveVisibleNominal(
 
   let localKey = declarationKey(currentModule, reference)
   if nominalExists(classes, interfaces, localKey):
+    requireNominalDirectoryAccess(modules, classes, interfaces, currentModule, localKey, span)
     return localKey
 
   var candidates = initHashSet[string]()

@@ -177,7 +177,8 @@ proc analyzeProject*(project: EidoProject): hirProgram.HirProgram =
   let effectiveProject = project.withSdkStorageSource()
   var parsed = parseProject(effectiveProject)
   resolveModuleArchitecture(parsed, effectiveProject)
-  analyzeProgram(parsed, effectiveProject.target)
+  result = analyzeProgram(parsed, effectiveProject.target)
+  validateResolvedDirectoryUses(parsed, result, effectiveProject)
 
 ## Compiles one Eido project through semantic analysis to generated Nim source.
 ## Example: an executable project emits one Nim program containing declarations from all supplied Eido files.

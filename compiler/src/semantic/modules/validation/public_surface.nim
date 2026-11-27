@@ -77,6 +77,7 @@ proc resolveSurfaceReference(
       continue
     let ancestorSpec = modules[ancestorName]
     for adoption in ancestorSpec.adopts:
+      if isDirectoryAdoption(modules, rootModule, ancestorSpec, adoption): continue
       let target = resolveChildExport(
         modules,
         rootModule,
@@ -295,6 +296,7 @@ proc buildAdoptedSurfaces(
   for moduleName, moduleSpec in modules:
     var surface = initHashSet[string]()
     for adoption in moduleSpec.adopts:
+      if isDirectoryAdoption(modules, rootModule, moduleSpec, adoption): continue
       let target = resolveChildExport(
         modules, rootModule, moduleSpec, adoption
       )

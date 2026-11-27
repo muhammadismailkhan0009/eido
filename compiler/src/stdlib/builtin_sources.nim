@@ -6,6 +6,7 @@ import std/[os, strutils]
 import ../source/source_unit
 import ../project/model as projectModel
 import ../project/modules/[manifest_parser, model]
+import embedded_catalog
 
 const
   BuiltinStdlibModuleName* = "eido.stdlib"
@@ -183,96 +184,6 @@ const
     currentSourcePath().parentDir / "../../../stdlib/native/nim/eido_storage.nim"
   )
 
-## Returns one embedded SDK manifest by its stable virtual installation path.
-proc embeddedStdlibManifest(manifestPath: string): string =
-  case manifestPath
-  of BuiltinStdlibManifestPath:
-    BuiltinStdlibManifestSource
-  of BuiltinProcessManifestPath:
-    BuiltinProcessManifestSource
-  of BuiltinIoManifestPath:
-    BuiltinIoManifestSource
-  of BuiltinStorageManifestPath:
-    BuiltinStorageManifestSource
-  of BuiltinCollectionsManifestPath:
-    BuiltinCollectionsManifestSource
-  of BuiltinMemoryManifestPath:
-    BuiltinMemoryManifestSource
-  of BuiltinTextManifestPath:
-    BuiltinTextManifestSource
-  of BuiltinRuntimeManifestPath:
-    BuiltinRuntimeManifestSource
-  of BuiltinManagedGcManifestPath:
-    BuiltinManagedGcManifestSource
-  of BuiltinRcManifestPath:
-    BuiltinRcManifestSource
-  else:
-    raise newException(
-      ValueError,
-      "embedded stdlib references unknown manifest '" & manifestPath & "'"
-    )
-
-## Resolves one manifest-owned stdlib source to its embedded compiler payload.
-## Manifests control module membership; this table only supplies installed bytes.
-proc embeddedStdlibSource(
-  manifestPath,
-  sourceEntry: string
-): tuple[path, text: string] =
-  let key = manifestPath & "|" & sourceEntry
-  case key
-  of BuiltinProcessManifestPath & "|process.eido":
-    (BuiltinProcessSourcePath, BuiltinProcessSource)
-  of BuiltinIoManifestPath & "|console.eido":
-    (BuiltinConsoleSourcePath, BuiltinConsoleSource)
-  of BuiltinStorageManifestPath & "|storage.eido":
-    (BuiltinStorageSourcePath, BuiltinStorageSource)
-  of BuiltinStorageManifestPath & "|alignment.eido":
-    (BuiltinAlignmentSourcePath, BuiltinAlignmentSource)
-  of BuiltinStorageManifestPath & "|aligned_heap_backing.eido":
-    (BuiltinAlignedHeapBackingSourcePath, BuiltinAlignedHeapBackingSource)
-  of BuiltinCollectionsManifestPath & "|array.eido":
-    (BuiltinArraySourcePath, BuiltinArraySource)
-  of BuiltinCollectionsManifestPath & "|storage_array.eido":
-    (BuiltinStorageArraySourcePath, BuiltinStorageArraySource)
-  of BuiltinCollectionsManifestPath & "|arrays.eido":
-    (BuiltinArraysSourcePath, BuiltinArraysSource)
-  of BuiltinTextManifestPath & "|string_runtime.eido":
-    (BuiltinStringRuntimeSourcePath, BuiltinStringRuntimeSource)
-  of BuiltinRuntimeManifestPath & "|copy_runtime.eido":
-    (BuiltinCopyRuntimeSourcePath, BuiltinCopyRuntimeSource)
-  of BuiltinManagedGcManifestPath & "|memory_value_registry.eido":
-    (BuiltinMemoryValueRegistrySourcePath, BuiltinMemoryValueRegistrySource)
-  of BuiltinManagedGcManifestPath & "|memory_type_registry.eido":
-    (BuiltinMemoryTypeRegistrySourcePath, BuiltinMemoryTypeRegistrySource)
-  of BuiltinManagedGcManifestPath & "|managed_heap_allocator.eido":
-    (BuiltinManagedHeapAllocatorSourcePath, BuiltinManagedHeapAllocatorSource)
-  of BuiltinManagedGcManifestPath & "|identity_index.eido":
-    (BuiltinManagedIdentityIndexSourcePath, BuiltinManagedIdentityIndexSource)
-  of BuiltinManagedGcManifestPath & "|managed_gc_runtime.eido":
-    (BuiltinManagedGcRuntimeSourcePath, BuiltinManagedGcRuntimeSource)
-  of BuiltinManagedGcManifestPath & "|memory_runtime.eido":
-    (BuiltinMemoryRuntimeSourcePath, BuiltinMemoryRuntimeSource)
-  of BuiltinManagedGcManifestPath & "|policy.eido":
-    (BuiltinManagedPolicySourcePath, BuiltinManagedPolicySource)
-  of BuiltinRcManifestPath & "|rc_value_registry.eido":
-    (BuiltinRcValueRegistrySourcePath, BuiltinRcValueRegistrySource)
-  of BuiltinRcManifestPath & "|rc_type_registry.eido":
-    (BuiltinRcTypeRegistrySourcePath, BuiltinRcTypeRegistrySource)
-  of BuiltinRcManifestPath & "|identity_index.eido":
-    (BuiltinRcIdentityIndexSourcePath, BuiltinRcIdentityIndexSource)
-  of BuiltinRcManifestPath & "|rc_runtime.eido":
-    (BuiltinRcRuntimeSourcePath, BuiltinRcRuntimeSource)
-  of BuiltinRcManifestPath & "|rc_policy_runtime.eido":
-    (BuiltinRcPolicyRuntimeSourcePath, BuiltinRcPolicyRuntimeSource)
-  of BuiltinRcManifestPath & "|policy.eido":
-    (BuiltinRcPolicySourcePath, BuiltinRcPolicySource)
-  else:
-    raise newException(
-      ValueError,
-      "embedded stdlib manifest '" & manifestPath &
-        "' references unknown source '" & sourceEntry & "'"
-    )
-
 ## Recursively materializes one embedded stdlib module from its manifest.
 proc loadEmbeddedStdlibModule(
   manifestPath,
@@ -282,10 +193,8 @@ proc loadEmbeddedStdlibModule(
   modules: var seq[ModuleSpec],
   embeddedSourcePaths: var seq[string]
 ): string =
-  let manifest = parseModuleManifest(
-    embeddedStdlibManifest(manifestPath),
-    manifestPath
-  )
+  let payload = embeddedModule(manifestPath)
+  let manifest = parseModuleManifest(payload.text, manifestPath)
 
   if expectedLocalName.len > 0 and manifest.name != expectedLocalName:
     raise newException(
@@ -316,13 +225,8 @@ proc loadEmbeddedStdlibModule(
   let ownIndex = modules.len
   modules.add spec
 
-  for policyEntry in manifest.policySources:
-    if policyEntry in manifest.sources:
-      raise newException(
-        ValueError,
-        "embedded memory policy source must not also be a target source: " & policyEntry
-      )
-    let embedded = embeddedStdlibSource(manifestPath, policyEntry)
+  for embedded in payload.sources:
+    if not embedded.policy: continue
     if embedded.path in embeddedSourcePaths:
       raise newException(
         ValueError,
@@ -330,13 +234,13 @@ proc loadEmbeddedStdlibModule(
       )
     embeddedSourcePaths.add embedded.path
     modules[ownIndex].policySources.add ModulePolicySource(
-      entry: policyEntry,
+      entry: embedded.entry,
       path: embedded.path,
       text: embedded.text
     )
 
-  for sourceEntry in manifest.sources:
-    let embedded = embeddedStdlibSource(manifestPath, sourceEntry)
+  for embedded in payload.sources:
+    if embedded.policy: continue
     if embedded.path in embeddedSourcePaths:
       raise newException(
         ValueError,

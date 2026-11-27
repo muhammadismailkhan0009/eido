@@ -119,11 +119,11 @@ proc validateExpr(
       )
 
   of ekCall:
-    if source.callee in functions and functions[source.callee] != currentModule:
+    if source.callee in functions and functions[source.callee].moduleName != currentModule:
       failAt(
         source.span,
         "top-level function '" & source.callee &
-          "' is internal to module '" & functions[source.callee] & "'"
+          "' is internal to module '" & functions[source.callee].moduleName & "'"
       )
     for argument in source.arguments:
       validateExpr(

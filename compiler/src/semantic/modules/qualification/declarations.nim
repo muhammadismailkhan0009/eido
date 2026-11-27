@@ -63,6 +63,26 @@ proc qualifyCallable(
     rootModule
   )
 
+## Validates local configuration class references; intrinsic selection strings
+## are checked against resolved layouts in the HIR pass.
+proc checkLayoutConfigDirectory(call: Expr, currentModule: string,
+    modules: ModuleRegistry, classes: ClassRegistry, interfaces: InterfaceRegistry) =
+  if call.isNil or call.kind != ekMethodCall: return
+  let path = nominalPath(call.receiver)
+  if path.len == 0: return
+  let localKey = declarationKey(currentModule, path)
+  # Configuration calls also accept unique suffix-qualified class names.
+  if path in classes:
+    requireNominalDirectoryAccess(modules, classes, interfaces, currentModule, path, call.span)
+  elif localKey in classes:
+    requireNominalDirectoryAccess(modules, classes, interfaces, currentModule, localKey, call.span)
+  else:
+    var matches: seq[string]
+    for key in classes.keys:
+      if key.endsWith("." & path): matches.add key
+    if matches.len == 1:
+      requireNominalDirectoryAccess(modules, classes, interfaces, currentModule, matches[0], call.span)
+
 ## Rewrites all module-project declarations/references to canonical semantic names.
 proc qualifyModuleProgram(
   source: var Program,
@@ -156,10 +176,18 @@ proc qualifyModuleProgram(
         rootModule
       )
 
+    for methodDecl in sourceClass.layoutConfigMethods:
+      for stmt in methodDecl.body:
+        if stmt.kind == skCall:
+          checkLayoutConfigDirectory(stmt.call, sourceClass.moduleName, modules, classes, interfaces)
+
     sourceClass.name = declarationKey(
       sourceClass.moduleName,
       sourceClass.name
     )
+
+  for config in source.layoutConfigCalls:
+    checkLayoutConfigDirectory(config.call, config.moduleName, modules, classes, interfaces)
 
   for sourceLayout in mitems(source.layouts):
     var typeParameters = initHashSet[string]()

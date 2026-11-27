@@ -141,3 +141,26 @@ suite "Module manifest parsing":
       BuiltinRcManifestPath
     )
     check rcManifest.policySources == @["policy.eido"]
+
+  test "compact nonempty sequences and omitted optional sections":
+    let manifest = parseModuleManifest("""
+      module: network
+      sources: [., "a,b.eido", 'other/']
+      dependencies: [storage]
+      exports: [Tcp, TcpConnection]
+      adopts: [address.SocketAddress]
+      allowsExternalImplementation: [TcpConnection]
+    """, "module.yaml")
+    check manifest.sources == @[".", "a,b.eido", "other/"]
+    check manifest.dependencies == @["storage"]
+    check manifest.exports == @["Tcp", "TcpConnection"]
+    check manifest.adopts == @["address.SocketAddress"]
+    check manifest.allowsExternalImplementation == @["TcpConnection"]
+    check manifest.children.len == 0
+    check manifest.provides.len == 0
+    check manifest.policySources.len == 0
+
+  test "rejects malformed inline sequence items":
+    for value in ["[a,,b]", "[a, { bad: value }]", "[a, 'unterminated]", "a"]:
+      expect ValueError:
+        discard parseModuleManifest("module: app\nsources: " & value, "module.yaml")
